@@ -39,7 +39,7 @@ class learner:
         return
 
     @partial(jax.jit, static_argnums=(0,))
-    def train_step(self, noise_key, V_state, Policy_state):
+    def train_step(self, noise_key, V_state, Policy_state, update_certificate=True, update_policy=True):
 
         idxs = np.random.choice(len(self.grid), size=self.train_batch_size, replace=False)
         subgrid = self.grid[idxs]
@@ -85,13 +85,9 @@ class learner:
 
         # Compute gradients
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=False)
-        loss_val, grads = loss_grad_fun(V_state.params, Policy_state.params)
+        loss_val, (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
-        # Update parameters
-        V_state = V_state.apply_gradients(grads=grads)
-        Policy_state = Policy_state.apply_gradients(grads=grads)
-
-        return V_state, Policy_state, loss_val
+        return V_grads, Policy_grads, loss_val
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_stabilize_set(self, rng, n):

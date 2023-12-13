@@ -6,6 +6,10 @@ from models.linearsystem_jax import LinearEnv
 parser = argparse.ArgumentParser(prefix_chars='--')
 parser.add_argument('--model', type=str, default="LinearEnv",
                     help="Gymnasium environment ID")
+parser.add_argument('--update_certificate', type=bool, default=True,
+                    help="If True, certificate network is updated by the learner")
+parser.add_argument('--update_policy', type=bool, default=False,
+                    help="If True, policy network is updated by the learner")
 args = parser.parse_args()
 
 if args.model == 'LinearEnv':
@@ -17,11 +21,12 @@ else:
 # TODO: Properly pass arguments/hyperparameters to this PPO function
 agent_state = PPO(fun)
 
-assert False
 # %%
 
 from commons import ticDiff, tocDiff
 from learner import MLP, MLP_softplus, learner
+from jax_utils import create_train_state
+import jax
 
 # Create gym environment (jax/flax version)
 env = LinearEnv()
@@ -35,6 +40,7 @@ V_state = create_train_state(
             learning_rate=0.0005,
         )
 
+# TODO: Load PPO trained policy into the policy here
 policy_model = MLP([64, 64, 1])
 Policy_state = create_train_state(
             model=policy_model,
@@ -52,14 +58,18 @@ noise_key = jax.random.PRNGKey(1)
 
 for i in range(1000):
     noise_key, noise_subkey = jax.random.split(noise_key)
-    V_state, Policy_state, loss = learn.train_step(noise_subkey, V_state, Policy_state)
+    V_grads, Policy_grads, loss = learn.train_step(noise_subkey, V_state, Policy_state)
+
+    # Update parameters
+    if args.update_certificate:
+        V_state = V_state.apply_gradients(grads=V_grads)
+    if args.update_policy:
+        Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
     if i % 250 == 0:
         print(f'Iteration {i}')
         print(f'Loss: {loss}')
 tocDiff()
-
-# %%
 
 from plot import plot_certificate_2D
 # 2D plot for the certificate function over the state space
