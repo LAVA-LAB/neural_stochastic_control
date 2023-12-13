@@ -537,7 +537,7 @@ def update_ppo(
 
 
 
-def PPO(environment_function, args):
+def PPO(environment_function, args, neurons_per_layer=[64,64], activation_functions=[nn.relu, nn.relu]):
 
     # TRY NOT TO MODIFY: seeding
     np.random.seed(args.seed)
@@ -552,10 +552,10 @@ def PPO(environment_function, args):
 
     # Create both networks
     actor = Actor(action_shape_prod=np.array(env.action_space.shape).prod(),
-                  neurons_per_layer=[64,64],
-                  activation_func=[nn.relu, nn.relu])  # Declare prod out of class for JIT
-    critic = Critic(neurons_per_layer=[64,64],
-                    activation_func=[nn.relu, nn.relu])
+                  neurons_per_layer=neurons_per_layer,
+                  activation_func=activation_functions)  # Declare prod out of class for JIT
+    critic = Critic(neurons_per_layer=neurons_per_layer,
+                    activation_func=activation_functions)
 
     # Anneal learning rate over time
     def linear_schedule(count):

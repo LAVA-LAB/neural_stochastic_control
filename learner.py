@@ -156,6 +156,7 @@ class learner:
 
 class MLP_softplus(nn.Module):
     features: Sequence[int]
+    activation_func: list
 
     def setup(self):
         # we automatically know what to do with lists, dicts of submodules
@@ -165,13 +166,14 @@ class MLP_softplus(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        for feat in self.features[:-1]:
-            x = nn.relu(nn.Dense(feat)(x))
+        for act_func, feat in zip(self.activation_func, self.features[:-1]):
+            x = act_func(nn.Dense(feat)(x))
         x = nn.softplus(nn.Dense(self.features[-1])(x))
         return x
 
 class MLP(nn.Module):
     features: Sequence[int]
+    activation_func: list
 
     def setup(self):
         # we automatically know what to do with lists, dicts of submodules
@@ -181,7 +183,7 @@ class MLP(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        for feat in self.features[:-1]:
-            x = nn.relu(nn.Dense(feat)(x))
+        for act_func, feat in zip(self.activation_func, self.features[:-1]):
+            x = act_func(nn.Dense(feat)(x))
         x = nn.Dense(self.features[-1])(x)
         return x
