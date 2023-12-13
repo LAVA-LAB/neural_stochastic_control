@@ -1,21 +1,14 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_atari_envpool_xla_jaxpy
 import os
-# import jax.random as random
 import time
-from dataclasses import dataclass
-from typing import Sequence
 
 import flax
 import flax.linen as nn
-import gymnasium as gym
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-import tyro
-from flax.linen.initializers import constant, orthogonal
 from flax.training.train_state import TrainState
-from torch.utils.tensorboard import SummaryWriter
 
 from jax import Array
 import tensorflow_probability.substrates.jax.distributions as tfp
@@ -26,7 +19,7 @@ from typing import Callable
 from flax import struct
 
 from functools import partial
-from commons import define_grid, ticDiff, tocDiff
+from commons import ticDiff, tocDiff
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
@@ -35,110 +28,40 @@ os.environ["TF_XLA_FLAGS"] = "--xla_gpu_autotune_level=2 --xla_gpu_deterministic
 os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 
-@dataclass
-class Args:
-    exp_name: str = os.path.basename(__file__)[: -len(".py")]
-    """the name of this experiment"""
-    seed: int = 4
+@flax.struct.dataclass
+class PPOargs:
+    seed: int
     """seed of the experiment"""
-    torch_deterministic: bool = True
-    """if toggled, `torch.backends.cudnn.deterministic=False`"""
-    cuda: bool = True
-    """if toggled, cuda will be enabled by default"""
-
-    # Algorithm specific arguments
-    env_id: str = "HalfCheetah-v4"
-    """the id of the environment"""
-    total_timesteps: int = 1000000
+    total_timesteps: int
     """total timesteps of the experiments"""
-    learning_rate: float = 3e-4
+    learning_rate: float
     """the learning rate of the optimizer"""
-    num_envs: int = 10
+    num_envs: int
     """the number of parallel game environments"""
-    num_steps: int = 2048
+    num_steps: int
     """the number of steps to run in each environment per policy rollout"""
-    anneal_lr: bool = True
+    anneal_lr: bool
     """Toggle learning rate annealing for policy and value networks"""
-    gamma: float = 0.99
+    gamma: float
     """the discount factor gamma"""
-    gae_lambda: float = 0.95
+    gae_lambda: float
     """the lambda for the general advantage estimation"""
-    num_minibatches: int = 32
+    num_minibatches: int
     """the number of mini-batches"""
-    update_epochs: int = 10
+    update_epochs: int
     """the K epochs to update the policy"""
-    norm_adv: bool = True
-    """Toggles advantages normalization"""
-    clip_coef: float = 0.2
+    clip_coef: float
     """the surrogate clipping coefficient"""
-    clip_vloss: bool = True
-    """Toggles whether or not to use a clipped loss for the value function, as per the paper."""
-    ent_coef: float = 0.0
+    ent_coef: float
     """coefficient of the entropy"""
-    vf_coef: float = 0.5
+    vf_coef: float
     """coefficient of the value function"""
-    max_grad_norm: float = 0.5
+    max_grad_norm: float
     """the maximum norm for the gradient clipping"""
-    target_kl: float = None
-    """the target KL divergence threshold"""
-
     # to be filled in runtime
-    batch_size: int = 0
-    """the batch size (computed in runtime)"""
-    minibatch_size: int = 0
-    """the mini-batch size (computed in runtime)"""
-    num_iterations: int = 0
-    """the number of iterations (computed in runtime)"""
-
-
-class Actor(nn.Module):
-    action_shape_prod: int
-
-    @nn.compact
-    def __call__(self, x: Array):
-        action_mean = nn.Sequential([
-            linear_layer_init(args.neurons_per_layer),
-            nn.tanh,
-            linear_layer_init(args.neurons_per_layer),
-            nn.tanh,
-            linear_layer_init(self.action_shape_prod, std=0.01),
-        ])(x)
-        actor_logstd = self.param('logstd', nn.initializers.zeros, (1, self.action_shape_prod))
-        action_logstd = jnp.broadcast_to(actor_logstd, action_mean.shape)  # Make logstd the same shape as actions
-        return action_mean, action_logstd
-
-args = tyro.cli(Args)
-args.neurons_per_layer = 64
-
-args.batch_size = int(args.num_envs * args.num_steps)
-args.minibatch_size = int(args.batch_size // args.num_minibatches)
-args.num_iterations = args.total_timesteps // args.batch_size
-
-class Critic(nn.Module):
-    @nn.compact
-    def __call__(self, x: Array):
-        return nn.Sequential([
-            linear_layer_init(args.neurons_per_layer),
-            nn.tanh,
-            linear_layer_init(args.neurons_per_layer),
-            nn.tanh,
-            linear_layer_init(1, std=1.0),
-        ])(x)
-
-
-# Helper function to quickly declare linear layer with weight and bias initializers
-def linear_layer_init(features, std=np.sqrt(2), bias_const=0.0):
-    layer = nn.Dense(features=features, kernel_init=nn.initializers.orthogonal(std),
-                     bias_init=nn.initializers.constant(bias_const))
-    return layer
-
-
-# Anneal learning rate over time
-def linear_schedule(count):
-    # anneal learning rate linearly after one training iteration which contains
-    # (args.num_minibatches * args.update_epochs) gradient updates
-    frac = 1.0 - (count // (args.num_minibatches * args.update_epochs)) / args.num_iterations
-    return args.learning_rate * frac
+    batch_size: int
+    minibatch_size: int
+    num_iterations: int
 
 
 class AgentState(TrainState):
@@ -173,20 +96,49 @@ class EpisodeStatistics:
     returned_episode_lengths: jnp.array
 
 
-@jax.jit
-def get_action_and_value(
-        agent_state: AgentState,
-        next_obs: jax.Array,
-        key: jax.Array
-):
-    action_mean, action_logstd = agent_state.actor_fn(agent_state.params['actor'], next_obs)
-    action_std = jnp.exp(action_logstd)
+class Actor(nn.Module):
+    action_shape_prod: int
+    neurons_per_layer: list
+    activation_func: list
 
-    # Sample continuous actions from Normal distribution
-    key, subkey = jax.random.split(key)
-    action = action_mean + action_std * jax.random.normal(key, shape=action_mean.shape)
+    @nn.compact
+    def __call__(self, x: Array):
 
-    return action, key
+        fnn = []
+        for neurons, afun in zip(self.neurons_per_layer, self.activation_func):
+            fnn += [
+                linear_layer_init(neurons),
+                afun
+            ]
+
+        action_mean = nn.Sequential(fnn + [linear_layer_init(self.action_shape_prod, std=0.01)])(x)
+        actor_logstd = self.param('logstd', nn.initializers.zeros, (1, self.action_shape_prod))
+        action_logstd = jnp.broadcast_to(actor_logstd, action_mean.shape)  # Make logstd the same shape as actions
+        return action_mean, action_logstd
+
+
+class Critic(nn.Module):
+    neurons_per_layer: list
+    activation_func: list
+
+    @nn.compact
+    def __call__(self, x: Array):
+
+        fnn = []
+        for neurons, afun in zip(self.neurons_per_layer, self.activation_func):
+            fnn += [
+                linear_layer_init(neurons),
+                afun
+            ]
+
+        return nn.Sequential(fnn + [linear_layer_init(1, std=1.0)])(x)
+
+
+# Helper function to quickly declare linear layer with weight and bias initializers
+def linear_layer_init(features, std=np.sqrt(2), bias_const=0.0):
+    layer = nn.Dense(features=features, kernel_init=nn.initializers.orthogonal(std),
+                     bias_init=nn.initializers.constant(bias_const))
+    return layer
 
 
 @jax.jit
@@ -196,6 +148,7 @@ def get_action_and_value2(
         obs: np.ndarray,
         action: np.ndarray
 ):
+
     action_mean, action_logstd = agent_state.actor_fn(params['actor'], obs)
     value = agent_state.critic_fn(params['critic'], obs)
     action_std = jnp.exp(action_logstd)
@@ -206,10 +159,11 @@ def get_action_and_value2(
 
 
 @jax.jit
-def get_action_and_value_gym(agent_state: AgentState, next_obs: np.ndarray, next_done: np.ndarray, storage: Storage, step: int,
+def get_action_and_value(agent_state: AgentState, next_obs: np.ndarray, next_done: np.ndarray, storage: Storage, step: int,
                          key: jax.Array):
-    action_mean, action_logstd = agent_state.actor_fn(agent_state.params['actor'], next_obs)
-    value = agent_state.critic_fn(agent_state.params['critic'], next_obs)
+
+    action_mean, action_logstd = agent_state.actor_fn(jax.lax.stop_gradient(agent_state.params['actor']), next_obs)
+    value = agent_state.critic_fn(jax.lax.stop_gradient(agent_state.params['critic']), next_obs)
     action_std = jnp.exp(action_logstd)
 
     # Sample continuous actions from Normal distribution
@@ -227,9 +181,10 @@ def get_action_and_value_gym(agent_state: AgentState, next_obs: np.ndarray, next
     return storage, action, key
 
 
-@partial(jax.jit, static_argnums=(0,)) # Don't JIT the environment
+@partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
 def rollout_jax_jit(
         env,
+        args: PPOargs,
         agent_state: AgentState,
         next_obs: np.ndarray,
         next_done: np.ndarray,
@@ -237,18 +192,14 @@ def rollout_jax_jit(
         action_key: jax.Array,
         env_key: jax.Array,
         steps_since_reset: jax.Array,
-        global_step: int,
-        # writer: SummaryWriter,
 ):
 
     @jax.jit
     def rollout_body(i, val):
         step = i
-        (global_step, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset) = val
+        (agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset) = val
 
-        global_step += 1 * args.num_envs
-        storage, action, action_key = get_action_and_value_gym(agent_state, next_obs, next_done, storage, step,
-                                                               action_key)
+        storage, action, action_key = get_action_and_value(agent_state, next_obs, next_done, storage, step, action_key)
 
         next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos = \
             env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
@@ -256,17 +207,18 @@ def rollout_jax_jit(
         next_done = terminated | truncated
         storage = storage.replace(rewards=storage.rewards.at[step].set(reward))
 
-        return (global_step, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
+        return (agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
 
-    val = (global_step, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
+    val = (agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
     val = jax.lax.fori_loop(0, args.num_steps, rollout_body, val)
-    (global_step, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset) = val
+    (agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset) = val
 
-    return next_obs, next_done, storage, action_key, env_key, global_step
+    return next_obs, next_done, storage, action_key, env_key
 
 
 def rollout_jax(
         env,
+        args: PPOargs,
         agent_state: AgentState,
         next_obs: np.ndarray,
         next_done: np.ndarray,
@@ -274,12 +226,9 @@ def rollout_jax(
         action_key: jax.Array,
         env_key: jax.Array,
         steps_since_reset: jax.Array,
-        global_step: int,
-        # writer: SummaryWriter,
 ):
     for step in range(0, args.num_steps):
-        global_step += 1 * args.num_envs
-        storage, action, action_key = get_action_and_value_gym(agent_state, next_obs, next_done, storage, step, action_key)
+        storage, action, action_key = get_action_and_value(agent_state, next_obs, next_done, storage, step, action_key)
 
         next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos = \
             env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
@@ -287,23 +236,13 @@ def rollout_jax(
         next_done = terminated | truncated
         storage = storage.replace(rewards=storage.rewards.at[step].set(reward))
 
-        # Only print when at least 1 env is done
-        if "final_info" not in infos:
-            continue
-
-        for info in infos["final_info"]:
-            # Skip the envs that are not done
-            if info and "episode" in info:
-                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                # writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                # writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-    return next_obs, next_done, storage, action_key, env_key, global_step
+    return next_obs, next_done, storage, action_key, env_key
 
 
 @jax.jit
 def compute_gae_body(i, val):
 
-    (storage, lastgaelam) = val
+    (args, storage, lastgaelam) = val
     t = args.num_steps - 1 - i
 
     nextnonterminal = 1.0 - storage.dones[t + 1]
@@ -312,22 +251,22 @@ def compute_gae_body(i, val):
     lastgaelam = delta + args.gamma * args.gae_lambda * nextnonterminal * lastgaelam
     storage = storage.replace(advantages=storage.advantages.at[t].set(lastgaelam))
 
-    val = (storage, lastgaelam)
+    val = (args, storage, lastgaelam)
     return val
 
 
-@jax.jit
+@partial(jax.jit, static_argnums=(0,))
 def compute_gae_jit(
+    args: PPOargs,
     agent_state: AgentState,
     next_obs: np.ndarray,
     next_done: np.ndarray,
     storage: Storage,
 ):
-    # next_obs = jax.lax.stop_gradient(next_obs)
 
     # Reset advantages values
     storage = storage.replace(advantages=storage.advantages.at[:].set(0.0))
-    next_value = agent_state.critic_fn(agent_state.params['critic'], next_obs).squeeze()
+    next_value = agent_state.critic_fn(jax.lax.stop_gradient(agent_state.params['critic']), next_obs).squeeze()
 
     # Compute advantage using generalized advantage estimate
     lastgaelam = 0
@@ -341,23 +280,24 @@ def compute_gae_jit(
     storage = storage.replace(advantages=storage.advantages.at[t].set(lastgaelam))
 
     # Then work backward
-    val = (storage, lastgaelam)
+    val = (args, storage, lastgaelam)
     val = jax.lax.fori_loop(1, args.num_steps, compute_gae_body, val)
-    (storage, lastgaelam) = val
+    (args, storage, lastgaelam) = val
 
     storage = storage.replace(returns=storage.advantages + storage.values)
 
     return storage
 
-# @jax.jit
+
 def compute_gae(
+    args: PPOargs,
     agent_state: TrainState,
     next_obs: np.ndarray,
     next_done: np.ndarray,
     storage: Storage,
 ):
     storage = storage.replace(advantages=storage.advantages.at[:].set(0.0))
-    next_value = agent_state.critic_fn(agent_state.params['critic'], next_obs).squeeze()
+    next_value = agent_state.critic_fn(jax.lax.stop_gradient(agent_state.params['critic']), next_obs).squeeze()
     lastgaelam = 0
     for t in reversed(range(args.num_steps)):
         if t == args.num_steps - 1:
@@ -372,9 +312,10 @@ def compute_gae(
     storage = storage.replace(returns=storage.advantages + storage.values)
     return storage
 
-@partial(jax.jit, static_argnums=(0,)) # Don't JIT the environment
+@partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
 def update_ppo_jit(
         env,
+        args: PPOargs,
         agent_state: AgentState,
         storage: Storage,
         key: jax.Array,
@@ -514,6 +455,7 @@ def update_ppo_jit(
 
 def update_ppo(
     env,
+    args: PPOargs,
     agent_state: AgentState,
     storage: Storage,
     key: jax.Array,
@@ -595,7 +537,7 @@ def update_ppo(
 
 
 
-def PPO(environment_function):
+def PPO(environment_function, args):
 
     # TRY NOT TO MODIFY: seeding
     np.random.seed(args.seed)
@@ -609,9 +551,18 @@ def PPO(environment_function):
     obs, env_key, steps_since_reset = env.vreset(env_key)
 
     # Create both networks
-    actor = Actor(
-        action_shape_prod=np.array(env.action_space.shape).prod())  # Declare prod out of class for JIT
-    critic = Critic()
+    actor = Actor(action_shape_prod=np.array(env.action_space.shape).prod(),
+                  neurons_per_layer=[64,64],
+                  activation_func=[nn.relu, nn.relu])  # Declare prod out of class for JIT
+    critic = Critic(neurons_per_layer=[64,64],
+                    activation_func=[nn.relu, nn.relu])
+
+    # Anneal learning rate over time
+    def linear_schedule(count):
+        # anneal learning rate linearly after one training iteration which contains
+        # (args.num_minibatches * args.update_epochs) gradient updates
+        frac = 1.0 - (count // (args.num_minibatches * args.update_epochs)) / args.num_iterations
+        return args.learning_rate * frac
 
     # Initialize parameters of networks
     agent_state = AgentState.create(
@@ -657,31 +608,22 @@ def PPO(environment_function):
         print(f'Start iter {iteration}')
         ticDiff()
 
-        next_obs, next_done, storage, action_key, env_key, global_step = \
-            rollout_jax_jit(env, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset, global_step)
+        next_obs, next_done, storage, action_key, env_key = \
+            rollout_jax_jit(env, args, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
 
-        # ticDiff()
-        storage = compute_gae_jit(agent_state, next_obs, next_done, storage)
-        # tocDiff()
-        # storage2 = compute_gae(agent_state, next_obs, next_done, storage)
-        # tocDiff()
+        # Increment global number of steps
+        global_step += 1 * args.num_envs * args.num_steps
+
+        storage = compute_gae_jit(args, agent_state, next_obs, next_done, storage)
+        # storage2 = compute_gae(args, agent_state, next_obs, next_done, storage)
         # assert all(jnp.abs(storage2.returns - storage.returns) < 1e-5)
 
-        # ticDiff()
         agent_state, loss, pg_loss, v_loss, entropy_loss, approx_kl, permutation_key = update_ppo_jit(
-            env, agent_state, storage, permutation_key)
-
-        # print(f'- Jitted: {tocDiff(False)}')
-        # ticDiff()
-
+            env, args, agent_state, storage, permutation_key)
         # agent_state, loss, pg_loss, v_loss, entropy_loss, approx_kl, permutation_key = update_ppo(
-        #     env, agent_state, storage, permutation_key)
-
-        # print(f'- Normal: {tocDiff(False)}')
-
+        #     env, args, agent_state, storage, permutation_key)
         # assert jnp.isclose(loss, loss2) and jnp.isclose(pg_loss, pg_loss2) and jnp.isclose(v_loss, v_loss2) and \
         #     jnp.isclose(entropy_loss, entropy_loss2) and jnp.isclose(approx_kl, approx_kl2)
-
 
         # Calculate how good an approximation of the return is the value function
         y_pred, y_true = storage.values, storage.returns

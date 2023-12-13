@@ -42,7 +42,7 @@ class learner:
     def train_step(self, noise_key, V_state, Policy_state, update_certificate=True, update_policy=True):
 
         idxs = np.random.choice(len(self.grid), size=self.train_batch_size, replace=False)
-        subgrid = self.grid[idxs]
+        subgrid = self.grid#[idxs]
 
         noise_key1, noise_key2 = jax.random.split(noise_key)
 
@@ -71,7 +71,8 @@ class learner:
             loss_min_outside = jnp.maximum(0, self.M + self.Lv + self.Delta_theta + self.delta_train - minV)
 
             # Loss to promote low Lipschitz constant
-            loss_lipschitz = self.lambda_lipschitz * lipschitz_coeff_l1(certificate_params)
+            loss_lipschitz = self.lambda_lipschitz * lipschitz_coeff_l1(certificate_params) * \
+                                self.lambda_lipschitz * lipschitz_coeff_l1(policy_params)
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_val_below_M = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, samples_in_stabilize)))
@@ -81,13 +82,13 @@ class learner:
             # Define total loss
             loss_total = loss_exp_decrease + loss_min_outside + loss_lipschitz + loss_val_below_M + loss_glob_min
 
-            return loss_total
+            return loss_total, loss_lipschitz
 
         # Compute gradients
-        loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=False)
-        loss_val, (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
+        loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
+        (loss_val, loss_lipschitz), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
-        return V_grads, Policy_grads, loss_val
+        return V_grads, Policy_grads, loss_val, loss_lipschitz
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_stabilize_set(self, rng, n):
