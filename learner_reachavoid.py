@@ -16,14 +16,10 @@ class Buffer:
     Class to store samples to train Martingale over
     '''
 
-    def __init__(self, dim, stabilizing_set, stabilizing_subset = False, max_size = 10_000_000, ):
+    def __init__(self, dim, max_size = 10_000_000, ):
         self.dim = dim
         self.data = np.zeros(shape=(0,dim), dtype=np.float32)
         self.max_size = max_size
-        self.Xs = stabilizing_set
-        self.T = stabilizing_subset
-        self.data_not_in_Xs = np.zeros(shape=(0,dim), dtype=np.float32)
-        self.data_in_T = np.zeros(shape=(0, dim), dtype=np.float32)
 
     def append(self, samples):
         '''
@@ -38,27 +34,6 @@ class Buffer:
         if not (self.max_size is not None and len(self.data) > self.max_size):
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
-            # Also store if the sample is in the non-stabilizing set or not
-
-            # Determine which points are in the stabilizing set Xs
-            if type(self.Xs) == list:
-                data_not_in_Xs_append = self.data[[i for i, s in enumerate(self.data) if not
-                    any([space.contains(s) for space in self.Xs])]]
-            else:
-                data_not_in_Xs_append = self.data[[i for i, s in enumerate(self.data) if not self.Xs.contains(s)]]
-            self.data_not_in_Xs = np.vstack((self.data_not_in_Xs, data_not_in_Xs_append), dtype=np.float32)
-
-            # Determine which points are in the subset T of the stabilizing set Xs (if provided)
-            if not self.T:
-                return
-            if type(self.T) == list:
-                data_in_T = self.data[[i for i, s in enumerate(self.data) if not
-                    any([space.contains(s) for space in self.T])]]
-            else:
-                data_in_T = self.data[[i for i, s in enumerate(self.data) if not self.Xs.contains(s)]]
-            self.data_not_in_Xs = np.vstack((self.data_not_in_Xs, data_not_in_Xs_append), dtype=np.float32)
-
-
 
 
 def define_grid(low, high, size):
@@ -78,27 +53,25 @@ def define_grid(low, high, size):
 
 class Learner:
 
-    def __init__(self, env):
+    def __init__(self, env, tau):
 
-        self.train_batch_size = 256
+        self.batch_size = 4096
 
-        self.Ncond2 = 16
-        self.Ncond3 = 256
-        self.N3 = 256
-        self.N4 = 512
+        # Lipschitz factor
+        self.lambda_lipschitz = 0.001
 
-        self.lambda_lipschitz = jnp.float32(0.001)
-
-        self.eps_train = jnp.float32(0.1)
-        self.delta_train = jnp.float32(0.1)
-
-        self.M = jnp.float32(1)
-
+        # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4
-        self.max_lip_certificate = 8
+        self.max_lip_certificate = 15
+
+        self.tau = tau
+
+        self.epsilon = 0.3
+        self.N = 16
+        self.N_expectation = 144
 
         # Define vectorized functions for loss computation
-        self.loss_cond2_vectorized = jax.vmap(self.loss_cond2, in_axes=(None, None, 0, 0, 0), out_axes=0)
+        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, 0, 0, 0), out_axes=0)
 
         self.env = env
 
@@ -111,33 +84,19 @@ class Learner:
                    key: jax.Array,
                    V_state: TrainState,
                    Policy_state: TrainState,
-                   samples_inX,
-                   samples_outside_Xs,
-                   samples_inT,
-                   samples_belowM,
-                   samples_belowM_actIdxs
+                   probability_bound: jnp.float32,
+                   C_decrease,
+                   C_init,
+                   C_unsafe,
+                   C_target
                    ):
 
-        rng0, rng1, rng2, rng3, rng4, new_key = jax.random.split(key, 6)
-
-        # subgrid = jax.random.choice(rng0, data, shape=(self.train_batch_size,), replace = False)
-        idxs = np.random.choice(len(samples_inX), size=self.train_batch_size, replace=False)
-        samples_inX = samples_inX[idxs]
-
-        # Samples in X \ Xs (outside stabilizing set)
-        # samples_not_in_Xs = jax.random.choice(rng1, data_not_in_Xs, shape=(self.Ncond3,), replace=False)
-        idxs = np.random.choice(len(samples_outside_Xs), size=self.Ncond3, replace=False)
-        samples_outside_Xs = samples_outside_Xs[idxs]
-
-        # Samples from the set where V(x) < M
-        # samples_belowM = jax.random.choice(rng3, data_belowM, shape=(self.N3,), replace=False)
-        idxs = np.random.choice(len(samples_belowM), size=self.N3, replace=False)
-        samples_belowM = samples_belowM[idxs]
+        subkey, key = jax.random.split(key, 2)
 
         ###
 
         # Split RNG keys for process noise in environment stap
-        noise_cond2_keys = jax.random.split(rng4, (len(samples_inX), self.Ncond2))
+        noise_cond2_keys = jax.random.split(subkey, (len(C_decrease), self.N_expectation))
 
         def loss_fun(certificate_params, policy_params):
 
@@ -146,42 +105,40 @@ class Learner:
             lip_policy = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, samples_inX)
+            actions = Policy_state.apply_fn(policy_params, C_decrease)
 
-            # Define loss for condition 2
-            # This is the mean over the data points (i.e., subgrid) in the state space
+            # Loss in initial state set
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
+
+            # Loss in unsafe state set
+            loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) - jnp.min(V_state.apply_fn(certificate_params, C_unsafe)))
+
+            # Loss for expected decrease condition
             loss_exp_decrease = jnp.mean(
-                self.loss_cond2_vectorized(V_state, certificate_params, samples_inX, actions, noise_cond2_keys))
-
-            # Define loss for condition 3 (outside X_s, the certificate has at least value M+L_v*Delta+\delta_train)
-            # minV is the minimum over certificate values for a set of sampled states (outside X_s)
-            minV = jnp.min(V_state.apply_fn(certificate_params, samples_outside_Xs))
-            # TODO: Make Delta_theta computation adaptive based on the policy (current computation is conservative)
-            Delta_theta = self.env.max_step_Delta
-            loss_min_outside = jnp.maximum(0, self.M + lip_certificate * Delta_theta + self.delta_train - minV)
-
-            # The list of samples with V(x)<M has a fixed (higher) length and should thus be masked (via jnp.dot)
-            belowM_vals = jnp.multiply(samples_belowM_actIdxs, V_state.apply_fn(certificate_params, samples_belowM))
-
-            # Loss to promote global minimum of certificate within stabilizing set
-            loss_val_below_M = jnp.maximum(0, jnp.max(belowM_vals))
-            loss_glob_min = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_inT)) -
-                                            jnp.min(belowM_vals))
+                self.loss_exp_decrease_vmap(V_state, certificate_params, C_decrease, actions, noise_cond2_keys))
 
             # Loss to promote low Lipschitz constant
-            loss_lipschitz = self.lambda_lipschitz * jnp.maximum(self.max_lip_certificate - lip_certificate, 0) + \
-                             self.lambda_lipschitz * jnp.maximum(self.max_lip_policy - lip_policy, 0)
+            loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(self.max_lip_certificate - lip_certificate, 0) + \
+                                                      jnp.maximum(self.max_lip_policy - lip_policy, 0))
+
+            # Loss to promote global minimum of certificate within stabilizing set
+            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.epsilon)
+            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
+                                        jnp.min(V_state.apply_fn(certificate_params, C_init)))
+            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
+                                          jnp.min(V_state.apply_fn(certificate_params, C_unsafe)))
+
+            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = loss_exp_decrease + loss_min_outside + loss_val_below_M + loss_glob_min + loss_lipschitz
-
+            loss_total = loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz + loss_aux
             infos = {
-                'loss_total': loss_total,
-                'loss_exp_decrease': loss_exp_decrease,
-                'loss_min_outside': loss_min_outside,
-                'loss_lipschitz': loss_lipschitz,
-                'loss_val_below_M': loss_val_below_M,
-                'loss_glob_min': loss_glob_min
+                '0. loss_total': loss_total,
+                '1. loss_init': loss_init,
+                '2. loss_unsafe': loss_unsafe,
+                '3. loss_exp_decrease': loss_exp_decrease,
+                '4. loss_lipschitz': loss_lipschitz,
+                '6. loss_aux': loss_aux
             }
 
             return loss_total, infos
@@ -231,7 +188,7 @@ class Learner:
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
 
-    def loss_cond2(self, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -251,7 +208,7 @@ class Learner:
         loss = jnp.maximum(0,
                            jnp.mean(V_state.apply_fn(V_params, state_new))
                            - V_state.apply_fn(V_params, x)
-                           + self.eps_train)
+                           + self.tau * self.K)
 
         return loss
 

@@ -88,7 +88,7 @@ V_state = create_train_state(
             learning_rate=0.0005,
         )
 
-# Define learner
+# Define Learner
 learn = learner(env)
 learn.set_train_grid(env.observation_space, size=[1001, 1001])
 

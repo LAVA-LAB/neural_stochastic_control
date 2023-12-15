@@ -61,7 +61,7 @@ if __name__ == "__main__":
     env = gym.make(args.model)
     env.reset()
 
-    # Initialize policy/certificate network and learner
+    # Initialize policy/certificate network and Learner
 
     certificate_net = CertificateNetwork(in_features = len(env.state))
     learn = learner()

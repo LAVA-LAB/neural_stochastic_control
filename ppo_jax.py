@@ -19,7 +19,7 @@ from typing import Callable
 from flax import struct
 
 from functools import partial
-from commons import ticDiff, tocDiff
+from jax_utils import lipschitz_coeff_l1
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
@@ -318,6 +318,7 @@ def update_ppo_jit(
         args: PPOargs,
         agent_state: AgentState,
         storage: Storage,
+        max_policy_lipschitz: jnp.float32,
         key: jax.Array,
 ):
     # Flatten collected experiences
@@ -367,9 +368,13 @@ def update_ppo_jit(
         # Entropy loss
         entropy_loss = entropy.mean()
 
+        # Loss for lipschitz coefficient
+        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor']) - max_policy_lipschitz, 0)
+
         # main loss as sum of each part loss
-        loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
-        return loss, (pg_loss, v_loss, entropy_loss, stop_gradient(approx_kl))
+        loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
+
+        return loss, (pg_loss, v_loss, entropy_loss, stop_gradient(approx_kl), lipschitz_loss)
 
     # Create function that will return gradient of the specified function
     ppo_loss_grad_fn = jit(value_and_grad(ppo_loss, argnums=1, has_aux=True))
@@ -436,7 +441,7 @@ def update_ppo_jit(
          b_inds_mat) = val
 
         mb_inds = b_inds_mat[iMax]
-        (loss, (pg_loss, v_loss, entropy_loss, approx_kl)), grads = ppo_loss_grad_fn(
+        (loss, (pg_loss, v_loss, entropy_loss, approx_kl, lipschitz_loss)), grads = ppo_loss_grad_fn(
             agent_state,
             agent_state.params,
             b_obs[mb_inds],
@@ -450,7 +455,16 @@ def update_ppo_jit(
         # Update an agent
         agent_state = agent_state.apply_gradients(grads=grads)
 
-    return agent_state, loss, pg_loss, v_loss, entropy_loss, approx_kl, key
+    losses = {
+        'Total loss': loss,
+        'pg_loss': pg_loss,
+        'v_loss': v_loss,
+        'entropy_loss': entropy_loss,
+        'approx_kl': approx_kl,
+        'lipschitz_loss': lipschitz_loss
+    }
+
+    return agent_state, losses, key
 
 
 def update_ppo(
@@ -458,6 +472,7 @@ def update_ppo(
     args: PPOargs,
     agent_state: AgentState,
     storage: Storage,
+    max_policy_lipschitz: jnp.float32,
     key: jax.Array,
 ):
     # Flatten collected experiences
@@ -507,8 +522,12 @@ def update_ppo(
         # Entropy loss
         entropy_loss = entropy.mean()
 
+        # Loss for lipschitz coefficient
+        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor']) - max_policy_lipschitz, 0)
+
         # main loss as sum of each part loss
-        loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef
+        loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
+
         return loss, (pg_loss, v_loss, entropy_loss, stop_gradient(approx_kl))
 
     # Create function that will return gradient of the specified function
@@ -537,7 +556,13 @@ def update_ppo(
 
 
 
-def PPO(environment_function, args, neurons_per_layer=[64,64], activation_functions=[nn.relu, nn.relu]):
+def PPO(environment_function,
+        args,
+        max_policy_lipschitz,
+        neurons_per_layer=[64,64],
+        activation_functions=[nn.relu, nn.relu]):
+
+    max_policy_lipschitz = jnp.float32(max_policy_lipschitz)
 
     # TRY NOT TO MODIFY: seeding
     np.random.seed(args.seed)
@@ -603,35 +628,52 @@ def PPO(environment_function, args, neurons_per_layer=[64,64], activation_functi
 
     # %%
 
+    steps_per_iteration = args.num_envs * args.num_steps
+
     for iteration in range(1, args.num_iterations + 1):
 
         print(f'Start iter {iteration}')
-        ticDiff()
+        start_iter_time = time.time()
 
+        start_time = time.time()
         next_obs, next_done, storage, action_key, env_key = \
             rollout_jax_jit(env, args, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
+        time_diff = time.time() - start_time
+        print(f'- Rollout done in  {(time_diff):.3f} [s] ({(steps_per_iteration / time_diff):.1f} steps per second)')
 
         # Increment global number of steps
         global_step += 1 * args.num_envs * args.num_steps
+
+        start_time = time.time()
 
         storage = compute_gae_jit(args, agent_state, next_obs, next_done, storage)
         # storage2 = compute_gae(args, agent_state, next_obs, next_done, storage)
         # assert all(jnp.abs(storage2.returns - storage.returns) < 1e-5)
 
-        agent_state, loss, pg_loss, v_loss, entropy_loss, approx_kl, permutation_key = update_ppo_jit(
-            env, args, agent_state, storage, permutation_key)
+        agent_state, losses, permutation_key = update_ppo_jit(
+            env, args, agent_state, storage, max_policy_lipschitz, permutation_key)
         # agent_state, loss, pg_loss, v_loss, entropy_loss, approx_kl, permutation_key = update_ppo(
         #     env, args, agent_state, storage, permutation_key)
         # assert jnp.isclose(loss, loss2) and jnp.isclose(pg_loss, pg_loss2) and jnp.isclose(v_loss, v_loss2) and \
         #     jnp.isclose(entropy_loss, entropy_loss2) and jnp.isclose(approx_kl, approx_kl2)
+
+        time_diff = time.time() - start_time
+        print(f'- Policy update done in  {(time_diff):.3f} [s]')
+        print('-- Components of loss:')
+        for key,info in losses.items():
+            print(f'--- {key}: {info:.4f}')
+
+        lip_policy = lipschitz_coeff_l1(agent_state.params['actor'])
+
+        print(f'- Lipschitz coefficient (L1-norm) of policy network: {lip_policy:.3f}')
 
         # Calculate how good an approximation of the return is the value function
         y_pred, y_true = storage.values, storage.returns
         var_y = jnp.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        speed = (args.num_envs * args.num_steps) / tocDiff(False)
-        print(f' - Number of steps per second: {speed:.2f}')
+        speed = steps_per_iteration / (time.time() - start_iter_time)
+        print(f' - Speed of total iteration: {speed:.2f} steps per second')
 
 # %%
 
@@ -680,7 +722,7 @@ def PPO(environment_function, args, neurons_per_layer=[64,64], activation_functi
 
     # %%
 
-    from commons import define_grid
+    from learner import define_grid
 
     fig, ax = plt.subplots()
 

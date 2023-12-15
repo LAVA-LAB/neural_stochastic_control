@@ -4,13 +4,6 @@ import torch
 import control as ct
 import time
 
-def define_grid(low, high, size):
-
-    points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
-    grid = np.array(list(itertools.product(*points)))
-
-    return grid
-
 def lqr(A, B, Q, R, verbose=False):
 
     K, S, E = ct.dlqr(A, B, Q, R)

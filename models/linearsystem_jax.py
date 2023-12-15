@@ -34,29 +34,73 @@ class LinearEnv(gym.Env):
         self.clock = None
         self.isopen = True
 
+        self.state_dim = 2
+
         self.A = np.array([
-            [1, 0.0196],
-            [0, 0.98]
+            [1, 0.045],
+            [0, 0.9]
         ])
         self.B = np.array([
-            [0.002],
-            [0.1]
+            [0.45],
+            [0.5]
         ])
-        self.W = np.diag([0.002, 0.001])
+        self.W = np.diag([0.01, 0.005])
 
-        high = np.array([1.0, 1.0], dtype=np.float32)
+        # Lipschitz coefficient of linear dynamical system is maximum sum of rows in A, B, and W matrix.
+        self.lipschitz_f = jnp.max(jnp.array([jnp.sum(self.A[i]) + self.B[i] + self.W[i] for i in range(len(self.A))]))
+
+        # Max step size (big Delta) under one step transition
+        # TODO: Make big Delta adaptive (it may change based on the policy)
+        state_space_vertices = np.array([
+            [1.5, 1.5],
+            [-1.5, 1.5],
+            [-1.5, -1.5],
+            [1.5, -1.5]
+        ])
+        input_vertices = np.array([[-self.max_torque], [self.max_torque]])
+        noise_vertices = np.array([
+            [1, 1],
+            [-1, 1],
+            [-1, -1],
+            [1, -1]
+        ])
+        self.max_step_Delta = np.max([
+            np.sum(np.abs(x - (self.A @ x + self.B @ u + self.W @ w)))
+            for x in state_space_vertices for u in input_vertices for w in noise_vertices
+        ])
+
+
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
             low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
         )
+
+        # Set observation / state space
+        high = np.array([1.5, 1.5], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
-        stab_high = np.array([0.2, 0.2], dtype=np.float32)
-        self.stabilize_space = spaces.Box(low=-stab_high, high=stab_high, dtype=np.float32)
+        # Set target set
+        high = np.array([0.2, 0.2], dtype=np.float32)
+        self.target_space = [
+            spaces.Box(low=-high, high=high, dtype=np.float32)
+        ]
 
-        self.state = np.zeros(2)
+        self.init_space = [
+            spaces.Box(low=np.array([-0.25, -0.1], dtype=np.float32), high=np.array([-0.2, 0.1], dtype=np.float32),
+                       dtype=np.float32),
+            spaces.Box(low=np.array([0.2, -0.1], dtype=np.float32), high=np.array([0.25, 0.1], dtype=np.float32),
+                       dtype=np.float32),
+        ]
+
+        self.unsafe_space = [
+            spaces.Box(low=np.array([-1.5, -1.5], dtype=np.float32), high=np.array([-1.4, 0], dtype=np.float32),
+                       dtype=np.float32),
+            spaces.Box(low=np.array([1.4, 0], dtype=np.float32), high=np.array([1.5, 1.5], dtype=np.float32),
+                       dtype=np.float32),
+        ]
+
         self.num_steps_until_reset = 1000
 
         # Define vectorized functions

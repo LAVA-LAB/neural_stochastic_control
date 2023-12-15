@@ -6,7 +6,10 @@ import jax.numpy as jnp
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-from commons import define_grid
+from matplotlib.collections import PatchCollection
+from matplotlib.patches import Rectangle
+
+from learner import define_grid
 
 def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
 
@@ -44,6 +47,40 @@ def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
     plt.show()
 
     return traces
+
+def plot_layout(env, train_buffer=None):
+
+    if len(env.observation_space.low) != 2:
+        print(f" >> Cannot create layout plot: environment has wrong state dimension (namely {len(env.observation_space.low)}.")
+        return
+
+    fig, ax = plt.subplots()
+
+    # Plot stabilize set
+    if type(env.stabilize_space) == list:
+        for set in env.stabilize_space:
+            width, height = set.high - set.low
+            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='red'))
+
+    else:
+        width, height = env.stabilize_space.high - env.stabilize_space.low
+        ax.add_patch(Rectangle(env.stabilize_space.low, width, height, fill=False, edgecolor='red'))
+
+    # Plot data points in buffer that are not in the stabilizing set
+    if train_buffer:
+        x,y = train_buffer.data_not_in_Xs.T
+        plt.scatter(x,y, color='black', s=1)
+
+    # XY limits
+    low = env.observation_space.low
+    high = env.observation_space.high
+    ax.set_xlim(low[0], high[0])
+    ax.set_ylim(low[1], high[1])
+
+    ax.set_title("Problem layout", fontsize=10)
+    plt.show()
+
+    return
 
 def vector_plot(env, Pi_state, vectors_per_dim = 10):
 
