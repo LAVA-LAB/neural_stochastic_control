@@ -166,14 +166,6 @@ learnIters = 1000
 
 for i in range(learnIters):
 
-    # Jitting with JAX to XLA does not support dynamically shaped arrays. Thus, we set a fixed maximum size and always
-    # feed arrays of the same size to the functions below. Then, we mask the larger array to obtain the relevant values
-    samples_belowM_maxsize = jnp.int32(len(train_buffer.data))
-    samples_belowM = jnp.zeros((samples_belowM_maxsize, env.state_dim), dtype=jnp.float32)
-    dt = train_buffer.data[(V_state.apply_fn(V_state.params, train_buffer.data) < learn.M).flatten()]
-    samples_belowM = samples_belowM.at[:len(dt)].set(dt)
-    samples_belowM_actIdxs = jnp.array([True]*len(dt) + [False]*int(samples_belowM_maxsize-len(dt)), dtype=jnp.bool_)
-
     V_grads, Policy_grads, infos, noise_key = learn.train_step(
         key = noise_key,
         V_state = V_state,
