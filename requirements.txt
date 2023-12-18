@@ -1,5 +1,6 @@
 Box2D==2.3.2
 box2d-py==2.3.8
+control==0.9.4
 flax @ git+https://github.com/google/flax.git@230b0d77e98da22b6e574c3cbff743ca1504bfca
 gymnasium==0.29.1
 ipython==8.18.1

@@ -54,8 +54,8 @@ activation_functions = [nn.relu, nn.relu]
 
 # %% ### PPO policy initialization ###
 
-args.new_ppo = False
-args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_11-00-16'
+args.new_ppo = True
+# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_11-00-16'
 
 if args.new_ppo:
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
