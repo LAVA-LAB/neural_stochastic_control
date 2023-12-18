@@ -13,8 +13,9 @@ from gymnasium import spaces
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 from functools import partial
-
 from jax_utils import vsplit
+
+from commons import RectangularSet, MultiRectangularSet
 
 class LinearEnv(gym.Env):
 
@@ -47,7 +48,7 @@ class LinearEnv(gym.Env):
         self.W = np.diag([0.01, 0.005])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of rows in A, B, and W matrix.
-        self.lipschitz_f = jnp.max(jnp.array([jnp.sum(self.A[i]) + self.B[i] + self.W[i] for i in range(len(self.A))]))
+        self.lipschitz_f = float(jnp.max(jnp.array([jnp.sum(self.A[i]) + self.B[i] + self.W[i] for i in range(len(self.A))])))
 
         # Max step size (big Delta) under one step transition
         # TODO: Make big Delta adaptive (it may change based on the policy)
@@ -69,7 +70,6 @@ class LinearEnv(gym.Env):
             for x in state_space_vertices for u in input_vertices for w in noise_vertices
         ])
 
-
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
@@ -82,24 +82,17 @@ class LinearEnv(gym.Env):
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
         # Set target set
-        high = np.array([0.2, 0.2], dtype=np.float32)
-        self.target_space = [
-            spaces.Box(low=-high, high=high, dtype=np.float32)
-        ]
+        self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
-        self.init_space = [
-            spaces.Box(low=np.array([-0.25, -0.1], dtype=np.float32), high=np.array([-0.2, 0.1], dtype=np.float32),
-                       dtype=np.float32),
-            spaces.Box(low=np.array([0.2, -0.1], dtype=np.float32), high=np.array([0.25, 0.1], dtype=np.float32),
-                       dtype=np.float32),
-        ]
+        self.init_space = MultiRectangularSet([
+            RectangularSet(low=np.array([-0.3, -0.1]), high=np.array([-0.2, 0.1]), dtype=np.float32),
+            RectangularSet(low=np.array([0.2, -0.1]), high=np.array([0.3, 0.1]), dtype=np.float32)
+        ])
 
-        self.unsafe_space = [
-            spaces.Box(low=np.array([-1.5, -1.5], dtype=np.float32), high=np.array([-1.4, 0], dtype=np.float32),
-                       dtype=np.float32),
-            spaces.Box(low=np.array([1.4, 0], dtype=np.float32), high=np.array([1.5, 1.5], dtype=np.float32),
-                       dtype=np.float32),
-        ]
+        self.unsafe_space = MultiRectangularSet([
+            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
+            RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
+        ])
 
         self.num_steps_until_reset = 1000
 
@@ -125,11 +118,13 @@ class LinearEnv(gym.Env):
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
         # Propagate dynamics
-        new_x = self.A[0, 0] * state[0] + self.A[0, 1] * state[1] + self.B[0, 0] * u[0] + \
-                self.W[0, 0] * noise[0] + self.W[0, 1] * noise[1]
-        new_y = self.A[1, 0] * state[0] + self.A[1, 1] * state[1] + self.B[1, 0] * u[0] + \
-                self.W[1, 0] * noise[0] + self.W[1, 1] * noise[1]
-        state = jnp.array([new_x, new_y])
+        # new_x = self.A[0, 0] * state[0] + self.A[0, 1] * state[1] + self.B[0, 0] * u[0] + \
+        #         self.W[0, 0] * noise[0] + self.W[0, 1] * noise[1]
+        # new_y = self.A[1, 0] * state[0] + self.A[1, 1] * state[1] + self.B[1, 0] * u[0] + \
+        #         self.W[1, 0] * noise[0] + self.W[1, 1] * noise[1]
+        # state = jnp.array([new_x, new_y])
+
+        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
 
         return state, key
 
