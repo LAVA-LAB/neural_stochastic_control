@@ -91,11 +91,11 @@ class Verifier:
             u = actions[i:j]
             key = noise_keys[i:j]
 
-            # if mode == 'cpu':
-            #     with jax.default_device(cpu_device):
-            #         Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
-            # else:
-            Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            if mode == 'cpu':
+                with jax.default_device(cpu_device):
+                    Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            else:
+                Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
