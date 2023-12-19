@@ -90,8 +90,8 @@ class Learner:
         self.lambda_lipschitz = 10 * 0.001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
-        self.max_lip_policy = 4
-        self.max_lip_certificate = 15
+        self.max_lip_policy = 2 #4
+        self.max_lip_certificate = 10 # 15
 
         self.global_minimum = 0.05
         self.N_expectation = 32 # 144
@@ -147,7 +147,7 @@ class Learner:
                    (self.env.lipschitz_f * (jnp.maximum(self.max_lip_policy, lip_policy) + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, Kmax, decrease_eps, V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
             if self.exp_decrease_max:
