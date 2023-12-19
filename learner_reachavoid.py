@@ -63,7 +63,7 @@ class Learner:
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4
-        self.max_lip_certificate = 15
+        self.max_lip_certificate = 10 # 15
 
         self.epsilon = 0.3
         self.N_expectation = 16 # 144

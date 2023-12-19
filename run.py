@@ -115,7 +115,7 @@ env = LinearEnv()
 
 args.counterexample_fraction = 0.5
 
-args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 args.train_mesh_tau = 0.01
@@ -181,8 +181,8 @@ for i in range(CEGIS_iters):
     print(f'Start CEGIS iteration {i} (samples in train buffer: {len(train_buffer.data)})')
     epoch_start = time.time()
 
-    if i >= 1:
-        # args.update_policy = True
+    if i >= 3:
+        args.update_policy = True
         epochs = 1000
     else:
         epochs = 10000
@@ -305,17 +305,17 @@ for i in range(CEGIS_iters):
     verify.update_dataset_train(train_buffer.data)
 
     # Refine mesh and discretization
-    # args.verify_mesh_tau = np.maximum(0.5 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
-    # args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
+    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+    args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
-    # num_per_dimension_verify = np.array(
-    #     np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
-    # verify_buffer = Buffer(dim=env.observation_space.shape[0])
-    # initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
-    #                                   env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
-    #                                   size=num_per_dimension_verify)
-    # verify_buffer.append(initial_verify_grid)
-    # verify.update_dataset_verify(verify_buffer.data)
+    num_per_dimension_verify = np.array(
+        np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
+    verify_buffer = Buffer(dim=env.observation_space.shape[0])
+    initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
+                                      env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
+                                      size=num_per_dimension_verify)
+    verify_buffer.append(initial_verify_grid)
+    verify.update_dataset_verify(verify_buffer.data)
 
     # Plot dataset
     filename = f"plots/data_{start_datetime}_iteration={i}"

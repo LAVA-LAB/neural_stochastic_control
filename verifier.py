@@ -42,7 +42,7 @@ class Verifier:
 
 
     def check_conditions(self, env, V_state, Policy_state, noise_key,
-                         expectation_batch = 100000):
+                         expectation_batch = 100000, mode='cpu'):
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)
@@ -51,7 +51,7 @@ class Verifier:
         print('- Check martingale conditions...')
 
         # Expected decrease condition check on all states outside target set
-        try:
+        if mode == ''
             Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
         except:
             with jax.default_device(cpu_device):
