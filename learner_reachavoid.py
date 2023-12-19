@@ -132,14 +132,14 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau - 1)
-            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
+            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
 
             # Loss in unsafe state set
-            loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau)
-            # loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
-            #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
+            # loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
+            #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau)
+            loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
             Kmax = self.max_lip_certificate * (self.env.lipschitz_f * (self.max_lip_policy + 1) + 1)
@@ -243,7 +243,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least eps_train.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + 0.3)
+        loss = jnp.maximum(0, diff + tau * K)
 
         return loss, diff
 

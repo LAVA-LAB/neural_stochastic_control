@@ -183,9 +183,9 @@ for i in range(CEGIS_iters):
 
     if i >= 3:
         args.update_policy = True
-        epochs = 1000
+        epochs = 10000
     else:
-        epochs = 1000
+        epochs = 10000
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.

@@ -45,7 +45,7 @@ class LinearEnv(gym.Env):
             [0.45],
             [0.5]
         ])
-        self.W = np.diag([0.01, 0.005])
+        self.W = np.zeros((2,2)) # np.diag([0.01, 0.005])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of rows in A, B, and W matrix.
         self.lipschitz_f = float(jnp.max(jnp.array([jnp.sum(self.A[i]) + self.B[i] + self.W[i] for i in range(len(self.A))])))
