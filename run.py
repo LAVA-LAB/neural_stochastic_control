@@ -113,7 +113,7 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.counterexample_fraction = 0.5
+args.counterexample_fraction = 0.25
 
 args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
