@@ -62,7 +62,8 @@ class Verifier:
 
         # TODO: For now, this expected decrease condition is approximate
         noise_key, subkey = jax.random.split(noise_key)
-        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 500))
+        with jax.default_device(cpu_device):
+            noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 500))
 
         # Determine actions for every point in subgrid
         with jax.default_device(cpu_device):
