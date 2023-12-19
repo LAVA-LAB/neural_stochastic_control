@@ -70,12 +70,12 @@ def plot_layout(env, train_data=None, additional_data=None, folder=False, filena
     if train_data is not None:
         x = train_data[:,0]
         y = train_data[:,1]
-        plt.scatter(x,y, color='black', s=1)
+        plt.scatter(x,y, color='black', s=0.1)
 
     if additional_data is not None:
         x = additional_data[:, 0]
         y = additional_data[:, 1]
-        plt.scatter(x,y, color='blue', s=1)
+        plt.scatter(x,y, color='blue', s=0.1)
 
     # XY limits
     low = env.observation_space.low

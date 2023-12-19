@@ -113,7 +113,7 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 args.train_mesh_tau = 0.01
@@ -188,9 +188,19 @@ for i in range(CEGIS_iters):
     else:
         epochs = 2000
 
+    # Experiment by perturbing the training grid
+    key, perturbation_key = jax.random.split(key, 2)
+    perturbation = jax.random.uniform(perturbation_key, train_buffer.data.shape,
+                                      minval=-0.5 * args.train_mesh_cell_width,
+                                      maxval=0.5 * args.train_mesh_cell_width)
+
+    # Plot dataset
+    filename = f"plots/data_{start_datetime}_iteration={i}"
+    plot_layout(env, train_buffer.data + perturbation, counterx_buffer.data, folder=args.cwd, filename=filename)
+
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
-    C = format_training_data(env, train_buffer.data)
+    C = format_training_data(env, train_buffer.data + perturbation)
     key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
                                                              len(train_buffer.data), epochs, 0.75 * args.batch_size)
 
@@ -198,7 +208,7 @@ for i in range(CEGIS_iters):
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
                                                              len(counterx_buffer.data), epochs, 0.25 * args.batch_size)
 
-    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
+    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.05*np.ones(len(batch_X_decrease))))
 
     for j in range(epochs):
         # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
@@ -253,7 +263,7 @@ for i in range(CEGIS_iters):
     counterx_buffer.append_and_remove(fraction_to_keep=0.5, samples=samples_to_add, buffer_size=30000)
 
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.0005)
+    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
     num_per_dimension_verify = np.array(
@@ -264,10 +274,6 @@ for i in range(CEGIS_iters):
                                       size=num_per_dimension_verify)
     verify_buffer.append(initial_verify_grid)
     verify.update_dataset_verify(verify_buffer.data)
-
-    # Plot dataset
-    filename = f"plots/data_{start_datetime}_iteration={i}"
-    plot_layout(env, train_buffer.data, samples_to_add, folder=args.cwd, filename=filename)
 
     plt.close('all')
     print('\n================\n')
