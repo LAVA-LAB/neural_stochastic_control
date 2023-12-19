@@ -4,6 +4,9 @@ from functools import partial
 from jax import jit
 import numpy as np
 import time
+from jax_utils import lipschitz_coeff_l1
+
+cpu_device = jax.devices('cpu')[0]
 
 class Verifier:
 
@@ -38,13 +41,18 @@ class Verifier:
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
 
-    def check_conditions(self, V_state, Policy_state, lip_policy, lip_certificate, K, noise_key,
+    def check_conditions(self, env, V_state, Policy_state, noise_key,
                          expectation_batch = 100000):
+
+        lip_policy = lipschitz_coeff_l1(Policy_state.params)
+        lip_certificate = lipschitz_coeff_l1(V_state.params)
+        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         print('- Check martingale conditions...')
 
         # Expected decrease condition check on all states outside target set
-        Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
+        with jax.default_device(cpu_device):
+            Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                                                         < 1 / (1-self.args.probability_bound)).flatten()
         check_expDecr_at = self.C_decrease_adj[idxs]
@@ -63,18 +71,11 @@ class Verifier:
         starts = np.arange(num_batches) * expectation_batch
         ends   = np.minimum(starts + expectation_batch, len(check_expDecr_at))
 
-        # starttime = time.time()
         for i,j in zip(starts, ends):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             key = noise_keys[i:j]
             Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
-        # print('Streamed version took:', time.time()-starttime)
-
-        # starttime = time.time()
-        # for i,(x,u,key) in enumerate(zip(check_expDecr_at, actions, noise_keys)):
-        #     Vdiff[i] = self.V_step_noise_batch(V_state, V_state.params, x, u, key)
-        # print('Looped version took:', time.time() - starttime)
 
         # # Expected certificate value after step -- NOTE: This vectorized approach takes (too) much memory!
         # Vdecr = self.V_step_vectorized(V_state, V_state.params, check_expDecr_at, actions, noise_keys)

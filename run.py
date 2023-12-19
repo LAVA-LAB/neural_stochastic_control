@@ -55,7 +55,7 @@ activation_functions = [nn.relu, nn.relu]
 # %% ### PPO policy initialization ###
 
 args.new_ppo = True
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_11-00-16'
+# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.new_ppo:
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
@@ -95,6 +95,7 @@ if args.new_ppo:
     save_args = orbax_utils.save_args_from_target(ckpt)
     orbax_checkpointer.save(checkpoint_path, ckpt, save_args=save_args)
 else:
+    # Load existing pretrained policy
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
 
@@ -105,14 +106,22 @@ from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_layout
 
+# Restore state of policy network
 raw_restored = orbax_checkpointer.restore(checkpoint_path)
 ppo_state = raw_restored['model']
 
-# from plot import vector_plot
-# vector_plot(env, Policy_state)
-
 # Create gym environment (jax/flax version)
 env = LinearEnv()
+
+args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
+
+args.train_mesh_tau = 0.01
+args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
+
+# Probability bound to check for
+args.probability_bound = 0.1
+args.batch_size = 4 * 1024
 
 # Initialize certificate network
 certificate_model = MLP_softplus(neurons_per_layer + [1], activation_functions)
@@ -136,17 +145,6 @@ Policy_state = create_train_state(
 for layer in Policy_state.params['params'].keys():
     Policy_state.params['params'][layer]['kernel'] = ppo_state['params']['actor']['params'][layer]['kernel']
     Policy_state.params['params'][layer]['bias'] = ppo_state['params']['actor']['params'][layer]['bias']
-
-args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
-args.verify_mesh_tau_min = 0.001
-args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
-
-args.train_mesh_tau = 0.03
-args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
-
-# Probability bound to check for
-args.probability_bound = 0.5
-args.batch_size = 4 * 1024
 
 # Define Learner
 learn = Learner(env, args=args)
@@ -182,8 +180,8 @@ for i in range(CEGIS_iters):
     epoch_start = time.time()
 
     if i >= 3:
-        args.update_policy = True
-        epochs = 1000
+        # args.update_policy = True
+        epochs = 500
     else:
         epochs = 1000
 
@@ -210,6 +208,7 @@ for i in range(CEGIS_iters):
         return (key, V_state, Policy_state), [i]
 
     # Convert train dataset into batches
+    # TODO: Tidy up this stuff..
     key, permutation_key = jax.random.split(key)
     permutation_keys = jax.random.split(permutation_key)
     current_batch_size = min(args.batch_size, len(train_buffer.data))
@@ -232,16 +231,15 @@ for i in range(CEGIS_iters):
     idxs_C_target = jax.random.choice(permutation_keys[3], len(verify.C_target), shape=(epochs, batch_C_target),
                                       replace=True)
 
+    # TODO: Check if this jax.lax.scan version of the train step could speed up things
     # idxs = jax.random.choice(permutation_key, len(train_buffer.data), shape=(epochs, current_batch_size), replace=True)
-
     # val = (key, V_state, Policy_state)
     # val, result = jax.lax.scan(epoch_body, init=val, xs=idxs)
     # (key, V_state, Policy_state) = val
     # infos = {}
 
-    #####
-
     for j in range(epochs):
+        # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
         V_grads, Policy_grads, infos, key, diff = learn.train_step(
             key = key,
             V_state = V_state,
@@ -268,8 +266,6 @@ for i in range(CEGIS_iters):
             for ky, info in infos.items():
                 print(f' - {ky}: {info:.8f}')
 
-    #####
-
     epoch_end = time.time()
     print(f'\nLast epoch ({epochs} iterations) took {epoch_end - epoch_start:.2f} seconds')
 
@@ -278,21 +274,16 @@ for i in range(CEGIS_iters):
 
     print(f'\nNumber of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
 
-    lip_policy = lipschitz_coeff_l1(Policy_state.params)
-    lip_certificate = lipschitz_coeff_l1(V_state.params)
-    K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
-
-    print(f'Check martingale conditions over {len(verify_buffer.data)} smples...')
-
+    print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
     C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
-        verify.check_conditions(V_state, Policy_state, lip_policy, lip_certificate, K, key)
+        verify.check_conditions(env, V_state, Policy_state, key)
 
     print(f'- {len(C_expDecr_violations)} expected decrease violations')
     print(f'- {len(C_init_violations)} initial state violations')
     print(f'- {len(C_unsafe_violations)} unsafe state violations')
 
     # Samples to add to dataset
-    idxs = np.random.choice(len(C_expDecr_violations), size=min(len(C_expDecr_violations), 1000000), replace=False)
+    idxs = np.random.choice(len(C_expDecr_violations), size=min(len(C_expDecr_violations), 25000), replace=False)
     samples_to_add = np.unique(np.vstack([C_expDecr_violations[idxs], C_init_violations, C_unsafe_violations]), axis=0)
 
     # key, perturbation_key = jax.random.split(key)
@@ -303,14 +294,24 @@ for i in range(CEGIS_iters):
     # # Append to buffer
     train_buffer.append(samples_to_add)
     verify.update_dataset_train(train_buffer.data)
-    # verify.update_dataset_verify(verify_buffer.data)
 
     if len(samples_to_add) == 0:
         print('Successfully learned martingale!')
         break
 
+
+    num_per_dimension_train = np.array(
+        np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
+    train_buffer = Buffer(dim=env.observation_space.shape[0])
+    initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
+                                     env.observation_space.high - 0.5 * args.train_mesh_tau,
+                                     size=num_per_dimension_train)
+    train_buffer.append(initial_train_grid)
+    verify.update_dataset_train(train_buffer.data)
+
+
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+    args.verify_mesh_tau = np.maximum(0.5 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
     num_per_dimension_verify = np.array(
