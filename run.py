@@ -184,9 +184,9 @@ for i in range(CEGIS_iters):
 
     if i >= 3:
         args.update_policy = True
-        epochs = 1000
-    else:
         epochs = 2000
+    else:
+        epochs = 10000
 
     # Experiment by perturbing the training grid
     key, perturbation_key = jax.random.split(key, 2)
