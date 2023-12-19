@@ -6,6 +6,7 @@ import numpy as np
 import time
 from jax_utils import lipschitz_coeff_l1
 import os
+from tqdm import tqdm
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
@@ -47,7 +48,7 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
+    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 1000):
 
         # Expected decrease condition check on all states outside target set
         with jax.default_device(cpu_device):
@@ -72,12 +73,11 @@ class Verifier:
         starts = np.arange(num_batches) * expectation_batch
         ends = np.minimum(starts + expectation_batch, len(check_expDecr_at))
 
-        for z, (i, j) in enumerate(zip(starts, ends)):
+        for (i, j) in tqdm(zip(starts, ends)):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             key = noise_keys[i:j]
             Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
-            print(f'--- Block {int(z)} out of {len(starts)} done')
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
