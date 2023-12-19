@@ -143,7 +143,8 @@ class Learner:
                                       jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
-            Kmax = self.max_lip_certificate * (self.env.lipschitz_f * (self.max_lip_policy + 1) + 1)
+            Kmax = jnp.maximum(self.max_lip_certificate, lip_certificate) * \
+                   (self.env.lipschitz_f * (jnp.maximum(self.max_lip_policy, lip_policy) + 1) + 1)
 
             # Loss for expected decrease condition
             exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
