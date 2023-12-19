@@ -147,7 +147,7 @@ class Learner:
                    (self.env.lipschitz_f * (jnp.maximum(self.max_lip_policy, lip_policy) + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, Kmax, decrease_eps, V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
             loss_exp_decrease = jnp.mean(jnp.concatenate((exp_decrease)))

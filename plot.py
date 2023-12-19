@@ -87,7 +87,7 @@ def plot_layout(env, train_data=None, additional_data=None, folder=False, filena
 
     if folder and filename:
         # Save figure
-        for form in ['pdf', 'png']:
+        for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
             plt.savefig(filepath, format=form, bbox_inches='tight')
 
@@ -132,6 +132,6 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
     if folder and filename:
         # Save figure
-        for form in ['pdf', 'png']:
+        for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
             plt.savefig(filepath, format=form, bbox_inches='tight')
