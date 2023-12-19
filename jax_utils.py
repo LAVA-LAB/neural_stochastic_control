@@ -7,9 +7,13 @@ vsplit_fun = jax.vmap(jax.random.split)
 def vsplit(keys):
     return vsplit_fun(keys)
 
-def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0):
+def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0, params=None):
 
-    params = model.init(rng, jnp.ones([1, in_dim]))
+    if params is None:
+        params = model.init(rng, jnp.ones([1, in_dim]))
+    else:
+        params = params
+
     tx = optax.adam(learning_rate)
     if ema > 0:
         tx = optax.chain(tx, optax.ema(ema))

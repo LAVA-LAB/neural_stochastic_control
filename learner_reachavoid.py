@@ -90,10 +90,10 @@ class Learner:
         self.lambda_lipschitz = 10 * 0.001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
-        self.max_lip_policy = 2 #4
-        self.max_lip_certificate = 10 # 15
+        self.max_lip_policy = 4 #4
+        self.max_lip_certificate = 15 # 15
 
-        self.global_minimum = 0.05
+        self.global_minimum = 0.2
         self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation
