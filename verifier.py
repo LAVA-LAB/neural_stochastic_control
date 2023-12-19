@@ -5,8 +5,15 @@ from jax import jit
 import numpy as np
 import time
 from jax_utils import lipschitz_coeff_l1
+import os
 
 cpu_device = jax.devices('cpu')[0]
+
+# Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
+os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
+# Fix CUDNN non-determinisim; https://github.com/google/jax/issues/4823#issuecomment-952835771
+os.environ["TF_XLA_FLAGS"] = "--xla_gpu_autotune_level=2 --xla_gpu_deterministic_reductions"
+os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 class Verifier:
 
@@ -42,7 +49,7 @@ class Verifier:
 
 
     def check_conditions(self, env, V_state, Policy_state, noise_key,
-                         expectation_batch = 100000, mode='cpu'):
+                         expectation_batch = 100000, mode='gpu'):
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)

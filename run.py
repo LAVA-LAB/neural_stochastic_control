@@ -115,7 +115,7 @@ env = LinearEnv()
 
 args.counterexample_fraction = 0.5
 
-args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 args.train_mesh_tau = 0.01
