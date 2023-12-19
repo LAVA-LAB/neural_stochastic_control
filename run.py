@@ -118,7 +118,7 @@ args.counterexample_fraction = 0.25
 args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
-args.train_mesh_tau = 0.01
+args.train_mesh_tau = 0.001
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Probability bound to check for
@@ -320,8 +320,8 @@ for i in range(CEGIS_iters):
     verify.update_dataset_verify(verify_buffer.data)
 
     # Plot dataset
-    filename = f"plots/data_{start_datetime}_iteration={i}"
-    plot_layout(env, train_buffer.data, samples_to_add, folder=args.cwd, filename=filename)
+    # filename = f"plots/data_{start_datetime}_iteration={i}"
+    # plot_layout(env, train_buffer.data, samples_to_add, folder=args.cwd, filename=filename)
 
     plt.close('all')
     print('\n================\n')
