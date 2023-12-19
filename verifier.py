@@ -48,7 +48,7 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 1000):
+    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
 
         # Expected decrease condition check on all states outside target set
         with jax.default_device(cpu_device):
@@ -62,8 +62,7 @@ class Verifier:
 
         # TODO: For now, this expected decrease condition is approximate
         noise_key, subkey = jax.random.split(noise_key)
-        with jax.default_device(cpu_device):
-            noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 200))
+        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 200))
 
         # Determine actions for every point in subgrid
         with jax.default_device(cpu_device):
