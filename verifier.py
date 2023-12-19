@@ -49,7 +49,7 @@ class Verifier:
 
 
     def check_conditions(self, env, V_state, Policy_state, noise_key,
-                         expectation_batch = 100000, mode='gpu'):
+                         expectation_batch = 10000, mode='cpu'):
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)
@@ -72,7 +72,7 @@ class Verifier:
 
         # TODO: For now, this expected decrease condition is approximate
         noise_key, subkey = jax.random.split(noise_key)
-        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 50))
+        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 250))
 
         # Determine actions for every point in subgrid
         if mode == 'cpu':
@@ -91,11 +91,11 @@ class Verifier:
             u = actions[i:j]
             key = noise_keys[i:j]
 
-            if mode == 'cpu':
-                with jax.default_device(cpu_device):
-                    Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
-            else:
-                Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            # if mode == 'cpu':
+            #     with jax.default_device(cpu_device):
+            #         Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            # else:
+            Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
