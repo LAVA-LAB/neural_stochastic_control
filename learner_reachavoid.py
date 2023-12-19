@@ -93,7 +93,7 @@ class Learner:
         self.max_lip_policy = 4
         self.max_lip_certificate = 20 # 15
 
-        self.epsilon = 0.3
+        self.epsilon = 0.0
         self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation

@@ -189,7 +189,7 @@ for i in range(CEGIS_iters):
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
-    C = format_training_data(env, np.vstack((train_buffer.data, counterx_buffer.data)))
+    C = format_training_data(env, train_buffer.data)
     batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
                                                                        len(train_buffer.data), epochs, args.batch_size)
 
@@ -245,7 +245,7 @@ for i in range(CEGIS_iters):
     counterx_buffer.append_and_remove(fraction_to_keep=0.5, samples=samples_to_add, buffer_size=30000)
 
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)
+    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.0005)
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
     num_per_dimension_verify = np.array(
