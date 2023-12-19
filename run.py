@@ -160,6 +160,7 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 counterx_buffer = Buffer(dim = env.observation_space.shape[0])
+counterx_buffer.append_and_remove(fraction_to_keep=0.0, samples=initial_train_grid, buffer_size=30000)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 num_per_dimension_verify = np.array(
@@ -185,13 +186,19 @@ for i in range(CEGIS_iters):
         args.update_policy = True
         epochs = 1000
     else:
-        epochs = 5000
+        epochs = 2000
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
-    batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
-                                                                       len(train_buffer.data), epochs, args.batch_size)
+    batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
+                                                             len(train_buffer.data), epochs, 0.75 * args.batch_size)
+
+    X = format_training_data(env, counterx_buffer.data)
+    batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
+                                                             len(counterx_buffer.data), epochs, 0.25*args.batch_size)
+
+    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
     for j in range(epochs):
         # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
@@ -199,10 +206,11 @@ for i in range(CEGIS_iters):
             key = key,
             V_state = V_state,
             Policy_state = Policy_state,
-            C_decrease = batches_C_decrease[j],
-            C_init = batch_C_init[j],
-            C_unsafe = batch_C_unsafe[j],
-            C_target = batch_C_target[j])
+            C_decrease = np.vstack((batch_C_decrease[j], batch_X_decrease[j])),
+            C_init = np.vstack((batch_C_init[j], batch_X_init[j])),
+            C_unsafe = np.vstack((batch_C_unsafe[j], batch_X_unsafe[j])),
+            C_target = np.vstack((batch_C_target[j], batch_X_target[j])),
+            decrease_eps = decrease_eps)
 
         # Update parameters
         if args.update_certificate:

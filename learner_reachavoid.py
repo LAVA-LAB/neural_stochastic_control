@@ -97,7 +97,7 @@ class Learner:
         self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation
-        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, 0, 0, 0), out_axes=(0, 0))
+        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, None, 0, 0, 0), out_axes=(0, 0))
 
         return
 
@@ -111,7 +111,8 @@ class Learner:
                    C_decrease,
                    C_init,
                    C_unsafe,
-                   C_target
+                   C_target,
+                   decrease_eps,
                    ):
 
         key, subkey = jax.random.split(key, 2)
@@ -145,10 +146,10 @@ class Learner:
             Kmax = self.max_lip_certificate * (self.env.lipschitz_f * (self.max_lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, jnp.maximum(K, Kmax), V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, jnp.maximum(K, Kmax), decrease_eps, V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease)
+            loss_exp_decrease = jnp.mean(jnp.concatenate((exp_decrease)))
 
             violations = (diff >= -self.args.verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
@@ -224,7 +225,7 @@ class Learner:
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
 
-    def loss_exp_decrease(self, tau, K, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, tau, K, epsilon, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -243,7 +244,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least eps_train.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K)
+        loss = jnp.maximum(0, diff + tau * K + epsilon)
 
         return loss, diff
 
