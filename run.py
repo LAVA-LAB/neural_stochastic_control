@@ -178,7 +178,7 @@ ticDiff()
 CEGIS_iters = 100
 
 for i in range(CEGIS_iters):
-    print(f'Start CEGIS iteration {i} (samples in train buffer: {len(train_buffer.data)})')
+    print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     epoch_start = time.time()
 
     if i >= 3:
