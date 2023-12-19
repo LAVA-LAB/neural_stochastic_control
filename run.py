@@ -54,8 +54,8 @@ activation_functions = [nn.relu, nn.relu]
 
 # %% ### PPO policy initialization ###
 
-args.new_ppo = True
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+args.new_ppo = False
+args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.new_ppo:
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
@@ -120,7 +120,7 @@ args.train_mesh_tau = 0.01
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Probability bound to check for
-args.probability_bound = 0.1
+args.probability_bound = 0.8
 args.batch_size = 4 * 1024
 
 # Initialize certificate network
@@ -173,7 +173,7 @@ verify.update_dataset_verify(verify_buffer.data)
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
 ticDiff()
-CEGIS_iters = 100
+CEGIS_iters = 1
 
 for i in range(CEGIS_iters):
     print(f'Start CEGIS iteration {i} (samples in train buffer: {len(train_buffer.data)})')
@@ -183,7 +183,7 @@ for i in range(CEGIS_iters):
         # args.update_policy = True
         epochs = 500
     else:
-        epochs = 1000
+        epochs = 100000
 
     @jax.jit
     def epoch_body(val, i):
@@ -277,10 +277,6 @@ for i in range(CEGIS_iters):
     print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
     C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
         verify.check_conditions(env, V_state, Policy_state, key)
-
-    print(f'- {len(C_expDecr_violations)} expected decrease violations')
-    print(f'- {len(C_init_violations)} initial state violations')
-    print(f'- {len(C_unsafe_violations)} unsafe state violations')
 
     # Samples to add to dataset
     idxs = np.random.choice(len(C_expDecr_violations), size=min(len(C_expDecr_violations), 25000), replace=False)
