@@ -113,7 +113,7 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_tau = 0.005 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 args.train_mesh_tau = 0.01
@@ -173,17 +173,17 @@ verify.update_dataset_verify(verify_buffer.data)
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
 ticDiff()
-CEGIS_iters = 1
+CEGIS_iters = 100
 
 for i in range(CEGIS_iters):
     print(f'Start CEGIS iteration {i} (samples in train buffer: {len(train_buffer.data)})')
     epoch_start = time.time()
 
-    if i >= 3:
+    if i >= 1:
         # args.update_policy = True
-        epochs = 500
+        epochs = 1000
     else:
-        epochs = 100000
+        epochs = 10000
 
     @jax.jit
     def epoch_body(val, i):
@@ -287,15 +287,11 @@ for i in range(CEGIS_iters):
     #                                   minval=-args.verify_mesh_cell_width,
     #                                   maxval=args.verify_mesh_cell_width)
 
-    # # Append to buffer
-    train_buffer.append(samples_to_add)
-    verify.update_dataset_train(train_buffer.data)
-
     if len(samples_to_add) == 0:
         print('Successfully learned martingale!')
         break
 
-
+    # Reset train grid to initial value and add current counterexamples to it
     num_per_dimension_train = np.array(
         np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
     train_buffer = Buffer(dim=env.observation_space.shape[0])
@@ -305,19 +301,18 @@ for i in range(CEGIS_iters):
     train_buffer.append(initial_train_grid)
     verify.update_dataset_train(train_buffer.data)
 
-
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.5 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
-    args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
+    # args.verify_mesh_tau = np.maximum(0.5 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+    # args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
-    num_per_dimension_verify = np.array(
-        np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
-    verify_buffer = Buffer(dim=env.observation_space.shape[0])
-    initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
-                                      env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
-                                      size=num_per_dimension_verify)
-    verify_buffer.append(initial_verify_grid)
-    verify.update_dataset_verify(verify_buffer.data)
+    # num_per_dimension_verify = np.array(
+    #     np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
+    # verify_buffer = Buffer(dim=env.observation_space.shape[0])
+    # initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
+    #                                   env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
+    #                                   size=num_per_dimension_verify)
+    # verify_buffer.append(initial_verify_grid)
+    # verify.update_dataset_verify(verify_buffer.data)
 
     # Plot dataset
     filename = f"plots/data_{start_datetime}_iteration={i}"
