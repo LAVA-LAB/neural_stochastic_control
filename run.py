@@ -121,7 +121,7 @@ args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The wid
 
 # Probability bound to check for
 args.probability_bound = 0.8
-args.batch_size = 4 * 1024
+args.batch_size = 8 * 1024
 
 # Initialize certificate network
 certificate_model = MLP_softplus(neurons_per_layer + [1], activation_functions)
@@ -129,7 +129,7 @@ V_state = create_train_state(
     model=certificate_model,
     rng=jax.random.PRNGKey(1),
     in_dim=2,
-    learning_rate=5e-4,
+    learning_rate=5e-3,
 )
 
 # Initialize policy network
@@ -184,9 +184,14 @@ for i in range(CEGIS_iters):
 
     if i >= 3:
         args.update_policy = True
-        epochs = 2000
+        epochs = 1000
     else:
-        epochs = 10000
+        epochs = 5000
+
+    if i >= 10:
+        learn.exp_decrease_max = True
+    else:
+        learn.exp_decrease_max = False
 
     # Experiment by perturbing the training grid
     key, perturbation_key = jax.random.split(key, 2)
