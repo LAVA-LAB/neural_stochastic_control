@@ -87,7 +87,7 @@ class Learner:
         self.env = env
 
         # Lipschitz factor
-        self.lambda_lipschitz = 10 * 0.001
+        self.lambda_lipschitz = 0.001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4 #4
