@@ -88,6 +88,8 @@ class Verifier:
         C_expDecr_violations = check_expDecr_at[idxs]
         # TODO: Insert (exact) expected decrease condition check here
 
+        return C_expDecr_violations, check_expDecr_at, noise_key
+
     def check_conditions(self, env, V_state, Policy_state, noise_key):
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
