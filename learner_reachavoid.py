@@ -66,7 +66,7 @@ class Learner:
         self.max_lip_certificate = 10 # 15
 
         self.epsilon = 0.3
-        self.N_expectation = 16 # 144
+        self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation
         self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, 0, 0, 0), out_axes=(0, 0))
@@ -104,12 +104,12 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.train_mesh_tau - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau - 1)
             # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.train_mesh_tau)
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau)
             # loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
             #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
@@ -117,7 +117,7 @@ class Learner:
             Kmax = self.max_lip_certificate * (self.env.lipschitz_f * (self.max_lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.train_mesh_tau, jnp.maximum(K, Kmax), V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, jnp.maximum(K, Kmax), V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
             loss_exp_decrease = jnp.mean(exp_decrease)
