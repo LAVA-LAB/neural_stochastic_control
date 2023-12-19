@@ -83,7 +83,11 @@ class Verifier:
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             key = noise_keys[i:j]
-            Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            try:
+                Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            except:
+                with jax.default_device(cpu_device):
+                    Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
