@@ -185,7 +185,7 @@ for i in range(CEGIS_iters):
         args.update_policy = True
         epochs = 1000
     else:
-        epochs = 50000
+        epochs = 5000
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
@@ -242,7 +242,7 @@ for i in range(CEGIS_iters):
         break
 
     # Add counterexamples to the counterexample buffer
-    counterx_buffer.append_and_remove(fraction_to_keep=0.50, samples=samples_to_add, buffer_size=45000)
+    counterx_buffer.append_and_remove(fraction_to_keep=0.5, samples=samples_to_add, buffer_size=30000)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)
