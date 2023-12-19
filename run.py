@@ -191,12 +191,12 @@ for i in range(CEGIS_iters):
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
-    batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
+    key = batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
                                                              len(train_buffer.data), epochs, 0.75 * args.batch_size)
 
     X = format_training_data(env, counterx_buffer.data)
-    batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
-                                                             len(counterx_buffer.data), epochs, 0.25*args.batch_size)
+    key = batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
+                                                             len(counterx_buffer.data), epochs, 0.25 * args.batch_size)
 
     decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 

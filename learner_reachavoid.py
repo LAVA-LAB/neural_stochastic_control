@@ -300,27 +300,28 @@ def batch_training_data(key, C, total_samples, epochs, batch_size):
     # Convert train dataset into batches
     # TODO: Tidy up this stuff..
     key, permutation_key = jax.random.split(key)
-    permutation_keys = jax.random.split(permutation_key)
+    permutation_keys = jax.random.split(permutation_key, 4)
 
-    fractions = np.array([len(C['decrease']), len(C['init']), len(C['unsafe']), len(C['target'])]) / total_samples
-    batch_C_init = int(max(1, len(C['init']) * batch_size / total_samples))
-    batch_C_unsafe = int(max(1, len(C['unsafe']) * batch_size / total_samples))
-    batch_C_target = int(max(1, len(C['target']) * batch_size / total_samples))
-    batch_C_decrease = int(batch_size - batch_C_init - batch_C_unsafe - batch_C_target)
+    size_C_init = int(len(C['init']) * batch_size / total_samples)
+    size_C_unsafe = int(len(C['unsafe']) * batch_size / total_samples)
+    size_C_target = int(len(C['target']) * batch_size / total_samples)
+    size_C_decrease = int(batch_size - size_C_init - size_C_unsafe - size_C_target)
 
     idxs_C_decrease = jax.random.choice(permutation_keys[0], len(C['decrease']),
-                                        shape=(epochs, batch_C_decrease),
+                                        shape=(epochs, size_C_decrease),
                                         replace=True)
-    idxs_C_init = jax.random.choice(permutation_keys[1], len(C['init']), shape=(epochs, batch_C_init),
-                                    replace=True)
-    idxs_C_unsafe = jax.random.choice(permutation_keys[2], len(C['unsafe']), shape=(epochs, batch_C_unsafe),
-                                      replace=True)
-    idxs_C_target = jax.random.choice(permutation_keys[3], len(C['target']), shape=(epochs, batch_C_target),
-                                      replace=True)
-
     batches_C_decrease = [C['decrease'][idx] for idx in idxs_C_decrease]
+
+    idxs_C_init = jax.random.choice(permutation_keys[1], len(C['init']), shape=(epochs, size_C_init),
+                                    replace=True)
     batch_C_init = [C['init'][idx] for idx in idxs_C_init]
+
+    idxs_C_unsafe = jax.random.choice(permutation_keys[2], len(C['unsafe']), shape=(epochs, size_C_unsafe),
+                                      replace=True)
     batch_C_unsafe = [C['unsafe'][idx] for idx in idxs_C_unsafe]
+
+    idxs_C_target = jax.random.choice(permutation_keys[3], len(C['target']), shape=(epochs, size_C_target),
+                                      replace=True)
     batch_C_target = [C['target'][idx] for idx in idxs_C_target]
 
-    return batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target
+    return key, batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target
