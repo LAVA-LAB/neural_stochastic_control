@@ -113,7 +113,9 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.verify_mesh_tau = 0.005 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.counterexample_fraction = 0.5
+
+args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 args.train_mesh_tau = 0.01
@@ -279,7 +281,7 @@ for i in range(CEGIS_iters):
         verify.check_conditions(env, V_state, Policy_state, key)
 
     # Samples to add to dataset
-    idxs = np.random.choice(len(C_expDecr_violations), size=min(len(C_expDecr_violations), 25000), replace=False)
+    idxs = np.random.choice(len(C_expDecr_violations), size=int(args.counterexample_fraction * len(train_buffer.data)), replace=True)
     samples_to_add = np.unique(np.vstack([C_expDecr_violations[idxs], C_init_violations, C_unsafe_violations]), axis=0)
 
     # key, perturbation_key = jax.random.split(key)
