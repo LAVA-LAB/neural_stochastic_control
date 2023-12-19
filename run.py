@@ -299,6 +299,7 @@ for i in range(CEGIS_iters):
                                      env.observation_space.high - 0.5 * args.train_mesh_tau,
                                      size=num_per_dimension_train)
     train_buffer.append(initial_train_grid)
+    train_buffer.append(samples_to_add)
     verify.update_dataset_train(train_buffer.data)
 
     # Refine mesh and discretization
