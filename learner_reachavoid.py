@@ -93,7 +93,7 @@ class Learner:
         self.max_lip_policy = 4
         self.max_lip_certificate = 20 # 15
 
-        self.epsilon = 0.0
+        self.global_minimum = 0.05
         self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation
@@ -159,7 +159,7 @@ class Learner:
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
-            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.epsilon)
+            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.global_minimum)
             loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
                                         jnp.min(V_state.apply_fn(certificate_params, C_init)))
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
@@ -302,9 +302,24 @@ def batch_training_data(key, C, total_samples, epochs, batch_size):
     key, permutation_key = jax.random.split(key)
     permutation_keys = jax.random.split(permutation_key, 4)
 
-    size_C_init = int(len(C['init']) * batch_size / total_samples)
-    size_C_unsafe = int(len(C['unsafe']) * batch_size / total_samples)
-    size_C_target = int(len(C['target']) * batch_size / total_samples)
+    # If the length of a specific array is nonzero, then select at least one element (otherwise errors can be caused in
+    # the learner). However, if the length of an array is zero, then we set the batch size for that array to zero, as
+    # there is nothing to select.
+    if len(C['init']) == 0:
+        size_C_init = 0
+    else:
+        size_C_init = int(max(1, len(C['init']) * batch_size / total_samples))
+
+    if len(C['unsafe']) == 0:
+        size_C_unsafe = 0
+    else:
+        size_C_unsafe = int(max(1, len(C['unsafe']) * batch_size / total_samples))
+
+    if len(C['target']) == 0:
+        size_C_target = 0
+    else:
+        size_C_target = int(max(1, len(C['target']) * batch_size / total_samples))
+
     size_C_decrease = int(batch_size - size_C_init - size_C_unsafe - size_C_target)
 
     idxs_C_decrease = jax.random.choice(permutation_keys[0], len(C['decrease']),
