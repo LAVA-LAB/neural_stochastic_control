@@ -47,7 +47,7 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-    def check_expected_decrease(self, V_state, Policy_state, lip_certificate, noise_key, expectation_batch = 5000):
+    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
 
         # Expected decrease condition check on all states outside target set
         with jax.default_device(cpu_device):
@@ -81,6 +81,8 @@ class Verifier:
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
+        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
+
         # Negative is violation
         idxs = (Vdiff >= -self.args.verify_mesh_tau * K)
         C_expDecr_violations = check_expDecr_at[idxs]
@@ -90,12 +92,11 @@ class Verifier:
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         print('- Check martingale conditions...')
 
         C_expDecr_violations, check_expDecr_at, noise_key = \
-            self.check_expected_decrease(V_state, Policy_state, lip_certificate, noise_key)
+            self.check_expected_decrease(V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
 
