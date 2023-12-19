@@ -28,6 +28,7 @@ class Buffer:
         :param samples:
         :return:
         '''
+
         # Check if buffer exceeds length. If not, add new samples
         assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
 
@@ -35,6 +36,33 @@ class Buffer:
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
+    def append_and_remove(self, fraction_to_keep, samples, buffer_size):
+        '''
+        Removes a given fraction of the training buffer and appends the given samples
+
+        :param fraction_to_remove:
+        :param samples:
+        :return:
+        '''
+
+        # Check if buffer exceeds length. If not, add new samples
+        assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
+
+        # Determine how many old and new samples are kept in the buffer
+        nr_old = int(fraction_to_keep * len(self.data))
+        nr_new = int(buffer_size - nr_old)
+
+        old_idxs = np.random.choice(len(self.data), nr_old, replace=False)
+        if nr_new <= len(samples):
+            replace = False
+        else:
+            replace = True
+        new_idxs = np.random.choice(len(samples), nr_new, replace=replace)
+
+        old_samples = self.data[old_idxs]
+        new_samples = samples[new_idxs]
+
+        self.data = np.vstack((old_samples, new_samples), dtype=np.float32)
 
 def define_grid(low, high, size):
     '''
@@ -237,6 +265,7 @@ class MLP_softplus(nn.Module):
         x = nn.softplus(nn.Dense(self.features[-1])(x))
         return x
 
+
 class MLP(nn.Module):
     features: Sequence[int]
     activation_func: list
@@ -253,3 +282,44 @@ class MLP(nn.Module):
             x = act_func(nn.Dense(feat)(x))
         x = nn.Dense(self.features[-1])(x)
         return x
+
+
+def format_training_data(env, data):
+    # Define other datasets (for init, unsafe, and decrease sets)
+    return {
+        'init': env.init_space.contains(data),
+        'unsafe': env.unsafe_space.contains(data),
+        'decrease': env.target_space.not_contains(data),
+        'target': env.target_space.contains(data)
+    }
+
+
+def batch_training_data(key, C, total_samples, epochs, batch_size):
+
+    # Convert train dataset into batches
+    # TODO: Tidy up this stuff..
+    key, permutation_key = jax.random.split(key)
+    permutation_keys = jax.random.split(permutation_key)
+
+    fractions = np.array([len(C['decrease']), len(C['init']), len(C['unsafe']), len(C['target'])]) / total_samples
+    batch_C_init = int(max(1, len(C['init']) * batch_size / total_samples))
+    batch_C_unsafe = int(max(1, len(C['unsafe']) * batch_size / total_samples))
+    batch_C_target = int(max(1, len(C['target']) * batch_size / total_samples))
+    batch_C_decrease = int(batch_size - batch_C_init - batch_C_unsafe - batch_C_target)
+
+    idxs_C_decrease = jax.random.choice(permutation_keys[0], len(C['decrease']),
+                                        shape=(epochs, batch_C_decrease),
+                                        replace=True)
+    idxs_C_init = jax.random.choice(permutation_keys[1], len(C['init']), shape=(epochs, batch_C_init),
+                                    replace=True)
+    idxs_C_unsafe = jax.random.choice(permutation_keys[2], len(C['unsafe']), shape=(epochs, batch_C_unsafe),
+                                      replace=True)
+    idxs_C_target = jax.random.choice(permutation_keys[3], len(C['target']), shape=(epochs, batch_C_target),
+                                      replace=True)
+
+    batches_C_decrease = [C['decrease'][idx] for idx in idxs_C_decrease]
+    batch_C_init = [C['init'][idx] for idx in idxs_C_init]
+    batch_C_unsafe = [C['unsafe'][idx] for idx in idxs_C_unsafe]
+    batch_C_target = [C['target'][idx] for idx in idxs_C_target]
+
+    return batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target

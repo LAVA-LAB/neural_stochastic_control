@@ -28,14 +28,6 @@ class Verifier:
 
         return
 
-    def update_dataset_train(self, data):
-
-        # Define other datasets (for init, unsafe, and decrease sets)
-        self.C_init = self.env.init_space.contains(data)
-        self.C_unsafe = self.env.unsafe_space.contains(data)
-        self.C_decrease = self.env.target_space.not_contains(data)
-        self.C_target = self.env.target_space.contains(data)
-
     def update_dataset_verify(self, data):
         # Define points of grid which are adjacent to different sets (used later by verifier)
         # Max. distance (L1-norm) between any vertex and a point in the adjacent cell is equal to the mesh size (tau).

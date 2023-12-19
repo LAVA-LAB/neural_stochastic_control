@@ -101,7 +101,7 @@ else:
 
 # %% ### Neural martingale Learner ###
 
-from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid
+from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid, format_training_data, batch_training_data
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_layout
@@ -113,12 +113,10 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.counterexample_fraction = 0.25
-
-args.verify_mesh_tau = 0.001 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
-args.train_mesh_tau = 0.001
+args.train_mesh_tau = 0.01
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Probability bound to check for
@@ -159,7 +157,9 @@ train_buffer = Buffer(dim = env.observation_space.shape[0])
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
                                   env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
 train_buffer.append(initial_train_grid)
-verify.update_dataset_train(train_buffer.data)
+
+# Set counterexample buffer
+counterx_buffer = Buffer(dim = env.observation_space.shape[0])
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 num_per_dimension_verify = np.array(
@@ -187,58 +187,11 @@ for i in range(CEGIS_iters):
     else:
         epochs = 1000
 
-    @jax.jit
-    def epoch_body(val, i):
-        (key, V_state, Policy_state) = val
-        (C_decrease, C_init, C_unsafe, C_target) = i
-
-        V_grads, Policy_grads, infos, key = learn.train_step(
-            key=key,
-            V_state=V_state,
-            Policy_state=Policy_state,
-            C_decrease=C_decrease,
-            C_init=C_init,
-            C_unsafe=C_unsafe,
-            C_target=C_target)
-
-        # Update parameters
-        if args.update_certificate:
-            V_state = V_state.apply_gradients(grads=V_grads)
-        if args.update_policy:
-            Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
-
-        return (key, V_state, Policy_state), [i]
-
-    # Convert train dataset into batches
-    # TODO: Tidy up this stuff..
-    key, permutation_key = jax.random.split(key)
-    permutation_keys = jax.random.split(permutation_key)
-    current_batch_size = min(args.batch_size, len(train_buffer.data))
-
-    fractions = np.array(
-        [len(verify.C_decrease), len(verify.C_init), len(verify.C_unsafe), len(verify.C_target)]) / len(
-        train_buffer.data)
-    batch_C_init = int(max(1, len(verify.C_init) * current_batch_size / len(train_buffer.data)))
-    batch_C_unsafe = int(max(1, len(verify.C_unsafe) * current_batch_size / len(train_buffer.data)))
-    batch_C_target = int(max(1, len(verify.C_target) * current_batch_size / len(train_buffer.data)))
-    batch_C_decrease = int(current_batch_size - batch_C_init - batch_C_unsafe - batch_C_target)
-
-    idxs_C_decrease = jax.random.choice(permutation_keys[0], len(verify.C_decrease),
-                                        shape=(epochs, batch_C_decrease),
-                                        replace=True)
-    idxs_C_init = jax.random.choice(permutation_keys[1], len(verify.C_init), shape=(epochs, batch_C_init),
-                                    replace=True)
-    idxs_C_unsafe = jax.random.choice(permutation_keys[2], len(verify.C_unsafe), shape=(epochs, batch_C_unsafe),
-                                      replace=True)
-    idxs_C_target = jax.random.choice(permutation_keys[3], len(verify.C_target), shape=(epochs, batch_C_target),
-                                      replace=True)
-
-    # TODO: Check if this jax.lax.scan version of the train step could speed up things
-    # idxs = jax.random.choice(permutation_key, len(train_buffer.data), shape=(epochs, current_batch_size), replace=True)
-    # val = (key, V_state, Policy_state)
-    # val, result = jax.lax.scan(epoch_body, init=val, xs=idxs)
-    # (key, V_state, Policy_state) = val
-    # infos = {}
+    # Determine datasets for current iteration and put into batches
+    # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
+    C = format_training_data(env, np.vstack((train_buffer.data, counterx_buffer.data)))
+    batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
+                                                                       len(train_buffer.data), epochs, args.batch_size)
 
     for j in range(epochs):
         # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
@@ -246,10 +199,10 @@ for i in range(CEGIS_iters):
             key = key,
             V_state = V_state,
             Policy_state = Policy_state,
-            C_decrease = verify.C_decrease[idxs_C_decrease[j]],
-            C_init = verify.C_init[idxs_C_init[j]],
-            C_unsafe = verify.C_unsafe[idxs_C_unsafe[j]],
-            C_target = verify.C_target[idxs_C_target[j]])
+            C_decrease = batches_C_decrease[j],
+            C_init = batch_C_init[j],
+            C_unsafe = batch_C_unsafe[j],
+            C_target = batch_C_target[j])
 
         # Update parameters
         if args.update_certificate:
@@ -278,36 +231,21 @@ for i in range(CEGIS_iters):
 
     print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
-
     C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
         verify.check_conditions(env, V_state, Policy_state, key)
 
     # Samples to add to dataset
-    idxs = np.random.choice(len(C_expDecr_violations), size=int(args.counterexample_fraction * len(train_buffer.data)), replace=True)
-    samples_to_add = np.unique(np.vstack([C_expDecr_violations[idxs], C_init_violations, C_unsafe_violations]), axis=0)
-
-    # key, perturbation_key = jax.random.split(key)
-    # perturbation = jax.random.uniform(perturbation_key, samples_to_add.shape,
-    #                                   minval=-args.verify_mesh_cell_width,
-    #                                   maxval=args.verify_mesh_cell_width)
+    samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
 
     if len(samples_to_add) == 0:
         print('Successfully learned martingale!')
         break
 
-    # Reset train grid to initial value and add current counterexamples to it
-    num_per_dimension_train = np.array(
-        np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
-    train_buffer = Buffer(dim=env.observation_space.shape[0])
-    initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
-                                     env.observation_space.high - 0.5 * args.train_mesh_tau,
-                                     size=num_per_dimension_train)
-    train_buffer.append(initial_train_grid)
-    train_buffer.append(samples_to_add)
-    verify.update_dataset_train(train_buffer.data)
+    # Add counterexamples to the counterexample buffer
+    counterx_buffer.append_and_remove(fraction_to_keep=0.75, samples=samples_to_add, buffer_size=30000)
 
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)  # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
+    args.verify_mesh_tau = np.maximum(0.8 * args.verify_mesh_tau, 0.001)
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
     num_per_dimension_verify = np.array(
@@ -320,8 +258,8 @@ for i in range(CEGIS_iters):
     verify.update_dataset_verify(verify_buffer.data)
 
     # Plot dataset
-    # filename = f"plots/data_{start_datetime}_iteration={i}"
-    # plot_layout(env, train_buffer.data, samples_to_add, folder=args.cwd, filename=filename)
+    filename = f"plots/data_{start_datetime}_iteration={i}"
+    plot_layout(env, train_buffer.data, samples_to_add, folder=args.cwd, filename=filename)
 
     plt.close('all')
     print('\n================\n')
