@@ -59,11 +59,11 @@ class Learner:
         self.env = env
 
         # Lipschitz factor
-        self.lambda_lipschitz = 0.0001
+        self.lambda_lipschitz = 0.001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4
-        self.max_lip_certificate = 15
+        self.max_lip_certificate = 20 # 15
 
         self.epsilon = 0.3
         self.N_expectation = 32 # 144
@@ -215,7 +215,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least eps_train.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + 0.1)
+        loss = jnp.maximum(0, diff + tau * K + 0.3)
 
         return loss, diff
 
