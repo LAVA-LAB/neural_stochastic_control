@@ -96,7 +96,7 @@ class Verifier:
         print('- Check martingale conditions...')
 
         C_expDecr_violations, check_expDecr_at, noise_key = \
-            self.check_expected_decrease(V_state, Policy_state, lip_certificate, lip_policy, noise_key)
+            self.check_expected_decrease(env, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
 
