@@ -13,6 +13,8 @@ os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
 os.environ["TF_XLA_FLAGS"] = "--xla_gpu_autotune_level=2 --xla_gpu_deterministic_reductions"
 os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
+cpu_device = jax.devices('cpu')[0]
+
 class Verifier:
 
     def __init__(self, env, args):
@@ -45,43 +47,37 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-
-    def check_conditions(self, env, V_state, Policy_state, noise_key,
-                         expectation_batch = 10000):
-
-        lip_policy = lipschitz_coeff_l1(Policy_state.params)
-        lip_certificate = lipschitz_coeff_l1(V_state.params)
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
-
-        print('- Check martingale conditions...')
+    def check_expected_decrease(self, V_state, Policy_state, lip_certificate, noise_key, expectation_batch = 5000):
 
         # Expected decrease condition check on all states outside target set
-        Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
+        with jax.default_device(cpu_device):
+            Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
-                                                        < 1 / (1-self.args.probability_bound)).flatten()
+                < 1 / (1 - self.args.probability_bound)).flatten()
         check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
 
         # TODO: For now, this expected decrease condition is approximate
         noise_key, subkey = jax.random.split(noise_key)
-        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 250))
+        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 100))
 
         # Determine actions for every point in subgrid
-        actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
+        with jax.default_device(cpu_device):
+            actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / expectation_batch).astype(int)
         starts = np.arange(num_batches) * expectation_batch
-        ends   = np.minimum(starts + expectation_batch, len(check_expDecr_at))
+        ends = np.minimum(starts + expectation_batch, len(check_expDecr_at))
 
-        for i,j in zip(starts, ends):
+        for z, (i, j) in enumerate(zip(starts, ends)):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             key = noise_keys[i:j]
-
             Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            print(f'--- Block {int(z)} out of {len(starts)} done')
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
@@ -90,10 +86,22 @@ class Verifier:
         C_expDecr_violations = check_expDecr_at[idxs]
         # TODO: Insert (exact) expected decrease condition check here
 
+    def check_conditions(self, env, V_state, Policy_state, noise_key):
+
+        lip_policy = lipschitz_coeff_l1(Policy_state.params)
+        lip_certificate = lipschitz_coeff_l1(V_state.params)
+        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
+
+        print('- Check martingale conditions...')
+
+        C_expDecr_violations, check_expDecr_at, noise_key = \
+            self.check_expected_decrease(V_state, Policy_state, lip_certificate, noise_key)
+
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
+        with jax.default_device(cpu_device):
+            Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
 
         idxs = ((Vvalues_init + lip_certificate * self.args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
@@ -101,7 +109,8 @@ class Verifier:
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
+        with jax.default_device(cpu_device):
+            Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
 
         idxs = ((Vvalues_unsafe - lip_certificate * self.args.verify_mesh_tau) < 1 / (1-self.args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]

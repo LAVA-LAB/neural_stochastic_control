@@ -185,7 +185,7 @@ for i in range(CEGIS_iters):
         args.update_policy = True
         epochs = 1000
     else:
-        epochs = 10000
+        epochs = 1000
 
     @jax.jit
     def epoch_body(val, i):
@@ -278,10 +278,9 @@ for i in range(CEGIS_iters):
 
     print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
-    cpu_device = jax.devices('cpu')[0]
-    with jax.default_device(cpu_device):
-        C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
-            verify.check_conditions(env, V_state, Policy_state, key)
+
+    C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
+        verify.check_conditions(env, V_state, Policy_state, key)
 
     # Samples to add to dataset
     idxs = np.random.choice(len(C_expDecr_violations), size=int(args.counterexample_fraction * len(train_buffer.data)), replace=True)
