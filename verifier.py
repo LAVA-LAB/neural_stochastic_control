@@ -7,8 +7,6 @@ import time
 from jax_utils import lipschitz_coeff_l1
 import os
 
-cpu_device = jax.devices('cpu')[0]
-
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
 # Fix CUDNN non-determinisim; https://github.com/google/jax/issues/4823#issuecomment-952835771
@@ -49,7 +47,7 @@ class Verifier:
 
 
     def check_conditions(self, env, V_state, Policy_state, noise_key,
-                         expectation_batch = 10000, mode='cpu'):
+                         expectation_batch = 10000):
 
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)
@@ -58,11 +56,7 @@ class Verifier:
         print('- Check martingale conditions...')
 
         # Expected decrease condition check on all states outside target set
-        if mode == 'cpu':
-            with jax.default_device(cpu_device):
-                Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
-        else:
-            Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
+        Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                                                         < 1 / (1-self.args.probability_bound)).flatten()
@@ -75,11 +69,7 @@ class Verifier:
         noise_keys = jax.random.split(subkey, (len(check_expDecr_at), 250))
 
         # Determine actions for every point in subgrid
-        if mode == 'cpu':
-            with jax.default_device(cpu_device):
-                actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
-        else:
-            actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
+        actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / expectation_batch).astype(int)
@@ -91,11 +81,7 @@ class Verifier:
             u = actions[i:j]
             key = noise_keys[i:j]
 
-            if mode == 'cpu':
-                with jax.default_device(cpu_device):
-                    Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
-            else:
-                Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
+            Vdiff[i:j] = self.V_step_vectorized(V_state, V_state.params, x, u, key).flatten()
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
@@ -107,11 +93,7 @@ class Verifier:
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        if mode == 'cpu':
-            with jax.default_device(cpu_device):
-                Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
-        else:
-            Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
+        Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
 
         idxs = ((Vvalues_init + lip_certificate * self.args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
@@ -119,11 +101,7 @@ class Verifier:
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        if mode == 'cpu':
-            with jax.default_device(cpu_device):
-                Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
-        else:
-            Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
+        Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
 
         idxs = ((Vvalues_unsafe - lip_certificate * self.args.verify_mesh_tau) < 1 / (1-self.args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]

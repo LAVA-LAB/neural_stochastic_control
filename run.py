@@ -277,8 +277,11 @@ for i in range(CEGIS_iters):
     print(f'\nNumber of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
 
     print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
-    C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
-        verify.check_conditions(env, V_state, Policy_state, key)
+    # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
+    cpu_device = jax.devices('cpu')[0]
+    with jax.default_device(cpu_device):
+        C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
+            verify.check_conditions(env, V_state, Policy_state, key)
 
     # Samples to add to dataset
     idxs = np.random.choice(len(C_expDecr_violations), size=int(args.counterexample_fraction * len(train_buffer.data)), replace=True)

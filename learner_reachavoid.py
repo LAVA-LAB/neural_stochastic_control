@@ -59,11 +59,11 @@ class Learner:
         self.env = env
 
         # Lipschitz factor
-        self.lambda_lipschitz = 0.001
+        self.lambda_lipschitz = 0.0001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4
-        self.max_lip_certificate = 10 # 15
+        self.max_lip_certificate = 15
 
         self.epsilon = 0.3
         self.N_expectation = 32 # 144
@@ -139,7 +139,7 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = loss_init + loss_unsafe + loss_exp_decrease + loss_aux
+            loss_total = loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz + loss_aux
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
