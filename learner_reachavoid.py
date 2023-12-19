@@ -56,6 +56,7 @@ class Learner:
     def __init__(self, env, args):
 
         self.args = args
+        self.env = env
 
         # Lipschitz factor
         self.lambda_lipschitz = 0.001
@@ -70,8 +71,6 @@ class Learner:
 
         # Define vectorized functions for loss computation
         self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, 0, 0, 0), out_axes=(0, 0))
-
-        self.env = env
 
         return
 
