@@ -42,6 +42,10 @@ def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
     ax.set_ylim(low[1], high[1])
 
     ax.set_title("Simulated traces under given controller", fontsize=10)
+    if hasattr(env, 'variable_names)'):
+        plt.xlabel(env.variable_names[0])
+        plt.xlabel(env.variable_names[1])
+
     plt.show()
 
     return traces
@@ -82,6 +86,9 @@ def plot_layout(env, train_data=None, additional_data=None, folder=False, filena
     ax.set_ylim(low[1], high[1])
 
     ax.set_title("Samples (black) and counterexamples (blue)", fontsize=10)
+    if hasattr(env, 'variable_names)'):
+        plt.xlabel(env.variable_names[0])
+        plt.xlabel(env.variable_names[1])
 
     if folder and filename:
         # Save figure
@@ -112,6 +119,11 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1):
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
+    ax.set_title("Vector field of closed-loop dynamics", fontsize=10)
+    if hasattr(env, 'variable_names)'):
+        plt.xlabel(env.variable_names[0])
+        plt.xlabel(env.variable_names[1])
+
     plt.show()
 
     return
@@ -131,6 +143,10 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     sns.heatmap(data)
 
     ax.set_title(f"Trained Lyapunov function ({filename})", fontsize=10)
+
+    if hasattr(env, 'variable_names)'):
+        plt.xlabel(env.variable_names[0])
+        plt.xlabel(env.variable_names[1])
 
     if folder and filename:
         # Save figure

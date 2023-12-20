@@ -17,7 +17,7 @@ from jax_utils import vsplit
 
 from commons import RectangularSet, MultiRectangularSet
 
-class LinearEnv(gym.Env):
+class PendulumEnv(gym.Env):
 
     metadata = {
         "render_modes": [],
@@ -32,6 +32,14 @@ class LinearEnv(gym.Env):
 
         self.max_torque = 1
 
+        # Pendulum parameters
+        self.delta = 0.05
+        self.G = 10
+        self.m = 0.15
+        self.l = 0.5
+        self.b = 0.1
+        self.max_speed = 5
+
         self.screen_dim = 500
         self.screen = None
         self.clock = None
@@ -39,38 +47,8 @@ class LinearEnv(gym.Env):
 
         self.state_dim = 2
 
-        self.A = np.array([
-            [1, 0.045],
-            [0, 0.9]
-        ])
-        self.B = np.array([
-            [0.45],
-            [0.5]
-        ])
-        self.W = np.zeros((2,2)) # np.diag([0.01, 0.005])
-
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
-        self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
-
-        # Max step size (big Delta) under one step transition
-        # TODO: Make big Delta adaptive (it may change based on the policy)
-        state_space_vertices = np.array([
-            [1.5, 1.5],
-            [-1.5, 1.5],
-            [-1.5, -1.5],
-            [1.5, -1.5]
-        ])
-        input_vertices = np.array([[-self.max_torque], [self.max_torque]])
-        noise_vertices = np.array([
-            [1, 1],
-            [-1, 1],
-            [-1, -1],
-            [1, -1]
-        ])
-        self.max_step_Delta = np.max([
-            np.sum(np.abs(x - (self.A @ x + self.B @ u + self.W @ w)))
-            for x in state_space_vertices for u in input_vertices for w in noise_vertices
-        ])
+        self.lipschitz_f = float(1.78)
 
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
@@ -80,20 +58,17 @@ class LinearEnv(gym.Env):
         )
 
         # Set observation / state space
-        high = np.array([1.5, 1.5], dtype=np.float32)
+        high = np.array([0.7, 0.7], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
         # Set target set
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
-        self.init_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-0.25, -0.1]), high=np.array([-0.2, 0.1]), dtype=np.float32),
-            RectangularSet(low=np.array([0.2, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
-        ])
+        self.init_space = RectangularSet(low=np.array([-0.3, -0.3]), high=np.array([0.3, 0.3]), dtype=np.float32)
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
-            RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
+            RectangularSet(low=np.array([-0.7, -0.7]), high=np.array([-0.6, 0]), dtype=np.float32),
+            RectangularSet(low=np.array([0.6, 0]), high=np.array([0.7, 0.7]), dtype=np.float32)
         ])
 
         self.num_steps_until_reset = 1000
@@ -120,13 +95,12 @@ class LinearEnv(gym.Env):
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
         # Propagate dynamics
-        # new_x = self.A[0, 0] * state[0] + self.A[0, 1] * state[1] + self.B[0, 0] * u[0] + \
-        #         self.W[0, 0] * noise[0] + self.W[0, 1] * noise[1]
-        # new_y = self.A[1, 0] * state[0] + self.A[1, 1] * state[1] + self.B[1, 0] * u[0] + \
-        #         self.W[1, 0] * noise[0] + self.W[1, 1] * noise[1]
-        # state = jnp.array([new_x, new_y])
+        x1 = (1-self.b) * state[1] + self.delta * (-1.5*self.G*jnp.sin(state[0] + jnp.pi)) / (2*self.l) + \
+                3/(self.m*self.l**2) * 2 * u[0] + 0.02 * noise[0]
+        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+        x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
 
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
+        state = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
 
         return state, key
 
@@ -143,25 +117,14 @@ class LinearEnv(gym.Env):
         costs = -1 + state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
-        new_x = self.A[0, 0] * state[0] + self.A[0, 1] * state[1] + self.B[0, 0] * u[0] + \
-                self.W[0, 0] * noise[0] + self.W[0, 1] * noise[1]
-        new_y = self.A[1, 0] * state[0] + self.A[1, 1] * state[1] + self.B[1, 0] * u[0] + \
-                self.W[1, 0] * noise[0] + self.W[1, 1] * noise[1]
-        state = jnp.array([new_x, new_y])
+        x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
+             3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * noise[0]
+        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+        x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
+
+        state = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
 
         steps_since_reset += 1
-
-        # # Check if environment should be reset
-        # if jnp.linalg.norm(state, 2) < 1e-3:
-        #     terminated = True
-        #     costs = -10
-        #     print(' > Goal reached (reset)')
-        # elif jnp.any(jnp.abs(state) > self.observation_space.high):
-        #     terminated = True
-        #     costs = 100
-        #     print(' > Too far away from goal (reset)')
-        # else:
-        #     terminated = False
 
         # TODO: Make this work
         terminated = False

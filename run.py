@@ -3,6 +3,7 @@ import jax
 import flax.linen as nn
 from ppo_jax import PPO, PPOargs
 from models.linearsystem_jax import LinearEnv
+from models.pendulum_jax import PendulumEnv
 from datetime import datetime
 import os
 from pathlib import Path
@@ -36,6 +37,29 @@ parser.add_argument('--ppo_num_steps', type=int, default=2048,
                     help="Total steps for rollout in PPO (for policy initialization")
 parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
+
+### LEARNER ARGUMENTS
+parser.add_argument('--cegis_iterations', type=int, default=100,
+                    help="Number of CEGIS iteration to run")
+parser.add_argument('--epochs', type=int, default=100,
+                    help="Number of epochs to run in each iteration")
+parser.add_argument('--batch_size', type=int, default=4096,
+                    help="Batch size used by the learner in each epoch")
+parser.add_argument('--probability_bound', type=float, default=0.8,
+                    help="Bound on the reach-avoid probability to verify")
+parser.add_argument('--train_mesh_tau', type=float, default=0.01,
+                    help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
+
+### VERIFIER ARGUMENTS
+parser.add_argument('--noise_partition_cells', type=int, default=25,
+                    help="Number of cells to partition the noise space in (to numerically integrate stochastic nosie)")
+parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
+                    help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
+parser.add_argument('--verify_mesh_tau_min', type=float, default=0.001,
+                    help="Lowest allowed verification grid mesh size")
+parser.add_argument('--refresh_fraction_counterx', type=float, default=0.5,
+                    help="Fraction of the counter example buffer to renew after each iteration")
+
 ###
 parser.add_argument('--update_certificate', type=bool, default=True,
                     help="If True, certificate network is updated by the Learner")
@@ -46,6 +70,8 @@ args.cwd = os.getcwd()
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
+elif args.model == 'PendulumEnv':
+    fun = PendulumEnv
 else:
     assert False
 
@@ -54,10 +80,12 @@ activation_functions = [nn.relu, nn.relu]
 
 # %% ### PPO policy initialization ###
 
-args.new_ppo = False
-args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+args.new_ppo = True
+# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.new_ppo:
+    print(f'Run PPO for model `{args.model}`')
+
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
     minibatch_size = int(batch_size // args.ppo_num_minibatches)
     num_iterations = int(args.ppo_total_timesteps // batch_size)
@@ -99,6 +127,8 @@ else:
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
 
+assert False
+
 # %% ### Neural martingale Learner ###
 
 from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid, format_training_data, batch_training_data
@@ -113,15 +143,8 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.verify_mesh_tau = 0.01 # Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.
 args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
-
-args.train_mesh_tau = 0.01
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
-
-# Probability bound to check for
-args.probability_bound = 0.8
-args.batch_size = 4 * 1024
 
 # Initialize certificate network
 certificate_model = MLP_softplus(neurons_per_layer + [1], activation_functions)
@@ -176,17 +199,13 @@ verify.update_dataset_verify(verify_buffer.data)
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
 ticDiff()
-CEGIS_iters = 100
 
-for i in range(CEGIS_iters):
+for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     epoch_start = time.time()
 
     if i >= 3:
         args.update_policy = True
-        epochs = 1000
-    else:
-        epochs = 1000
 
     # Experiment by perturbing the training grid
     key, perturbation_key = jax.random.split(key, 2)
@@ -202,15 +221,15 @@ for i in range(CEGIS_iters):
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
     key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
-                                                             len(train_buffer.data), epochs, 0.75 * args.batch_size)
+                                                             len(train_buffer.data), args.epochs, 0.75 * args.batch_size)
 
     X = format_training_data(env, counterx_buffer.data)
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
-                                                             len(counterx_buffer.data), epochs, 0.25 * args.batch_size)
+                                                             len(counterx_buffer.data), args.epochs, 0.25 * args.batch_size)
 
     decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
-    for j in range(epochs):
+    for j in range(args.epochs):
         # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
         V_grads, Policy_grads, infos, key, diff = learn.train_step(
             key = key,
@@ -243,7 +262,7 @@ for i in range(CEGIS_iters):
             print('overall lipschitz K (L1)', lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1))
 
     epoch_end = time.time()
-    print(f'\nLast epoch ({epochs} iterations) took {epoch_end - epoch_start:.2f} seconds')
+    print(f'\nLast epoch took {epoch_end - epoch_start:.2f} seconds')
 
     filename = f"plots/certificate_{start_datetime}_iteration={i}"
     plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
@@ -264,12 +283,14 @@ for i in range(CEGIS_iters):
 
     # Add counterexamples to the counterexample buffer
     if i > 0:
-        counterx_buffer.append_and_remove(fraction_to_keep=0.5, samples=samples_to_add, buffer_size=30000)
+        counterx_buffer.append_and_remove(refresh_fraction=args.refresh_fraction_counterx,
+                                          samples=samples_to_add, buffer_size=30000)
     else:
-        counterx_buffer.append_and_remove(fraction_to_keep=0.0, samples=samples_to_add, buffer_size=30000)
+        counterx_buffer.append_and_remove(refresh_fraction=args.refresh_fraction_counterx,
+                                          samples=samples_to_add, buffer_size=30000)
 
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, 0.001)
+    args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
 
     num_per_dimension_verify = np.array(

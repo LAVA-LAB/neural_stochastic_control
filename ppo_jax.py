@@ -681,8 +681,8 @@ def PPO(environment_function,
 
     fig, ax = plt.subplots()
 
-    len_traces = 100
-    num_traces = min(10, args.num_envs)
+    len_traces = 20
+    num_traces = min(1, args.num_envs)
 
     next_obs, env_key, steps_since_reset = env.vreset(env_key)
     next_obs = np.array(next_obs)
@@ -714,8 +714,8 @@ def PPO(environment_function,
     # Goal x-y limits
     low = env.observation_space.low
     high = env.observation_space.high
-    ax.set_xlim(low[0], high[0])
-    ax.set_ylim(low[1], high[1])
+    ax.set_xlim(low[0] - 0.1, high[0] + 0.1)
+    ax.set_ylim(low[1] - 0.1, high[1] + 0.1)
 
     ax.set_title("Simulated traces under given controller", fontsize=10)
     plt.show()
