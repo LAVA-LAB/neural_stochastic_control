@@ -23,10 +23,8 @@ parser.add_argument('--model', type=str, default="LinearEnv",
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 ###
-parser.add_argument('--new_ppo', type=bool, default=True,
-                    help="If True, run new PPO policy initialization")
 parser.add_argument('--ppo_load_file', type=str, default='',
-                    help="If --new_ppo if False, than a checkpoint in loaded from this file")
+                    help="If given, a PPO checkpoint in loaded from this file")
 parser.add_argument('--ppo_max_policy_lipschitz', type=float, default=3,
                     help="Max. Lipschitz constant for policy to train towards in PPO (below this value, loss is zero)")
 parser.add_argument('--ppo_total_timesteps', type=int, default=1e6,
@@ -80,7 +78,7 @@ activation_functions = [nn.relu, nn.relu]
 
 # %% ### PPO policy initialization ###
 
-if args.new_ppo:
+if args.ppo_load_file == '':
     print(f'Run PPO for model `{args.model}`')
 
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
