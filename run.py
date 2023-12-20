@@ -39,7 +39,7 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
-parser.add_argument('--epochs', type=int, default=100,
+parser.add_argument('--epochs', type=int, default=1000,
                     help="Number of epochs to run in each iteration")
 parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
