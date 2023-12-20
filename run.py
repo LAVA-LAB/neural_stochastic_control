@@ -223,7 +223,7 @@ for i in range(CEGIS_iters):
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
                                                              len(counterx_buffer.data), epochs, 0.25 * args.batch_size)
 
-    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.02*np.ones(len(batch_X_decrease))))
+    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
     for j in range(epochs):
         # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
