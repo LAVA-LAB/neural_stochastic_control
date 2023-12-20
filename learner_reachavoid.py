@@ -90,11 +90,11 @@ class Learner:
         self.lambda_lipschitz = 0.001
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
-        self.max_lip_policy = 4 #4
-        self.max_lip_certificate = 30 # 15
+        self.max_lip_policy = 4
+        self.max_lip_certificate = 15
 
-        self.global_minimum = 0.1
-        self.N_expectation = 32 # 144
+        self.global_minimum = 0.3
+        self.N_expectation = 16
 
         # Define vectorized functions for loss computation
         self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, None, 0, 0, 0), out_axes=(0, 0))
