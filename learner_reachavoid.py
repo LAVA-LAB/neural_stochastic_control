@@ -166,7 +166,7 @@ class Learner:
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
                                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)))
 
-            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
+            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe + loss_lipschitz
 
             # Define total loss
             loss_total = (loss_init + loss_unsafe + loss_exp_decrease)
@@ -245,8 +245,8 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + epsilon)
-
+        loss = jnp.maximum(0, diff + 1.1 * tau * K + epsilon)
+        
         return loss, diff
 
 
