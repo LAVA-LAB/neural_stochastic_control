@@ -231,8 +231,8 @@ for i in range(CEGIS_iters):
         if j % 100 == 0:
             lip_policy = lipschitz_coeff_l1(Policy_state.params)
             lip_certificate = lipschitz_coeff_l1(V_state.params)
-            infos['lipschitz policy (L1)'] = lip_policy
-            infos['lipschitz certificate (L1)'] = lip_certificate
+            infos['lipschitz policy (L1)'] =  [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True,False] for j in [True,False]]
+            infos['lipschitz certificate (L1)'] = [lipschitz_coeff_l1(V_state.params, i, j) for i in [True,False] for j in [True,False]]
             infos['overall lipschitz K (L1)'] = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
             print(f'\nLoss (iteration {i} epoch {j}):')
