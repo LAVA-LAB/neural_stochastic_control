@@ -421,7 +421,7 @@ if __name__ == "__main__":
 
     # %%
 
-    from _old.learner import define_grid
+    from learner_reachavoid import define_grid
 
     env = make_env(args.env_id, i, args.capture_video, run_name, args.gamma)()
     env.reset()
