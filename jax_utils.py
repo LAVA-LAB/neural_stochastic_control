@@ -2,6 +2,7 @@ import jax.numpy as jnp
 from flax.training import train_state
 import optax
 import jax
+from functools import partial
 
 vsplit_fun = jax.vmap(jax.random.split)
 def vsplit(keys):
@@ -19,7 +20,7 @@ def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0, params=Non
         tx = optax.chain(tx, optax.ema(ema))
     return train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
 
-@jax.jit
+@partial(jax.jit, static_argnums=(1,2,))
 def lipschitz_coeff_l1(params, weights=True, CPLip=True):
     if (not weights and not CPLip):
         L = jnp.float32(1)
