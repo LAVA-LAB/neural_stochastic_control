@@ -21,7 +21,7 @@ def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0, params=Non
     return train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
 
 @partial(jax.jit, static_argnums=(1,2,))
-def lipschitz_coeff_l1(params, weights=True, CPLip=True):
+def lipschitz_coeff_l1(params, weights=False, CPLip=False):
     if (not weights and not CPLip):
         L = jnp.float32(1)
         # Compute Lipschitz coefficient by iterating through layers
