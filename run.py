@@ -80,9 +80,6 @@ activation_functions = [nn.relu, nn.relu]
 
 # %% ### PPO policy initialization ###
 
-args.new_ppo = True
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
-
 if args.new_ppo:
     print(f'Run PPO for model `{args.model}`')
 
@@ -126,8 +123,6 @@ else:
     # Load existing pretrained policy
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
-
-assert False
 
 # %% ### Neural martingale Learner ###
 
@@ -183,7 +178,7 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 counterx_buffer = Buffer(dim = env.observation_space.shape[0])
-counterx_buffer.append_and_remove(fraction_to_keep=0.0, samples=initial_train_grid, buffer_size=30000)
+counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid, buffer_size=30000)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 num_per_dimension_verify = np.array(
