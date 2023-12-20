@@ -245,7 +245,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least eps_train.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + epsilon)
+        loss = jnp.maximum(0, diff + 1.5 * tau * K + epsilon)
 
         return loss, diff
 
