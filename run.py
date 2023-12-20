@@ -129,7 +129,7 @@ V_state = create_train_state(
     model=certificate_model,
     rng=jax.random.PRNGKey(1),
     in_dim=2,
-    learning_rate=5e-3,
+    learning_rate=5e-4,
 )
 
 # Initialize policy network
@@ -196,7 +196,7 @@ for i in range(CEGIS_iters):
         args.update_policy = True
         epochs = 1000
     else:
-        epochs = 5000
+        epochs = 1000
 
     # if i >= 10:
     #     learn.exp_decrease_max = True
