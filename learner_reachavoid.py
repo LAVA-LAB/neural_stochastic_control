@@ -159,7 +159,7 @@ class Learner:
             # loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
             #                                           jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
-            loss_lipschitz = jnp.maximum(K - 40)
+            loss_lipschitz = jnp.maximum(K - 40, 0)
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.global_minimum)
@@ -168,10 +168,10 @@ class Learner:
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
                                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)))
 
-            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe + loss_lipschitz
+            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease)
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz)
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
