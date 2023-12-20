@@ -83,7 +83,7 @@ def plot_layout(env, train_data=None, additional_data=None, folder=False, filena
     ax.set_xlim(low[0], high[0])
     ax.set_ylim(low[1], high[1])
 
-    ax.set_title("Problem layout", fontsize=10)
+    ax.set_title("Samples (black) and counterexamples (blue)", fontsize=10)
 
     if folder and filename:
         # Save figure
@@ -120,6 +120,8 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1):
 
 def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
+    fig, ax = plt.subplots()
+
     # Visualize certificate network
     grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101, 101])
     X = np.round(grid[:, 0], 3)
@@ -129,6 +131,8 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     data = pd.DataFrame(data={'x': X, 'y': Y, 'z': out})
     data = data.pivot(index='y', columns='x', values='z')[::-1]
     sns.heatmap(data)
+
+    ax.set_title(f"Trained Lyapunov function ({filename})", fontsize=10)
 
     if folder and filename:
         # Save figure

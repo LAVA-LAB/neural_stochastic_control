@@ -159,7 +159,7 @@ class Learner:
             # loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
             #                                           jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
-            loss_lipschitz = jnp.maximum(K - 40, 0)
+            loss_lipschitz = jnp.maximum(K - 60, 0)
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.global_minimum)
@@ -247,7 +247,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + 1.1 * tau * K + epsilon)
+        loss = jnp.maximum(0, diff + tau * K + epsilon)
 
         return loss, diff
 

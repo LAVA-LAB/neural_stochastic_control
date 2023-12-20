@@ -32,13 +32,13 @@ class Verifier:
         # Define points of grid which are adjacent to different sets (used later by verifier)
         # Max. distance (L1-norm) between any vertex and a point in the adjacent cell is equal to the mesh size (tau).
         self.C_decrease_adj = self.env.target_space.not_contains(data,
-                                 delta=0 * -0.5 * self.args.verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
+                                 delta=-0.5 * self.args.verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
 
         self.C_init_adj = self.env.init_space.contains(data,
-                                 delta=0 * 0.5 * self.args.verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
+                                 delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
 
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
-                                 delta=0 * 0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
+                                 delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
     def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
 
