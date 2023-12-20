@@ -150,7 +150,7 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(jnp.multiply(decrease_eps, exp_decrease))
+            loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.mean(jnp.multiply(decrease_eps, exp_decrease))
 
             violations = (diff >= -self.args.verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
@@ -169,7 +169,7 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = 1000 * (loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz + loss_aux)
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease)
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
@@ -242,10 +242,10 @@ class Learner:
 
         # Function apply_fn does a forward pass in the certificate network for all successor states in state_new,
         # which approximates the value of the certificate for the successor state (using different noise values).
-        # Then, the loss term is zero if the expected decrease in certificate value is at least eps_train.
+        # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + 1.5 * tau * K + epsilon)
+        loss = jnp.maximum(0, diff + tau * K + epsilon)
 
         return loss, diff
 

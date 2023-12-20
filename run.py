@@ -194,9 +194,9 @@ for i in range(CEGIS_iters):
 
     if i >= 3:
         args.update_policy = True
-        epochs = 1000
+        epochs = 2500
     else:
-        epochs = 1000
+        epochs = 2500
 
     # if i >= 10:
     #     learn.exp_decrease_max = True
@@ -211,11 +211,11 @@ for i in range(CEGIS_iters):
 
     # Plot dataset
     filename = f"plots/data_{start_datetime}_iteration={i}"
-    plot_layout(env, train_buffer.data + perturbation, counterx_buffer.data, folder=args.cwd, filename=filename)
+    plot_layout(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
-    C = format_training_data(env, train_buffer.data + perturbation)
+    C = format_training_data(env, train_buffer.data)
     key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
                                                              len(train_buffer.data), epochs, 0.75 * args.batch_size)
 
