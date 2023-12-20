@@ -310,7 +310,7 @@ class RSMVerifier:
     def compute_bound_init(self, n):
         _, grid_lb, grid_ub = self.get_unfiltered_grid(n)
 
-        mask = np.zeros(grid_lb.shape[0], dtype=np.bool)
+        mask = np.zeros(grid_lb.shape[0], dtype=bool)
         # Include if the grid cell intersects with any of the init spaces
         for init_space in self.env.init_spaces:
             intersect = v_intersect(init_space, grid_lb, grid_ub)
@@ -335,7 +335,7 @@ class RSMVerifier:
         _, grid_lb, grid_ub = self.get_unfiltered_grid(n)
 
         # Include only if either lb OR ub are in one of the unsafe sets
-        mask = np.zeros(grid_lb.shape[0], dtype=np.bool)
+        mask = np.zeros(grid_lb.shape[0], dtype=bool)
         for unsafe_space in self.env.unsafe_spaces:
             intersect = v_intersect(unsafe_space, grid_lb, grid_ub)
             mask = np.logical_or(
