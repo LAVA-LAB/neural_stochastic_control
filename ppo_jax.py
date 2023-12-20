@@ -722,7 +722,7 @@ def PPO(environment_function,
 
     # %%
 
-    from learner import define_grid
+    from _old.learner import define_grid
 
     fig, ax = plt.subplots()
 

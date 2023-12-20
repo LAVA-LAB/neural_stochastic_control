@@ -1,15 +1,13 @@
-import matplotlib.pyplot as plt # Import Pyplot to generate plots
 import numpy as np
 import jax
 import jax.numpy as jnp
 import seaborn as sns
 import pandas as pd
 import matplotlib.pyplot as plt
-from matplotlib.collections import PatchCollection
 from matplotlib.patches import Rectangle
 from pathlib import Path
 
-from learner import define_grid
+from _old.learner import define_grid
 
 def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
 

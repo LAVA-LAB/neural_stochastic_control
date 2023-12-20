@@ -90,8 +90,8 @@ class LinearEnv(gym.Env):
         ])
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, -1.4]), dtype=np.float32),
-            RectangularSet(low=np.array([1.4, 1.4]), high=np.array([1.5, 1.5]), dtype=np.float32)
+            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
+            RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
         ])
 
         self.num_steps_until_reset = 1000
