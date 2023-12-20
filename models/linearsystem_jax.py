@@ -49,7 +49,6 @@ class LinearEnv(gym.Env):
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
-            # float(jnp.max(jnp.array([jnp.sum(self.A[i]) + self.B[i] + self.W[i] for i in range(len(self.A))])))
 
         # Max step size (big Delta) under one step transition
         # TODO: Make big Delta adaptive (it may change based on the policy)

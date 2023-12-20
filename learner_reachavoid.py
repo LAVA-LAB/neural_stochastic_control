@@ -91,9 +91,9 @@ class Learner:
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
         self.max_lip_policy = 4 #4
-        self.max_lip_certificate = 15 # 15
+        self.max_lip_certificate = 30 # 15
 
-        self.global_minimum = 0.2
+        self.global_minimum = 0.1
         self.N_expectation = 32 # 144
 
         # Define vectorized functions for loss computation
@@ -133,14 +133,14 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau - 1)
-            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
+            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
 
             # Loss in unsafe state set
-            loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau)
-            # loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
-            #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
+            # loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
+            #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + jnp.maximum(lip_certificate, self.max_lip_certificate) * self.args.verify_mesh_tau)
+            loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
             Kmax = jnp.maximum(self.max_lip_certificate, lip_certificate) * \
@@ -150,10 +150,7 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease, actions, noise_cond2_keys)
 
-            if self.exp_decrease_max:
-                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.max(exp_decrease)
-            else:
-                loss_exp_decrease = jnp.mean(exp_decrease)
+            loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.max(exp_decrease)
 
             violations = (diff >= -self.args.verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)

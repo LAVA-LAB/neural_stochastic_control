@@ -198,10 +198,10 @@ for i in range(CEGIS_iters):
     else:
         epochs = 5000
 
-    if i >= 10:
-        learn.exp_decrease_max = True
-    else:
-        learn.exp_decrease_max = False
+    # if i >= 10:
+    #     learn.exp_decrease_max = True
+    # else:
+    #     learn.exp_decrease_max = False
 
     # Experiment by perturbing the training grid
     key, perturbation_key = jax.random.split(key, 2)
