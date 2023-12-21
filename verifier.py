@@ -53,7 +53,7 @@ class Verifier:
 
         # TODO: For now, this expected decrease condition is approximate
         noise_key, subkey = jax.random.split(noise_key)
-        noise_keys = jit(jax.random.split)(subkey, (len(check_expDecr_at), self.args.noise_partition_cells))
+        noise_keys = jax.random.split(subkey, (len(check_expDecr_at), self.args.noise_partition_cells))
 
         # Determine actions for every point in subgrid
         actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
@@ -69,7 +69,7 @@ class Verifier:
         #     key = noise_keys[i:j]
         #     Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, key).flatten()
 
-        Vdiff = jit(self.V_step_vectorized)(V_state, jax.lax.stop_gradient(V_state.params), x, u, key)
+        Vdiff = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), check_expDecr_at, actions, noise_keys)
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
