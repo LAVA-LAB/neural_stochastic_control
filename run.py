@@ -39,8 +39,10 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
-parser.add_argument('--epochs', type=int, default=1000,
+parser.add_argument('--epochs', type=int, default=200,
                     help="Number of epochs to run in each iteration")
+parser.add_argument('--batches', type=int, default=-1,
+                    help="Number of batches to run in each epoch (-1 means iterate over the full train dataset once)")
 parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
 parser.add_argument('--probability_bound', type=float, default=0.8,
@@ -55,8 +57,10 @@ parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--verify_mesh_tau_min', type=float, default=0.001,
                     help="Lowest allowed verification grid mesh size")
-parser.add_argument('--refresh_fraction_counterx', type=float, default=0.5,
+parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
+parser.add_argument('--counterx_fraction', type=float, default=0.25,
+                    help="Fraction of counter examples, compared to the total train data set.")
 
 ###
 parser.add_argument('--update_certificate', type=bool, default=True,
@@ -177,8 +181,9 @@ initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_me
 train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
-counterx_buffer = Buffer(dim = env.observation_space.shape[0])
-counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid, buffer_size=30000)
+args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
+counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size)
+counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 num_per_dimension_verify = np.array(
@@ -212,36 +217,47 @@ for i in range(args.cegis_iterations):
     filename = f"plots/data_{start_datetime}_iteration={i}"
     plot_layout(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
+    if args.batches == -1:
+        # Automatically determine number of batches
+        num_batches = int(np.ceil((len(train_buffer.data) + len(counterx_buffer.data)) / args.batch_size))
+    else:
+        # Use given number of batches
+        num_batches = args.batches
+
+    fraction_counterx = len(counterx_buffer.data) / (len(train_buffer.data) + len(counterx_buffer.data))
+
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
     C['decrease'] = train_buffer.data
     key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
-                                                             len(train_buffer.data), args.epochs, 0.75 * args.batch_size)
+                                                             len(train_buffer.data), num_batches, (1-fraction_counterx) * args.batch_size)
 
     X = format_training_data(env, counterx_buffer.data)
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
-                                                             len(counterx_buffer.data), args.epochs, 0.25 * args.batch_size)
+                                                             len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
     for j in range(args.epochs):
-        # Main train step function: Defines one loss function for the provided batch of train data and mimizes it
-        V_grads, Policy_grads, infos, key, diff = learn.train_step(
-            key = key,
-            V_state = V_state,
-            Policy_state = Policy_state,
-            C_decrease = np.vstack((batch_C_decrease[j], batch_X_decrease[j])),
-            C_init = np.vstack((batch_C_init[j], batch_X_init[j])),
-            C_unsafe = np.vstack((batch_C_unsafe[j], batch_X_unsafe[j])),
-            C_target = np.vstack((batch_C_target[j], batch_X_target[j])),
-            decrease_eps = decrease_eps)
+        for k in range(num_batches):
 
-        # Update parameters
-        if args.update_certificate:
-            V_state = V_state.apply_gradients(grads=V_grads)
-        if args.update_policy:
-            Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
+            # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
+            V_grads, Policy_grads, infos, key, diff = learn.train_step(
+                key = key,
+                V_state = V_state,
+                Policy_state = Policy_state,
+                C_decrease = np.vstack((batch_C_decrease[k], batch_X_decrease[k])),
+                C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
+                C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
+                C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
+                decrease_eps = decrease_eps)
+
+            # Update parameters
+            if args.update_certificate:
+                V_state = V_state.apply_gradients(grads=V_grads)
+            if args.update_policy:
+                Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
         if j % 100 == 0:
             lip_policy = lipschitz_coeff_l1(Policy_state.params)
@@ -279,11 +295,11 @@ for i in range(args.cegis_iterations):
 
     # Add counterexamples to the counterexample buffer
     if i > 0:
-        counterx_buffer.append_and_remove(refresh_fraction=args.refresh_fraction_counterx,
-                                          samples=samples_to_add, buffer_size=30000)
+        counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
+                                          samples=samples_to_add)
     else:
-        counterx_buffer.append_and_remove(refresh_fraction=args.refresh_fraction_counterx,
-                                          samples=samples_to_add, buffer_size=30000)
+        counterx_buffer.append_and_remove(refresh_fraction=1,
+                                          samples=samples_to_add)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)

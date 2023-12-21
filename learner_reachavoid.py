@@ -36,7 +36,7 @@ class Buffer:
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
-    def append_and_remove(self, refresh_fraction, samples, buffer_size):
+    def append_and_remove(self, refresh_fraction, samples):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
@@ -50,7 +50,7 @@ class Buffer:
 
         # Determine how many old and new samples are kept in the buffer
         nr_old = int((1-refresh_fraction) * len(self.data))
-        nr_new = int(buffer_size - nr_old)
+        nr_new = int(self.max_size - nr_old)
 
         old_idxs = np.random.choice(len(self.data), nr_old, replace=False)
         if nr_new <= len(samples):
