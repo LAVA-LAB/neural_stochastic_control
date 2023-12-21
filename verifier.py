@@ -40,7 +40,7 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
+    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key):
 
         # Expected decrease condition check on all states outside target set
         Vvalues_expDecr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
@@ -57,9 +57,9 @@ class Verifier:
         actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
 
         Vdiff = np.zeros(len(check_expDecr_at))
-        num_batches = np.ceil(len(check_expDecr_at) / expectation_batch).astype(int)
-        starts = np.arange(num_batches) * expectation_batch
-        ends = np.minimum(starts + expectation_batch, len(check_expDecr_at))
+        num_batches = np.ceil(len(check_expDecr_at) / self.args.verify_batch_size).astype(int)
+        starts = np.arange(num_batches) * self.args.verify_batch_size
+        ends = np.minimum(starts + self.args.verify_batch_size, len(check_expDecr_at))
 
         for (i, j) in tqdm(zip(starts, ends)):
 
