@@ -57,7 +57,7 @@ class Verifier:
         # Determine actions for every point in subgrid
         actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
 
-        Vdiff = self.compute_V_diff(V_state, idxs, actions)
+        Vdiff = self.compute_V_diff(V_state, check_expDecr_at, actions)
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
