@@ -285,8 +285,29 @@ for i in range(args.cegis_iterations):
     print(f'- Total number of samples: {len(verify_buffer.data)}')
     print(f'- Verification mesh size (tau): {args.verify_mesh_tau}')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
-    C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
-        verify.check_conditions(env, V_state, Policy_state, key)
+    while not verify_done:
+        C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
+            verify.check_conditions(env, V_state, Policy_state, key)
+
+        # If the suggested mesh is within the limit and also smaller than the current value, then try it
+        if suggested_mesh >= args.verify_mesh_tau_min and suggested_mesh < args.verify_mesh_tau:
+
+            args.verify_mesh_tau = suggested_mesh
+            args.verify_mesh_cell_width = args.verify_mesh_tau * (
+                        2 / env.state_dim)  # The width in each dimension is the mesh
+
+            num_per_dimension_verify = np.array(
+                np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width),
+                dtype=int)
+            verify_buffer = Buffer(dim=env.observation_space.shape[0])
+            initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
+                                              env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
+                                              size=num_per_dimension_verify)
+            verify_buffer.append(initial_verify_grid)
+            verify.update_dataset_verify(verify_buffer.data)
+
+        else:
+            verify_done = True
 
     # Samples to add to dataset
     samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)

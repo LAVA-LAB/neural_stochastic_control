@@ -115,13 +115,15 @@ class Learner:
                    decrease_eps,
                    ):
 
-        key, subkey = jax.random.split(key, 2)
-        # perturbation = jax.random.uniform(perturbation_key, (self.env.state_dim,),
-        #                              minval=-0.05,
-        #                              maxval=0.05)
+        key, noise_key, perturbation_key = jax.random.split(key, 3)
 
         # Split RNG keys for process noise in environment stap
-        noise_cond2_keys = jax.random.split(subkey, (len(C_decrease), self.N_expectation))
+        noise_cond2_keys = jax.random.split(noise_key, (len(C_decrease), self.N_expectation))
+
+        # Random perturbation to samples (for expected decrease condition)
+        perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
+                                          minval=-0.5*self.args.train_mesh_cell_width,
+                                          maxval=0.5*self.args.train_mesh_cell_width)
 
         def loss_fun(certificate_params, policy_params):
 
@@ -130,7 +132,7 @@ class Learner:
             lip_policy = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, C_decrease)
+            actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
 
             # Loss in initial state set
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * self.args.verify_mesh_tau - 1)
@@ -146,7 +148,7 @@ class Learner:
 
             # Loss for expected decrease condition
             exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
-                                                          certificate_params, C_decrease, actions, noise_cond2_keys)
+                                                          certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
             loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.mean(jnp.multiply(decrease_eps, exp_decrease))
 

@@ -69,8 +69,6 @@ class Verifier:
 
             Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
 
-        print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
-
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         # Negative is violation
@@ -78,7 +76,7 @@ class Verifier:
         C_expDecr_violations = check_expDecr_at[idxs]
         # TODO: Insert (exact) expected decrease condition check here
 
-        return C_expDecr_violations, check_expDecr_at, noise_key
+        return Vdiff, C_expDecr_violations, check_expDecr_at, noise_key
 
     def check_conditions(self, env, V_state, Policy_state, noise_key):
 
@@ -88,10 +86,12 @@ class Verifier:
 
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
-        C_expDecr_violations, check_expDecr_at, noise_key = \
+        Vdiff, C_expDecr_violations, check_expDecr_at, noise_key = \
             self.check_expected_decrease(env, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
+        print(f'--- Vdiff - min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
+        suggested_mesh = 0.95 * np.max(Vdiff) / K
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
@@ -109,7 +109,7 @@ class Verifier:
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
 
-        return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key
+        return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
     def V_step_noise_batch(self, V_state, V_params, x, u, noise_key):
