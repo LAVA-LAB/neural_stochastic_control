@@ -47,31 +47,14 @@ class Verifier:
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                 < 1 / (1 - self.args.probability_bound)).flatten()
+        check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
 
         # TODO: For now, this expected decrease condition is approximate
 
-        check_expDecr_at = self.C_decrease_adj[idxs]
-
         # Determine actions for every point in subgrid
         actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
-
-        Vdiff = self.compute_V_diff(V_state, check_expDecr_at, actions)
-
-        print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
-
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
-
-        # Negative is violation
-        idxs = (Vdiff >= -self.args.verify_mesh_tau * K)
-        C_expDecr_violations = check_expDecr_at[idxs]
-        # TODO: Insert (exact) expected decrease condition check here
-
-        return C_expDecr_violations, check_expDecr_at, noise_key
-
-    @partial(jax.jit, static_argnums=(0,2))
-    def compute_V_diff(self, V_state, check_expDecr_at, actions):
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / self.args.verify_batch_size).astype(int)
@@ -84,10 +67,18 @@ class Verifier:
             noise_key, subkey = jax.random.split(noise_key)
             noise_keys = jax.random.split(subkey, (len(x), self.args.noise_partition_cells))
 
-            Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                                noise_keys).flatten()
+            Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
 
-        return Vdiff
+        print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
+
+        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
+
+        # Negative is violation
+        idxs = (Vdiff >= -self.args.verify_mesh_tau * K)
+        C_expDecr_violations = check_expDecr_at[idxs]
+        # TODO: Insert (exact) expected decrease condition check here
+
+        return C_expDecr_violations, check_expDecr_at, noise_key
 
     def check_conditions(self, env, V_state, Policy_state, noise_key):
 
