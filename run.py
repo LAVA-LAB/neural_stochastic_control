@@ -243,7 +243,7 @@ for i in range(args.cegis_iterations):
     decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
-    
+
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 

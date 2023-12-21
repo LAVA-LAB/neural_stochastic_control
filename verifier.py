@@ -69,7 +69,7 @@ class Verifier:
 
             Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
 
-        print(f'V_step_number of compilations: {self.V_step_vectorized._cache_size()}')
+        print(f'V_step_number of compilations: {self.V_step_noise_batch._cache_size()}')
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
