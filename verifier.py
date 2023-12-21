@@ -52,10 +52,11 @@ class Verifier:
 
         # TODO: For now, this expected decrease condition is approximate
 
+        check_expDecr_at = self.C_decrease_adj[idxs]
+
         # Determine actions for every point in subgrid
         actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
 
-        check_expDecr_at = self.C_decrease_adj[idxs]
         Vdiff = self.compute_V_diff(V_state, idxs, actions)
 
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
