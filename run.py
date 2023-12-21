@@ -63,7 +63,7 @@ parser.add_argument('--noise_partition_cells', type=int, default=200,
                     help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
-parser.add_argument('--verify_mesh_tau_min', type=float, default=0.001,
+parser.add_argument('--verify_mesh_tau_min', type=float, default=0.0005,
                     help="Lowest allowed verification grid mesh size")
 parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
@@ -291,6 +291,13 @@ for i in range(args.cegis_iterations):
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
             verify.check_conditions(env, V_state, Policy_state, key)
 
+        # Samples to add to dataset
+        samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
+
+        if len(samples_to_add) == 0:
+            print('\n ===Successfully learned martingale! ===')
+            break
+
         # If the suggested mesh is within the limit and also smaller than the current value, then try it
         if suggested_mesh >= args.verify_mesh_tau_min and suggested_mesh < args.verify_mesh_tau:
 
@@ -310,13 +317,6 @@ for i in range(args.cegis_iterations):
 
         else:
             verify_done = True
-
-    # Samples to add to dataset
-    samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
-
-    if len(samples_to_add) == 0:
-        print('\n ===Successfully learned martingale! ===')
-        break
 
     # If the counterexample fraction (of total train data) is zero, then we simply add the counterexamples to the
     # training buffer.

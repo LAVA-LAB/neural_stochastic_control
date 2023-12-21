@@ -90,7 +90,7 @@ class Verifier:
             self.check_expected_decrease(env, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        suggested_mesh = np.maximum(0, 0.99 * -np.max(Vdiff) / K)
+        suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
         print(f'-- Vdiff - min: {np.min(Vdiff):.3f} mean: {np.mean(Vdiff):.3f} max: {np.max(Vdiff):.3f}')
         print(f'-- Suggested mesh for verification grid: {suggested_mesh:.5f}')
 
