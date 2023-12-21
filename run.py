@@ -15,6 +15,11 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
+from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid, format_training_data, batch_training_data
+from verifier import Verifier
+from jax_utils import create_train_state, lipschitz_coeff_l1
+from plot import plot_certificate_2D, plot_layout
+
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
 # Options
@@ -131,12 +136,7 @@ else:
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
 
-# %% ### Neural martingale Learner ###
-
-from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid, format_training_data, batch_training_data
-from verifier import Verifier
-from jax_utils import create_train_state, lipschitz_coeff_l1
-from plot import plot_certificate_2D, plot_layout
+# %%
 
 # Restore state of policy network
 raw_restored = orbax_checkpointer.restore(checkpoint_path)
@@ -281,7 +281,9 @@ for i in range(args.cegis_iterations):
     filename = f"plots/certificate_{start_datetime}_iteration={i}"
     plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
-    print(f'\nCheck martingale conditions over {len(verify_buffer.data)} samples...')
+    print(f'\nCheck martingale conditions...')
+    print(f'- Total number of samples: {len(verify_buffer.data)}')
+    print(f'- Verification mesh size (tau): {args.verify_mesh_tau}')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
     C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
         verify.check_conditions(env, V_state, Policy_state, key)
@@ -293,13 +295,17 @@ for i in range(args.cegis_iterations):
         print('\n ===Successfully learned martingale! ===')
         break
 
-    # Add counterexamples to the counterexample buffer
-    if i > 0:
-        counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=samples_to_add)
-    else:
-        counterx_buffer.append_and_remove(refresh_fraction=1, samples=samples_to_add)
+    # If the counterexample fraction (of total train data) is zero, then we simply add the counterexamples to the
+    # training buffer.
+    if args.counterx_fraction == 0:
+        train_buffer.append(samples_to_add)
 
-    train_buffer.append(samples_to_add)
+    else:
+        # Add counterexamples to the counterexample buffer
+        if i > 0:
+            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=samples_to_add)
+        else:
+            counterx_buffer.append_and_remove(refresh_fraction=1, samples=samples_to_add)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)

@@ -86,7 +86,6 @@ class Verifier:
         lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
-        print('Check martingale conditions...')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         C_expDecr_violations, check_expDecr_at, noise_key = \
