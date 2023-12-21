@@ -281,12 +281,13 @@ for i in range(args.cegis_iterations):
     filename = f"plots/certificate_{start_datetime}_iteration={i}"
     plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
-    print(f'\nCheck martingale conditions...')
-    print(f'- Total number of samples: {len(verify_buffer.data)}')
-    print(f'- Verification mesh size (tau): {args.verify_mesh_tau}')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
     verify_done = False
     while not verify_done:
+        print(f'\nCheck martingale conditions...')
+        print(f'- Total number of samples: {len(verify_buffer.data)}')
+        print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.3f}')
+
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
             verify.check_conditions(env, V_state, Policy_state, key)
 
