@@ -6,8 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from pathlib import Path
-
-from learner_reachavoid import define_grid
+from buffer import define_grid
 
 def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
 

@@ -1,8 +1,6 @@
 from typing import Sequence
-import itertools
 import numpy as np
 from functools import partial
-
 import jax
 import optax
 from jax import random, numpy as jnp
@@ -10,80 +8,11 @@ from flax.training.train_state import TrainState
 import flax.linen as nn
 from jax_utils import lipschitz_coeff_l1
 
-# TODO: Make this buffer efficient.
-class Buffer:
-    '''
-    Class to store samples to train Martingale over
-    '''
-
-    def __init__(self, dim, max_size = 10_000_000, ):
-        self.dim = dim
-        self.data = np.zeros(shape=(0,dim), dtype=np.float32)
-        self.max_size = max_size
-
-    def append(self, samples):
-        '''
-        Append given samples to training buffer
-
-        :param samples:
-        :return:
-        '''
-
-        # Check if buffer exceeds length. If not, add new samples
-        assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
-
-        if not (self.max_size is not None and len(self.data) > self.max_size):
-            append_samples = np.array(samples, dtype=np.float32)
-            self.data = np.vstack((self.data, append_samples), dtype=np.float32)
-
-    def append_and_remove(self, refresh_fraction, samples):
-        '''
-        Removes a given fraction of the training buffer and appends the given samples
-
-        :param fraction_to_remove:
-        :param samples:
-        :return:
-        '''
-
-        # Check if buffer exceeds length. If not, add new samples
-        assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
-
-        # Determine how many old and new samples are kept in the buffer
-        nr_old = int((1-refresh_fraction) * len(self.data))
-        nr_new = int(self.max_size - nr_old)
-
-        old_idxs = np.random.choice(len(self.data), nr_old, replace=False)
-        if nr_new <= len(samples):
-            replace = False
-        else:
-            replace = True
-        new_idxs = np.random.choice(len(samples), nr_new, replace=replace)
-
-        old_samples = self.data[old_idxs]
-        new_samples = samples[new_idxs]
-
-        self.data = np.vstack((old_samples, new_samples), dtype=np.float32)
-
-def define_grid(low, high, size):
-    '''
-    Set rectangular grid over state space for neural network learning
-
-    :param low: ndarray
-    :param high: ndarray
-    :param size: List of ints (entries per dimension)
-    '''
-
-    points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
-    grid = np.array(list(itertools.product(*points)))
-
-    return grid
-
 
 class Learner:
 
-    def __init__(self, env, args):
-
-        self.args = args
+    def __init__(self, env):
+        
         self.env = env
 
         # Lipschitz factor
@@ -93,7 +22,7 @@ class Learner:
         self.max_lip_policy = 4
         self.max_lip_certificate = 15
 
-        self.global_minimum = 0.3
+        self.glob_min = 0.3
         self.N_expectation = 16
 
         # Define vectorized functions for loss computation
@@ -113,6 +42,9 @@ class Learner:
                    C_unsafe,
                    C_target,
                    decrease_eps,
+                   max_grid_perturb,
+                   verify_mesh_tau,
+                   probability_bound
                    ):
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
@@ -122,8 +54,8 @@ class Learner:
 
         # Random perturbation to samples (for expected decrease condition)
         perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
-                                          minval=-0.5*self.args.train_mesh_cell_width,
-                                          maxval=0.5*self.args.train_mesh_cell_width)
+                                          minval=-0.5*max_grid_perturb,
+                                          maxval=0.5*max_grid_perturb)
 
         def loss_fun(certificate_params, policy_params):
 
@@ -135,34 +67,33 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * self.args.verify_mesh_tau - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * verify_mesh_tau - 1)
             # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
 
             # Loss in unsafe state set
-            loss_unsafe = jnp.maximum(0, 1/(1-self.args.probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * self.args.verify_mesh_tau)
-            # loss_unsafe = jnp.maximum(0, 1 / (1 - self.args.probability_bound) -
+            loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * verify_mesh_tau)
+            # loss_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) -
             #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(self.args.verify_mesh_tau, K, decrease_eps, V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
             loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.mean(jnp.multiply(decrease_eps, exp_decrease))
 
-            violations = (diff >= -self.args.verify_mesh_tau * K).astype(jnp.float32)
+            violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
-
             # loss_lipschitz = jnp.maximum(K - 60, 0)
 
             # Loss to promote global minimum of certificate within stabilizing set
-            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.global_minimum)
+            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.glob_min)
             loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
                                         jnp.min(V_state.apply_fn(certificate_params, C_init)))
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -

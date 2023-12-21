@@ -15,7 +15,8 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from learner_reachavoid import MLP, MLP_softplus, Learner, Buffer, define_grid, format_training_data, batch_training_data
+from learner_reachavoid import MLP, MLP_softplus, Learner, format_training_data, batch_training_data
+from buffer import Buffer, define_grid
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_layout
@@ -45,7 +46,7 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
-parser.add_argument('--epochs', type=int, default=20,
+parser.add_argument('--epochs', type=int, default=2,
                     help="Number of epochs to run in each iteration")
 parser.add_argument('--batches', type=int, default=-1,
                     help="Number of batches to run in each epoch (-1 means iterate over the full train dataset once)")
@@ -61,7 +62,7 @@ parser.add_argument('--verify_batch_size', type=int, default=10000,
                     help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
 parser.add_argument('--noise_partition_cells', type=int, default=200,
                     help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
-parser.add_argument('--verify_mesh_tau', type=float, default=0.001,
+parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--verify_mesh_tau_min', type=float, default=0.0005,
                     help="Lowest allowed verification grid mesh size")
@@ -145,7 +146,6 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
-args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Initialize certificate network
@@ -172,8 +172,8 @@ for layer in Policy_state.params['params'].keys():
     Policy_state.params['params'][layer]['bias'] = ppo_state['params']['actor']['params'][layer]['bias']
 
 # Define Learner
-learn = Learner(env, args=args)
-verify = Verifier(env, args=args)
+learn = Learner(env)
+verify = Verifier(env)
 
 # Set training dataset (by plain grid over the state space)
 num_per_dimension_train = np.array(
@@ -189,13 +189,7 @@ counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.c
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
-num_per_dimension_verify = np.array(
-    np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
-verify_buffer = Buffer(dim=env.observation_space.shape[0])
-initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
-                                  env.observation_space.high - 0.5 * args.verify_mesh_cell_width, size=num_per_dimension_verify)
-verify_buffer.append(initial_verify_grid)
-verify.update_dataset_verify(verify_buffer.data)
+verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
 # %%
 
@@ -256,7 +250,10 @@ for i in range(args.cegis_iterations):
                 C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
                 C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
                 C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
-                decrease_eps = decrease_eps)
+                decrease_eps = decrease_eps,
+                max_grid_perturb = args.train_mesh_cell_width,
+                verify_mesh_tau = args.verify_mesh_tau,
+                probability_bound = args.probability_bound)
 
             # Update parameters
             if args.update_certificate:
@@ -285,11 +282,11 @@ for i in range(args.cegis_iterations):
     verify_done = False
     while not verify_done:
         print(f'\nCheck martingale conditions...')
-        print(f'- Total number of samples: {len(verify_buffer.data)}')
+        print(f'- Total number of samples: {len(verify.buffer.data)}')
         print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.5f}')
 
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
-            verify.check_conditions(env, V_state, Policy_state, key)
+            verify.check_conditions(env, args, V_state, Policy_state, key)
 
         # Samples to add to dataset
         samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
@@ -300,21 +297,8 @@ for i in range(args.cegis_iterations):
 
         # If the suggested mesh is within the limit and also smaller than the current value, then try it
         if suggested_mesh >= args.verify_mesh_tau_min and suggested_mesh < args.verify_mesh_tau:
-
             args.verify_mesh_tau = suggested_mesh
-            args.verify_mesh_cell_width = args.verify_mesh_tau * (
-                        2 / env.state_dim)  # The width in each dimension is the mesh
-
-            num_per_dimension_verify = np.array(
-                np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width),
-                dtype=int)
-            verify_buffer = Buffer(dim=env.observation_space.shape[0])
-            initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
-                                              env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
-                                              size=num_per_dimension_verify)
-            verify_buffer.append(initial_verify_grid)
-            verify.update_dataset_verify(verify_buffer.data)
-
+            verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
         else:
             verify_done = True
 
@@ -335,16 +319,7 @@ for i in range(args.cegis_iterations):
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
-    args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
-
-    num_per_dimension_verify = np.array(
-        np.ceil((env.observation_space.high - env.observation_space.low) / args.verify_mesh_cell_width), dtype=int)
-    verify_buffer = Buffer(dim=env.observation_space.shape[0])
-    initial_verify_grid = define_grid(env.observation_space.low + 0.5 * args.verify_mesh_cell_width,
-                                      env.observation_space.high - 0.5 * args.verify_mesh_cell_width,
-                                      size=num_per_dimension_verify)
-    verify_buffer.append(initial_verify_grid)
-    verify.update_dataset_verify(verify_buffer.data)
+    verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
     plt.close('all')
     print('\n================\n')

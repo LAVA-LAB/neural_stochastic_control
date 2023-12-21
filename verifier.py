@@ -7,6 +7,7 @@ import time
 from jax_utils import lipschitz_coeff_l1
 import os
 from tqdm import tqdm
+from buffer import Buffer, define_grid
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
@@ -18,27 +19,50 @@ cpu_device = jax.devices('cpu')[0]
 
 class Verifier:
 
-    def __init__(self, env, args):
+    def __init__(self, env):
 
         self.env = env
-        self.args = args
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.V_step_vectorized = jax.vmap(self.V_step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
 
         return
 
-    def update_dataset_verify(self, data):
+
+    def set_verification_grid(self, env, mesh_size):
+        '''
+        Defines a rectangular gridding of the state space, used by the verifier
+        :param env: 
+        :param mesh_size: 
+        :return: 
+        '''
+
+        # Width of each cell in the partition. The grid points are the centers of the cells.
+        verify_mesh_cell_width = mesh_size * (2 / env.state_dim)
+
+        # Number of cells per dimension of the state space
+        num_per_dimension = np.array(
+            np.ceil((env.observation_space.high - env.observation_space.low) / verify_mesh_cell_width), dtype=int)
+        self.buffer = Buffer(dim=env.observation_space.shape[0])
+        
+        # Define grid
+        grid = define_grid(env.observation_space.low + 0.5 * verify_mesh_cell_width,
+                           env.observation_space.high - 0.5 * verify_mesh_cell_width,
+                           size=num_per_dimension)
+        
+        # Add gridd to buffer
+        self.buffer.append(grid)
+
         # Define points of grid which are adjacent to different sets (used later by verifier)
         # Max. distance (L1-norm) between any vertex and a point in the adjacent cell is equal to the mesh size (tau).
-        self.C_decrease_adj = self.env.target_space.not_contains(data,
-                                 delta=-0.5 * self.args.verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
+        self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
+                                 delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
 
-        self.C_init_adj = self.env.init_space.contains(data,
-                                 delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
+        self.C_init_adj = self.env.init_space.contains(self.buffer.data,
+                                 delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
 
-        self.C_unsafe_adj = self.env.unsafe_space.contains(data,
-                                 delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
+        self.C_unsafe_adj = self.env.unsafe_space.contains(self.buffer.data,
+                                 delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''
@@ -67,14 +91,14 @@ class Verifier:
 
             return output
 
-    def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key):
+    def check_expected_decrease(self, env, args, V_state, Policy_state, lip_certificate, lip_policy, noise_key):
 
         # Expected decrease condition check on all states outside target set
         #Vvalues_expDecr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
         Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
 
-        idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
-                < 1 / (1 - self.args.probability_bound)).flatten()
+        idxs = (Vvalues_expDecr - lip_certificate * args.verify_mesh_tau
+                < 1 / (1 - args.probability_bound)).flatten()
         check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
@@ -87,28 +111,28 @@ class Verifier:
                                             env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
-        num_batches = np.ceil(len(check_expDecr_at) / self.args.verify_batch_size).astype(int)
-        starts = np.arange(num_batches) * self.args.verify_batch_size
-        ends = np.minimum(starts + self.args.verify_batch_size, len(check_expDecr_at))
+        num_batches = np.ceil(len(check_expDecr_at) / args.verify_batch_size).astype(int)
+        starts = np.arange(num_batches) * args.verify_batch_size
+        ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
 
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Verifying exp. decrease condition'):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             noise_key, subkey = jax.random.split(noise_key)
-            noise_keys = jax.random.split(subkey, (len(x), self.args.noise_partition_cells))
+            noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
             Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         # Negative is violation
-        idxs = (Vdiff >= -self.args.verify_mesh_tau * K)
+        idxs = (Vdiff >= -args.verify_mesh_tau * K)
         C_expDecr_violations = check_expDecr_at[idxs]
         # TODO: Insert (exact) expected decrease condition check here
 
         return Vdiff, C_expDecr_violations, check_expDecr_at, noise_key
 
-    def check_conditions(self, env, V_state, Policy_state, noise_key):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key):
 
         lip_policy = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
         lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
@@ -117,7 +141,7 @@ class Verifier:
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         Vdiff, C_expDecr_violations, check_expDecr_at, noise_key = \
-            self.check_expected_decrease(env, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
+            self.check_expected_decrease(env, args, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
@@ -127,7 +151,7 @@ class Verifier:
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
 
-        idxs = ((Vvalues_init + lip_certificate * self.args.verify_mesh_tau) > 1).flatten()
+        idxs = ((Vvalues_init + lip_certificate * args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
@@ -135,7 +159,7 @@ class Verifier:
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
 
-        idxs = ((Vvalues_unsafe - lip_certificate * self.args.verify_mesh_tau) < 1 / (1-self.args.probability_bound)).flatten()
+        idxs = ((Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
