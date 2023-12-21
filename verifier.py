@@ -40,10 +40,38 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
+    def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=10_000_000):
+        '''
+        Do a forward pass for the given network, split into batches of given size (can be needed to avoid OOM errors).
+
+        :param apply_fn:
+        :param params:
+        :param samples:
+        :param batch_size:
+        :return:
+        '''
+
+        if len(samples) <= batch_size:
+            # If the number of samples is below the maximum batch size, then just do one pass
+            return jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples))
+
+        else:
+            # Otherwise, split into batches
+            output = np.zeros((len(samples), out_dim))
+            num_batches = np.ceil(len(samples) / batch_size).astype(int)
+            starts = np.arange(num_batches) * batch_size
+            ends = np.minimum(starts + batch_size, len(samples))
+
+            for (i, j) in zip(starts, ends):
+                output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples))
+
+            return output
+
     def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key):
 
         # Expected decrease condition check on all states outside target set
-        Vvalues_expDecr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
+        #Vvalues_expDecr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
+        Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                 < 1 / (1 - self.args.probability_bound)).flatten()
@@ -54,7 +82,9 @@ class Verifier:
         # TODO: For now, this expected decrease condition is approximate
 
         # Determine actions for every point in subgrid
-        actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
+        # actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
+        actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at,
+                                            env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / self.args.verify_batch_size).astype(int)
