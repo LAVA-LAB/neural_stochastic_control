@@ -45,7 +45,7 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
-parser.add_argument('--epochs', type=int, default=200,
+parser.add_argument('--epochs', type=int, default=20,
                     help="Number of epochs to run in each iteration")
 parser.add_argument('--batches', type=int, default=-1,
                     help="Number of batches to run in each epoch (-1 means iterate over the full train dataset once)")
@@ -61,7 +61,7 @@ parser.add_argument('--verify_batch_size', type=int, default=10000,
                     help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
 parser.add_argument('--noise_partition_cells', type=int, default=200,
                     help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
-parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
+parser.add_argument('--verify_mesh_tau', type=float, default=0.001,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--verify_mesh_tau_min', type=float, default=0.0005,
                     help="Lowest allowed verification grid mesh size")
@@ -286,7 +286,7 @@ for i in range(args.cegis_iterations):
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         print(f'- Total number of samples: {len(verify_buffer.data)}')
-        print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.3f}')
+        print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.5f}')
 
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
             verify.check_conditions(env, V_state, Policy_state, key)
@@ -317,6 +317,9 @@ for i in range(args.cegis_iterations):
 
         else:
             verify_done = True
+
+    if len(samples_to_add) == 0:
+        break
 
     # If the counterexample fraction (of total train data) is zero, then we simply add the counterexamples to the
     # training buffer.
