@@ -40,7 +40,7 @@ class Verifier:
         self.C_unsafe_adj = self.env.unsafe_space.contains(data,
                                  delta=0.5 * self.args.verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
 
-    def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=10_000_000):
+    def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''
         Do a forward pass for the given network, split into batches of given size (can be needed to avoid OOM errors).
 
@@ -63,7 +63,7 @@ class Verifier:
             ends = np.minimum(starts + batch_size, len(samples))
 
             for (i, j) in zip(starts, ends):
-                output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples))
+                output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples[i:j]))
 
             return output
 
