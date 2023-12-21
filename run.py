@@ -66,6 +66,8 @@ parser.add_argument('--update_policy', type=bool, default=False,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
+args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+
 if args.model == 'LinearEnv':
     fun = LinearEnv
 elif args.model == 'PendulumEnv':
@@ -213,6 +215,7 @@ for i in range(args.cegis_iterations):
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
+    C['decrease'] = train_buffer.data
     key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
                                                              len(train_buffer.data), args.epochs, 0.75 * args.batch_size)
 
