@@ -51,8 +51,8 @@ parser.add_argument('--train_mesh_tau', type=float, default=0.01,
                     help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 
 ### VERIFIER ARGUMENTS
-parser.add_argument('--noise_partition_cells', type=int, default=25,
-                    help="Number of cells to partition the noise space in (to numerically integrate stochastic nosie)")
+parser.add_argument('--noise_partition_cells', type=int, default=200,
+                    help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--verify_mesh_tau_min', type=float, default=0.001,
