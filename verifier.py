@@ -61,7 +61,7 @@ class Verifier:
         starts = np.arange(num_batches) * self.args.verify_batch_size
         ends = np.minimum(starts + self.args.verify_batch_size, len(check_expDecr_at))
 
-        for (i, j) in tqdm(zip(starts, ends)):
+        for (i, j) in tqdm(zip(starts, ends), total=len(starts)):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             noise_key, subkey = jax.random.split(noise_key)
