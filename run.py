@@ -285,6 +285,7 @@ for i in range(args.cegis_iterations):
     print(f'- Total number of samples: {len(verify_buffer.data)}')
     print(f'- Verification mesh size (tau): {args.verify_mesh_tau}')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
+    verify_done = False
     while not verify_done:
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
             verify.check_conditions(env, V_state, Policy_state, key)
