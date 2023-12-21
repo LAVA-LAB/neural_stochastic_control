@@ -42,8 +42,10 @@ class Verifier:
 
     def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
 
+        jit_fn = jit(V_state.apply_fn)
+
         # Expected decrease condition check on all states outside target set
-        Vvalues_expDecr = V_state.apply_fn(jax.lax.stop_gradient(V_state.params), self.C_decrease_adj)
+        Vvalues_expDecr = jit_fn(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                 < 1 / (1 - self.args.probability_bound)).flatten()
