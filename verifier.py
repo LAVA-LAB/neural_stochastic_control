@@ -61,7 +61,7 @@ class Verifier:
         starts = np.arange(num_batches) * self.args.verify_batch_size
         ends = np.minimum(starts + self.args.verify_batch_size, len(check_expDecr_at))
 
-        for (i, j) in tqdm(zip(starts, ends), total=len(starts)):
+        for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Verifying exp. decrease condition'):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
             noise_key, subkey = jax.random.split(noise_key)
@@ -69,6 +69,7 @@ class Verifier:
 
             Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
 
+        print(f'V_step_number of compilations: {self.V_step_vectorized._cache_size()}')
         print('min:', np.min(Vdiff), 'mean:', np.mean(Vdiff), 'max:', np.max(Vdiff))
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)

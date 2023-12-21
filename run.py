@@ -13,6 +13,7 @@ from commons import ticDiff, tocDiff
 import numpy as np
 import time
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -204,7 +205,7 @@ ticDiff()
 
 for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
-    epoch_start = time.time()
+    iteration_init = time.time()
 
     if i >= 3:
         args.update_policy = True
@@ -241,7 +242,10 @@ for i in range(args.cegis_iterations):
 
     decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
 
-    for j in range(args.epochs):
+    print(f'- Initializing iteration took {time.time-iteration_init} sec.')
+    iteration_start = time.time()
+
+    for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
@@ -261,29 +265,24 @@ for i in range(args.cegis_iterations):
             if args.update_policy:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-        if j % 100 == 0:
-            lip_policy = lipschitz_coeff_l1(Policy_state.params)
-            lip_certificate = lipschitz_coeff_l1(V_state.params)
+    lip_policy = lipschitz_coeff_l1(Policy_state.params)
+    lip_certificate = lipschitz_coeff_l1(V_state.params)
 
-            print(f'\nLoss (iteration {i} epoch {j}):')
-            for ky, info in infos.items():
-                print(f' - {ky}: {info:.8f}')
+    print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
 
-            print('lipschitz policy (L1):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j
-                                              in [True, False]])
-            print('lipschitz certificate (L1)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j
-                                                   in [True, False]])
-            print('overall lipschitz K (L1)', lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1))
+    print(f'\nLoss components in last train step:')
+    for ky, info in infos.items():
+        print(f' - {ky}: {info:.8f}')
 
-    epoch_end = time.time()
-    print(f'\nLast epoch took {epoch_end - epoch_start:.2f} seconds')
+    print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j
+                                      in [True, False]])
+    print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j
+                                           in [True, False]])
 
     filename = f"plots/certificate_{start_datetime}_iteration={i}"
     plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
-    print(f'\nNumber of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
-
-    print(f'Check martingale conditions over {len(verify_buffer.data)} samples...')
+    print(f'\nCheck martingale conditions over {len(verify_buffer.data)} samples...')
     # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
     C_expDecr_violations, C_init_violations, C_unsafe_violations, key = \
         verify.check_conditions(env, V_state, Policy_state, key)
@@ -292,16 +291,14 @@ for i in range(args.cegis_iterations):
     samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
 
     if len(samples_to_add) == 0:
-        print('Successfully learned martingale!')
+        print('\n ===Successfully learned martingale! ===')
         break
 
     # Add counterexamples to the counterexample buffer
     if i > 0:
-        counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
-                                          samples=samples_to_add)
+        counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=samples_to_add)
     else:
-        counterx_buffer.append_and_remove(refresh_fraction=1,
-                                          samples=samples_to_add)
+        counterx_buffer.append_and_remove(refresh_fraction=1, samples=samples_to_add)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
