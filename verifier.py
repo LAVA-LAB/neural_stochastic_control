@@ -90,9 +90,9 @@ class Verifier:
             self.check_expected_decrease(env, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        suggested_mesh = 0.99 * np.max(Vdiff) / K
+        suggested_mesh = np.max(0, 0.99 * -np.max(Vdiff) / K)
         print(f'-- Vdiff - min: {np.min(Vdiff):.3f} mean: {np.mean(Vdiff):.3f} max: {np.max(Vdiff):.3f}')
-        print(f'-- Suggested mesh for verification grid: {suggested_mesh:.3f}')
+        print(f'-- Suggested mesh for verification grid: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
