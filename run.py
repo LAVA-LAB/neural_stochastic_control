@@ -51,6 +51,8 @@ parser.add_argument('--train_mesh_tau', type=float, default=0.01,
                     help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 
 ### VERIFIER ARGUMENTS
+parser.add_argument('--verifier_batch_size', type=int, default=10000,
+                    help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
 parser.add_argument('--noise_partition_cells', type=int, default=200,
                     help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,

@@ -117,7 +117,7 @@ class Verifier:
     def V_step_noise_batch(self, V_state, V_params, x, u, noise_key):
 
         state_new, noise_key = self.env.vstep_noise_batch(x, noise_key, u)
-        V_new = jnp.mean(V_state.apply_fn(V_params, state_new))
-        V_old = V_state.apply_fn(V_state.params, x)
+        V_new = jnp.mean(jit(V_state.apply_fn)(V_params, state_new))
+        V_old = jit(V_state.apply_fn)(V_state.params, x)
 
         return V_new-V_old
