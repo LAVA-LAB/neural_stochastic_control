@@ -299,6 +299,8 @@ for i in range(args.cegis_iterations):
     else:
         counterx_buffer.append_and_remove(refresh_fraction=1, samples=samples_to_add)
 
+    train_buffer.append(samples_to_add)
+
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
     args.verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)  # The width in each dimension is the mesh
