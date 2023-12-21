@@ -62,8 +62,9 @@ class RSMLoop:
         start_metrics = None
         num_epochs = 200 if self.iter == 0 else 200
 
+        num_epochs = 10
+
         print(train_ds)
-        return train_ds
 
         start_time = time.time()
         pbar = tqdm(total=num_epochs)
@@ -124,9 +125,7 @@ class RSMLoop:
             print(
                 f"\n#### Iteration {self.iter} ({runtime // 60:0.0f}:{runtime % 60:02.0f} elapsed) #####"
             )
-            train_ds = self.train_until_zero_loss()
-            return train_ds
-
+            self.train_until_zero_loss()
             K_f = self.env.lipschitz_constant
             K_p = lipschitz_l1_jax(self.learner.p_state.params).item()
             K_l = lipschitz_l1_jax(self.learner.l_state.params).item()
@@ -146,6 +145,9 @@ class RSMLoop:
             self.info["iter"] = self.iter
             self.info["runtime"] = runtime
             sat, hard_violations, info = self.verifier.check_dec_cond(lipschitz_k)
+
+            return sat, hard_violations, info
+
             for k, v in info.items():
                 self.info[k] = v
             print("info=", str(self.info), flush=True)
@@ -397,7 +399,7 @@ if __name__ == "__main__":
     args.env = 'lds_100'
     args.skip_ppo = True
     args.p_lip = 4.0
-    args.grid_factor = 8
+    args.grid_factor = 1
     args.batch_size = 2048
     args.reach_prob = 0.8
 
@@ -433,8 +435,6 @@ if __name__ == "__main__":
         learner.pretrain_policy(args.ppo_iters, lip_start=0.05 / 10, lip_end=0.05)
         learner.save(f"checkpoints/{args.env}_ppo.jax")
         print("[SAVED]")
-    else:
-        print('Sipped PPO..')
 
     verifier = RSMVerifier(
         learner,
@@ -473,7 +473,7 @@ if __name__ == "__main__":
         import sys
 
         sys.exit(0)
-    train_ds = loop.run(args.timeout * 60)
+    sat = loop.run(args.timeout * 60)
     loop.plot_l(f"plots/{args.env}_end.png")
 
     with open("info.log", "a") as f:

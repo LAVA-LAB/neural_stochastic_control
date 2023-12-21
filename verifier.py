@@ -43,8 +43,7 @@ class Verifier:
     def check_expected_decrease(self, env, V_state, Policy_state, lip_certificate, lip_policy, noise_key, expectation_batch = 5000):
 
         # Expected decrease condition check on all states outside target set
-        with jax.default_device(cpu_device):
-            Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
+        Vvalues_expDecr = V_state.apply_fn(V_state.params, self.C_decrease_adj)
 
         idxs = (Vvalues_expDecr - lip_certificate * self.args.verify_mesh_tau
                 < 1 / (1 - self.args.probability_bound)).flatten()
@@ -57,8 +56,7 @@ class Verifier:
         noise_keys = jax.random.split(subkey, (len(check_expDecr_at), self.args.noise_partition_cells))
 
         # Determine actions for every point in subgrid
-        with jax.default_device(cpu_device):
-            actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
+        actions = Policy_state.apply_fn(Policy_state.params, check_expDecr_at)
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / expectation_batch).astype(int)
@@ -84,6 +82,9 @@ class Verifier:
 
     def check_conditions(self, env, V_state, Policy_state, noise_key):
 
+        Policy_state.params = jax.lax.stop_gradient(Policy_state.params)
+        V_state.params = jax.lax.stop_gradient(V_state.params)
+
         lip_policy = lipschitz_coeff_l1(Policy_state.params)
         lip_certificate = lipschitz_coeff_l1(V_state.params)
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
@@ -97,8 +98,7 @@ class Verifier:
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        with jax.default_device(cpu_device):
-            Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
+        Vvalues_init = V_state.apply_fn(V_state.params, self.C_init_adj)
 
         idxs = ((Vvalues_init + lip_certificate * self.args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
@@ -106,8 +106,7 @@ class Verifier:
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        with jax.default_device(cpu_device):
-            Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
+        Vvalues_unsafe = V_state.apply_fn(V_state.params, self.C_unsafe_adj)
 
         idxs = ((Vvalues_unsafe - lip_certificate * self.args.verify_mesh_tau) < 1 / (1-self.args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]
