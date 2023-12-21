@@ -70,9 +70,8 @@ class Verifier:
 
         return C_expDecr_violations, check_expDecr_at, noise_key
 
-    @partial(jax.jit, static_argnums=(0,))
-    def compute_V_diff(self, V_state, idxs, actions):
-        check_expDecr_at = self.C_decrease_adj[idxs]
+    @partial(jax.jit, static_argnums=(0,2))
+    def compute_V_diff(self, V_state, check_expDecr_at, actions):
 
         Vdiff = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / self.args.verify_batch_size).astype(int)
