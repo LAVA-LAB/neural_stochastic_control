@@ -64,8 +64,8 @@ def create_train_state(model, act_funcs, rng, in_dim, learning_rate=0.01, ema=0,
                              ibp_fn=jax.jit(partial(apply_ibp_rectangular, act_funcs)))
 
 @partial(jax.jit, static_argnums=(1,2,))
-def lipschitz_coeff_l1(params, weights=True, CPLip=True):
-    if (not weights and not CPLip):
+def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
+    if (not weighted and not CPLip):
         L = jnp.float32(1)
         # Compute Lipschitz coefficient by iterating through layers
         for layer in params["params"].values():
@@ -73,7 +73,7 @@ def lipschitz_coeff_l1(params, weights=True, CPLip=True):
             if "kernel" in layer:
                 L *= jnp.max(jnp.sum(jnp.abs(layer["kernel"]), axis=1))
 
-    elif (not weights and CPLip):
+    elif (not weighted and CPLip):
         L = jnp.float32(0)
         matrices = []
         for layer in params["params"].values():
@@ -83,13 +83,13 @@ def lipschitz_coeff_l1(params, weights=True, CPLip=True):
 
         nmatrices = len(matrices)
         products = [matrices]
-        prodnorms = [[jnp.max(jnp.sum(jnp.abs(mat), axis=0)) for mat in matrices]]
+        prodnorms = [[jnp.max(jnp.sum(jnp.abs(mat), axis=1)) for mat in matrices]]
         for nprods in range(1, nmatrices):
             prod_list = []
             for idx in range(nmatrices - nprods):
                 prod_list.append(jnp.matmul(products[nprods - 1][idx], matrices[idx + nprods]))
             products.append(prod_list)
-            prodnorms.append([jnp.max(jnp.sum(jnp.abs(mat), axis=0)) for mat in prod_list])
+            prodnorms.append([jnp.max(jnp.sum(jnp.abs(mat), axis=1)) for mat in prod_list])
 
         ncombs = 1 << (nmatrices - 1)
         for idx in range(ncombs):
@@ -105,39 +105,45 @@ def lipschitz_coeff_l1(params, weights=True, CPLip=True):
             L += Lloc / ncombs
 
 
-    elif (weights and not CPLip):
+    elif (weighted and not CPLip):
         L = jnp.float32(1)
-        weights = [jnp.ones(1)]
-        # Compute Lipschitz coefficient by iterating through layers
+        matrices = []
         for layer in params["params"].values():
             # Involve only the 'kernel' dictionaries of each layer in the network
             if "kernel" in layer:
-                colsums = jnp.sum(jnp.multiply(jnp.abs(layer["kernel"]), weights[-1][:, jnp.newaxis]), axis=0)
-                lip = jnp.max(colsums)
-                weights.append(colsums / lip)
-                L *= lip
+                matrices.append(layer["kernel"])
+        matrices.reverse()
 
-    elif (weights and CPLip):
+        weights = [jnp.ones(jnp.shape(matrices[0])[1])]
+        for mat in matrices:
+            colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
+            lip = jnp.max(colsums)
+            weights.append(colsums / lip)
+            L *= lip
+
+
+    elif (weighted and CPLip):
         L = jnp.float32(0)
         matrices = []
         for layer in params["params"].values():
             # Involve only the 'kernel' dictionaries of each layer in the network
             if "kernel" in layer:
                 matrices.append(layer["kernel"])
+        matrices.reverse()
 
-        weights = [jnp.ones(1)]
-        # Compute Lipschitz coefficient by iterating through layers
+        weights = [jnp.ones(jnp.shape(matrices[0])[1])]
         for mat in matrices:
-            colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][:, jnp.newaxis]), axis=0)
+            colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
             lip = jnp.max(colsums)
             weights.append(colsums / lip)
-
+            
+        matrices.reverse()
         nmatrices = len(matrices)
         products = [matrices]
         extra0 = []
         prodnorms = [[jnp.max(jnp.multiply(jnp.sum(jnp.multiply(jnp.abs(matrices[idx]),
-                                                                weights[idx][:, jnp.newaxis]), axis=0),
-                                           jnp.float32(1) / weights[idx + 1]))
+                                                                weights[-(idx + 2)][jnp.newaxis, :]), axis=1),
+                                           jnp.float32(1) / weights[-(idx + 1)]))
                       for idx in range(nmatrices)]]
         for nprods in range(1, nmatrices):
             prod_list = []
@@ -145,8 +151,8 @@ def lipschitz_coeff_l1(params, weights=True, CPLip=True):
                 prod_list.append(jnp.matmul(products[nprods - 1][idx], matrices[idx + nprods]))
             products.append(prod_list)
             prodnorms.append([jnp.max(jnp.multiply(jnp.sum(jnp.multiply(jnp.abs(prod_list[idx]),
-                                                                        weights[idx][:, jnp.newaxis]), axis=0),
-                                                   jnp.float32(1) / weights[idx + nprods + 1]))
+                                                                        weights[-(idx + nprods + 2)][jnp.newaxis, :]), axis=1),
+                                                   jnp.float32(1) / weights[-(idx + 1)]))
                               for idx in range(nmatrices - nprods)])
 
         ncombs = 1 << (nmatrices - 1)
