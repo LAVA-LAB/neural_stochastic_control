@@ -60,8 +60,8 @@ class Learner:
         def loss_fun(certificate_params, policy_params):
 
             # Compute Lipschitz coefficients
-            lip_certificate = lipschitz_coeff_l1(certificate_params)
-            lip_policy = lipschitz_coeff_l1(policy_params)
+            lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
+            lip_policy, _ = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
             actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)

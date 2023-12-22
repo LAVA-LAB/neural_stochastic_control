@@ -168,4 +168,6 @@ def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
 
             L += Lloc / ncombs
 
-    return L
+    if weighted:
+        return L, weights[-1]
+    else: return L, None
