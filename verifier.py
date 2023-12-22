@@ -94,6 +94,7 @@ class Verifier:
     def batched_forward_pass_ibp(self, apply_fn, params, samples, epsilon, out_dim, batch_size=1_000_000):
         '''
         Do a forward pass for the given network, split into batches of given size (can be needed to avoid OOM errors).
+        This version of the function uses IBP.
 
         :param apply_fn:
         :param params:
@@ -104,7 +105,7 @@ class Verifier:
 
         if len(samples) <= batch_size:
             # If the number of samples is below the maximum batch size, then just do one pass
-            return jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples))
+            return apply_fn(jax.lax.stop_gradient(params), samples, epsilon)
 
         else:
             # Otherwise, split into batches
@@ -114,7 +115,7 @@ class Verifier:
             ends = np.minimum(starts + batch_size, len(samples))
 
             for (i, j) in zip(starts, ends):
-                output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples[i:j]))
+                output[i:j] = apply_fn(jax.lax.stop_gradient(params), samples[i:j], epsilon)
 
             return output
 
@@ -133,8 +134,8 @@ class Verifier:
 
         # Expected decrease condition check on all states outside target set
         if IBP:
-            Vvalues_expDecr, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_decrease_adj,
-                                             0.5 * verify_mesh_cell_width)
+            Vvalues_expDecr, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
+                                                               0.5 * verify_mesh_cell_width, 1)
             idxs = (Vvalues_expDecr < 1 / (1 - args.probability_bound)).flatten()
         else:
             Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
