@@ -264,36 +264,22 @@ for i in range(args.cegis_iterations):
             if args.update_policy:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-    lip_policy = lipschitz_coeff_l1(Policy_state.params)
-    lip_certificate = lipschitz_coeff_l1(V_state.params)
-
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
-
     print(f'\nLoss components in last train step:')
     for ky, info in infos.items():
         print(f' - {ky}: {info:.8f}')
-
-    print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j
-                                      in [True, False]])
-    print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j
-                                           in [True, False]])
+    print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j in [True, False]])
+    print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
 
     filename = f"plots/certificate_{start_datetime}_iteration={i}"
     plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
-    # TODO: Current verifier needs too much memory on GPU, so currently forcing this to be done on CPU..
     verify_done = False
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         print(f'- Total number of samples: {len(verify.buffer.data)}')
         print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.5f}')
 
-
-        print('<< VERIFY WITH LIPSCHITZ BOUNDS >>')
-        C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
-            verify.check_conditions(env, args, V_state, Policy_state, key, IBP = False)
-
-        print('<< VERIFY WITH IBP >>')
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key, IBP = True)
 
@@ -335,27 +321,3 @@ for i in range(args.cegis_iterations):
 
 # 2D plot for the certificate function over the state space
 plot_certificate_2D(env, V_state)
-
-# %%
-
-# import jax_verify
-# import functools
-# import jax.numpy as jnp
-#
-# initial_mean = verify.C_init_adj[0:1]
-# eps = np.array([0.1, 0.1])
-#
-# initial_bound = jax_verify.IntervalBound(
-#       jnp.minimum(jnp.maximum(initial_mean - eps, -3), 3.0),
-#       jnp.minimum(jnp.maximum(initial_mean + eps, -3), 3.0))
-#
-# fn = jax.jit(functools.partial(V_state.apply_fn, V_state.params))
-# final_bound = jax_verify.interval_bound_propagation(fn, initial_bound)
-#
-# lb, ub = V_state.ibp_fn(V_state.params, initial_mean, eps)
-#
-# max_diff_lb = np.max(np.abs(lb - final_bound.lower))
-# max_diff_ub = np.max(np.abs(ub - final_bound.upper))
-#
-# print('Max abs. diff. in lower bound:', max_diff_lb)
-# print('Max abs. diff. in upper bound:', max_diff_ub)

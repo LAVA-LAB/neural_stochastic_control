@@ -32,8 +32,8 @@ class Verifier:
     def set_verification_grid(self, env, mesh_size):
         '''
         Defines a rectangular gridding of the state space, used by the verifier
-        :param env: 
-        :param mesh_size: 
+        :param env: Gym environment object
+        :param mesh_size: This is the L1 mesh size used to define the grid
         :return: 
         '''
 
@@ -43,18 +43,17 @@ class Verifier:
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
             np.ceil((env.observation_space.high - env.observation_space.low) / verify_mesh_cell_width), dtype=int)
+
+        # Create the (rectangular) verification grid and add it to the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0])
-        
-        # Define grid
         grid = define_grid(env.observation_space.low + 0.5 * verify_mesh_cell_width,
                            env.observation_space.high - 0.5 * verify_mesh_cell_width,
                            size=num_per_dimension)
-        
-        # Add gridd to buffer
         self.buffer.append(grid)
 
-        # Define points of grid which are adjacent to different sets (used later by verifier)
-        # Max. distance (L1-norm) between any vertex and a point in the adjacent cell is equal to the mesh size (tau).
+        # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
+        # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
+        # by expanding/shrinking these regions by 0.5 times the width of the cells.
         self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
                                  delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
 
