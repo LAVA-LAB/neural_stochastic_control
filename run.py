@@ -60,8 +60,8 @@ parser.add_argument('--train_mesh_tau', type=float, default=0.01,
 ### VERIFIER ARGUMENTS
 parser.add_argument('--verify_batch_size', type=int, default=10000,
                     help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
-parser.add_argument('--noise_partition_cells', type=int, default=200,
-                    help="Number of cells to partition the noise space in (to numerically integrate stochastic noise)")
+parser.add_argument('--noise_partition_cells', type=int, default=12,
+                    help="Number of cells to partition the noise space in per dimension (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--verify_mesh_tau_min', type=float, default=0.0005,
@@ -79,7 +79,7 @@ parser.add_argument('--update_policy', type=bool, default=False,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
-args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
@@ -176,7 +176,7 @@ for layer in Policy_state.params['params'].keys():
 
 # Define Learner
 learn = Learner(env)
-verify = Verifier(env)
+verify = Verifier(env, args)
 
 # Set training dataset (by plain grid over the state space)
 num_per_dimension_train = np.array(

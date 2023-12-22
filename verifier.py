@@ -19,12 +19,24 @@ cpu_device = jax.devices('cpu')[0]
 
 class Verifier:
 
-    def __init__(self, env):
+    def __init__(self, env, args):
 
         self.env = env
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.V_step_vectorized = jax.vmap(self.V_step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
+        self.V_step_expectation = jax.vmap(self.V_step, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+
+        # Discretize the noise space
+        cell_width = (env.noise_space.high - env.noise_space.low) / args.noise_partition_cells
+        num_cells = np.array(args.noise_partition_cells*np.ones(len(cell_width)), dtype=int)
+        self.noise_vertices = define_grid(env.noise_space.low + 0.5 * cell_width, env.noise_space.high - 0.5 * cell_width,
+                                          size=num_cells)
+        self.noise_lb = self.noise_vertices - 0.5 * cell_width
+        self.noise_ub = self.noise_vertices + 0.5 * cell_width
+
+        # Integrated probabilities for the noise distribution
+        self.noise_int_lb, self.noise_int_ub = env.integrate_noise(self.noise_lb, self.noise_ub)
 
         return
 
@@ -146,7 +158,6 @@ class Verifier:
         print('-- Done computing set of vertices to check expected decrease for')
 
         # TODO: For now, this expected decrease condition is approximate
-
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at,
                                             env.action_space.shape[0])
@@ -159,6 +170,10 @@ class Verifier:
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Verifying exp. decrease condition'):
             x = check_expDecr_at[i:j]
             u = actions[i:j]
+
+            # Vdiff[i:j] = self.V_step_expectation(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+            #                                      self.noise_lb, self.noise_ub, self.noise_int_ub)
+
             noise_key, subkey = jax.random.split(noise_key)
             noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
@@ -204,6 +219,20 @@ class Verifier:
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
+
+    @partial(jax.jit, static_argnums=(0,))
+    def V_step(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+
+        # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
+        state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
+
+        # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
+        _, V_new = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
+        V_expected = jnp.dot(V_new, prob_ub)
+
+        V_old = jit(V_state.apply_fn)(V_state.params, x)
+
+        return V_expected - V_old
 
     @partial(jax.jit, static_argnums=(0,))
     def V_step_noise_batch(self, V_state, V_params, x, u, noise_key):

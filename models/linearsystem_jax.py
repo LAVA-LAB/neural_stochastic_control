@@ -14,8 +14,8 @@ from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 from functools import partial
 from jax_utils import vsplit
-
 from commons import RectangularSet, MultiRectangularSet
+from scipy.stats import triang
 
 class LinearEnv(gym.Env):
 
@@ -47,7 +47,7 @@ class LinearEnv(gym.Env):
             [0.45],
             [0.5]
         ])
-        self.W = np.zeros((2,2)) # np.diag([0.01, 0.005])
+        self.W = np.diag([0.01, 0.005])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
@@ -83,6 +83,11 @@ class LinearEnv(gym.Env):
         high = np.array([1.5, 1.5], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
+        # Set support of noise distribution (which is triangular, zero-centered)
+        high = np.array([1, 1], dtype=np.float32)
+        self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.noise_dim = 2
+
         # Set target set
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
@@ -104,10 +109,49 @@ class LinearEnv(gym.Env):
 
         # Vectorized step, but only with different noise values
         self.vstep_noise_batch = jax.vmap(self.step, in_axes=(None, 0, None), out_axes=0)
+        self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
-        return jax.random.triangular(key, jnp.array([-1, -1]), jnp.array([0, 0]), jnp.array([1, 1]))
+        return jax.random.triangular(key, self.noise_space.low * jnp.ones(2), jnp.array([0, 0]),
+                                     self.noise_space.high * jnp.ones(2))
+
+    @partial(jit, static_argnums=(0,))
+    def step_noise_set(self, state, u, w_lb, w_ub):
+        ''' Make step with dynamics for a set of noise values '''
+
+        u = jnp.clip(u, -self.max_torque, self.max_torque)
+
+        # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
+        state_lb = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_lb)
+        state_ub = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_ub)
+
+        state_mean = (state_ub + state_lb) / 2
+        epsilon = (state_ub - state_lb) / 2
+
+        return state_mean, epsilon
+
+    def integrate_noise(self, w_lb, w_ub):
+        ''' Integrate noise distribution in the box [w_lb, w_ub]. '''
+
+        # For triangular distribution, integration is simple, because we can integrate each dimension individually and
+        # multiply the resulting probabilities
+        probs = np.ones(len(w_lb))
+
+        # Triangular cdf increases from loc to (loc + c*scale), and decreases from (loc+c*scale) to (loc + scale)
+        # So, 0 <= c <= 1.
+        loc = self.noise_space.low
+        c = 0.5  # Noise distribution is zero-centered, so c=0.5 by default
+        scale = self.noise_space.high - self.noise_space.low
+
+        for d in range(self.noise_space.shape[0]):
+            probs *= triang.cdf(w_ub[:,d], c, loc=loc[d], scale=scale[d]) - triang.cdf(w_lb[:,d], c, loc=loc[d], scale=scale[d])
+
+        # In this case, the noise integration is exact, but we still return an upper and lower bound
+        prob_ub = probs
+        prob_lb = probs
+
+        return prob_lb, prob_ub
 
     @partial(jit, static_argnums=(0,))
     def step(self, state, key, u):

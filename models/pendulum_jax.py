@@ -61,6 +61,11 @@ class PendulumEnv(gym.Env):
         high = np.array([0.7, 0.7], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
+        # Set support of noise distribution (which is triangular, zero-centered)
+        high = np.array([1, 1], dtype=np.float32)
+        self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.noise_dim = 2
+
         # Set target set
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
@@ -82,7 +87,8 @@ class PendulumEnv(gym.Env):
 
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
-        return jax.random.triangular(key, jnp.array([-1, -1]), jnp.array([0, 0]), jnp.array([1, 1]))
+        return jax.random.triangular(key, self.noise_space.low * jnp.ones(2), jnp.array([0, 0]),
+                                     self.noise_space.high * jnp.ones(2))
 
     @partial(jit, static_argnums=(0,))
     def step(self, state, key, u):

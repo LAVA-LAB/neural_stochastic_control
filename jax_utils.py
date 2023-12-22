@@ -71,7 +71,7 @@ def lipschitz_coeff_l1(params, weights=True, CPLip=True):
         for layer in params["params"].values():
             # Involve only the 'kernel' dictionaries of each layer in the network
             if "kernel" in layer:
-                L *= jnp.max(jnp.sum(jnp.abs(layer["kernel"]), axis=0))
+                L *= jnp.max(jnp.sum(jnp.abs(layer["kernel"]), axis=1))
 
     elif (not weights and CPLip):
         L = jnp.float32(0)
