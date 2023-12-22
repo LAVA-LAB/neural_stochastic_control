@@ -109,15 +109,16 @@ class Verifier:
 
         else:
             # Otherwise, split into batches
-            output = np.zeros((len(samples), out_dim))
+            output_lb = np.zeros((len(samples), out_dim))
+            output_ub = np.zeros((len(samples), out_dim))
             num_batches = np.ceil(len(samples) / batch_size).astype(int)
             starts = np.arange(num_batches) * batch_size
             ends = np.minimum(starts + batch_size, len(samples))
 
             for (i, j) in zip(starts, ends):
-                output[i:j] = apply_fn(jax.lax.stop_gradient(params), samples[i:j], epsilon)
+                output_lb[i:j], output_ub[i:j] = apply_fn(jax.lax.stop_gradient(params), samples[i:j], epsilon)
 
-            return output
+            return output_lb, output_ub
 
 
     def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False):
