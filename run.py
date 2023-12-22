@@ -288,8 +288,14 @@ for i in range(args.cegis_iterations):
         print(f'- Total number of samples: {len(verify.buffer.data)}')
         print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.5f}')
 
+
+        print('<< VERIFY WITH LIPSCHITZ BOUNDS >>')
         C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
-            verify.check_conditions(env, args, V_state, Policy_state, key)
+            verify.check_conditions(env, args, V_state, Policy_state, key, IBP = False)
+
+        print('<< VERIFY WITH IBP >>')
+        C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
+            verify.check_conditions(env, args, V_state, Policy_state, key, IBP = True)
 
         # Samples to add to dataset
         samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
@@ -332,24 +338,24 @@ plot_certificate_2D(env, V_state)
 
 # %%
 
-import jax_verify
-import functools
-import jax.numpy as jnp
-
-initial_mean = verify.C_init_adj[0:1]
-eps = np.array([0.1, 0.1])
-
-initial_bound = jax_verify.IntervalBound(
-      jnp.minimum(jnp.maximum(initial_mean - eps, -3), 3.0),
-      jnp.minimum(jnp.maximum(initial_mean + eps, -3), 3.0))
-
-fn = jax.jit(functools.partial(V_state.apply_fn, V_state.params))
-final_bound = jax_verify.interval_bound_propagation(fn, initial_bound)
-
-lb, ub = V_state.ibp_fn(V_state.params, initial_mean, eps)
-
-max_diff_lb = np.max(np.abs(lb - final_bound.lower))
-max_diff_ub = np.max(np.abs(ub - final_bound.upper))
-
-print('Max abs. diff. in lower bound:', max_diff_lb)
-print('Max abs. diff. in upper bound:', max_diff_ub)
+# import jax_verify
+# import functools
+# import jax.numpy as jnp
+#
+# initial_mean = verify.C_init_adj[0:1]
+# eps = np.array([0.1, 0.1])
+#
+# initial_bound = jax_verify.IntervalBound(
+#       jnp.minimum(jnp.maximum(initial_mean - eps, -3), 3.0),
+#       jnp.minimum(jnp.maximum(initial_mean + eps, -3), 3.0))
+#
+# fn = jax.jit(functools.partial(V_state.apply_fn, V_state.params))
+# final_bound = jax_verify.interval_bound_propagation(fn, initial_bound)
+#
+# lb, ub = V_state.ibp_fn(V_state.params, initial_mean, eps)
+#
+# max_diff_lb = np.max(np.abs(lb - final_bound.lower))
+# max_diff_ub = np.max(np.abs(ub - final_bound.upper))
+#
+# print('Max abs. diff. in lower bound:', max_diff_lb)
+# print('Max abs. diff. in upper bound:', max_diff_ub)

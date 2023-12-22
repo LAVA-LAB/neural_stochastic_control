@@ -132,7 +132,11 @@ class Verifier:
 
         return Vdiff, C_expDecr_violations, check_expDecr_at, noise_key
 
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False):
+        ''' If IBP is True, then interval bound propagation is used. '''
+
+        # Width of each cell in the partition. The grid points are the centers of the cells.
+        verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)
 
         lip_policy = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
         lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
@@ -149,7 +153,11 @@ class Verifier:
         print(f'-- Suggested mesh for verification grid: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
+        if IBP:
+            _, Vvalues_init = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
+                                             0.5* verify_mesh_cell_width)
+        else:
+            Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
 
         idxs = ((Vvalues_init + lip_certificate * args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
@@ -157,7 +165,11 @@ class Verifier:
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
+        if IBP:
+            Vvalues_unsafe, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
+                                             0.5 * verify_mesh_cell_width)
+        else:
+            Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
 
         idxs = ((Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]
