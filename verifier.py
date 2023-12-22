@@ -155,11 +155,12 @@ class Verifier:
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         if IBP:
             _, Vvalues_init = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
-                                             0.5* verify_mesh_cell_width)
+                                             0.5 * verify_mesh_cell_width)
+            idxs = (Vvalues_init > 1).flatten()
         else:
             Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
+            idxs = ((Vvalues_init + lip_certificate * args.verify_mesh_tau) > 1).flatten()
 
-        idxs = ((Vvalues_init + lip_certificate * args.verify_mesh_tau) > 1).flatten()
         C_init_violations = self.C_init_adj[idxs]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
@@ -168,10 +169,11 @@ class Verifier:
         if IBP:
             Vvalues_unsafe, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
                                              0.5 * verify_mesh_cell_width)
+            idxs = (Vvalues_unsafe < 1 / (1 - args.probability_bound)).flatten()
         else:
             Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
 
-        idxs = ((Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
+            idxs = ((Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
