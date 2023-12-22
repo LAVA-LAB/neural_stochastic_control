@@ -91,14 +91,55 @@ class Verifier:
 
             return output
 
-    def check_expected_decrease(self, env, args, V_state, Policy_state, lip_certificate, lip_policy, noise_key):
+    def batched_forward_pass_ibp(self, apply_fn, params, samples, epsilon, out_dim, batch_size=1_000_000):
+        '''
+        Do a forward pass for the given network, split into batches of given size (can be needed to avoid OOM errors).
+
+        :param apply_fn:
+        :param params:
+        :param samples:
+        :param batch_size:
+        :return:
+        '''
+
+        if len(samples) <= batch_size:
+            # If the number of samples is below the maximum batch size, then just do one pass
+            return jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples))
+
+        else:
+            # Otherwise, split into batches
+            output = np.zeros((len(samples), out_dim))
+            num_batches = np.ceil(len(samples) / batch_size).astype(int)
+            starts = np.arange(num_batches) * batch_size
+            ends = np.minimum(starts + batch_size, len(samples))
+
+            for (i, j) in zip(starts, ends):
+                output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples[i:j]))
+
+            return output
+
+
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False):
+        ''' If IBP is True, then interval bound propagation is used. '''
+
+        # Width of each cell in the partition. The grid points are the centers of the cells.
+        verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)
+
+        lip_policy = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
+        lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
+        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
+
+        print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
-        #Vvalues_expDecr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(self.C_decrease_adj))
-        Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
-
-        idxs = (Vvalues_expDecr - lip_certificate * args.verify_mesh_tau
-                < 1 / (1 - args.probability_bound)).flatten()
+        if IBP:
+            Vvalues_expDecr, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_decrease_adj,
+                                             0.5 * verify_mesh_cell_width)
+            idxs = (Vvalues_expDecr < 1 / (1 - args.probability_bound)).flatten()
+        else:
+            Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
+            idxs = (Vvalues_expDecr - lip_certificate * args.verify_mesh_tau
+                    < 1 / (1 - args.probability_bound)).flatten()
         check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
@@ -106,7 +147,6 @@ class Verifier:
         # TODO: For now, this expected decrease condition is approximate
 
         # Determine actions for every point in subgrid
-        # actions = jit(Policy_state.apply_fn)(jax.lax.stop_gradient(Policy_state.params), check_expDecr_at)
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at,
                                             env.action_space.shape[0])
 
@@ -121,7 +161,8 @@ class Verifier:
             noise_key, subkey = jax.random.split(noise_key)
             noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
-            Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u, noise_keys).flatten()
+            Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                                noise_keys).flatten()
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -129,23 +170,6 @@ class Verifier:
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         C_expDecr_violations = check_expDecr_at[idxs]
         # TODO: Insert (exact) expected decrease condition check here
-
-        return Vdiff, C_expDecr_violations, check_expDecr_at, noise_key
-
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False):
-        ''' If IBP is True, then interval bound propagation is used. '''
-
-        # Width of each cell in the partition. The grid points are the centers of the cells.
-        verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)
-
-        lip_policy = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
-        lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
-
-        print(f'- Overall Lipschitz coefficient K = {K:.3f}')
-
-        Vdiff, C_expDecr_violations, check_expDecr_at, noise_key = \
-            self.check_expected_decrease(env, args, V_state, Policy_state, lip_certificate, lip_policy, noise_key)
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
