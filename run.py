@@ -15,7 +15,7 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from learner_reachavoid import MLP, MLP_softplus, Learner, format_training_data, batch_training_data
+from learner_reachavoid import MLP, Learner, format_training_data, batch_training_data
 from buffer import Buffer, define_grid
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
@@ -88,8 +88,9 @@ elif args.model == 'PendulumEnv':
 else:
     assert False
 
-neurons_per_layer = [128, 128]
-activation_functions = [nn.relu, nn.relu]
+neurons_per_layer = [128, 128, 1]
+V_act_funcs = [nn.relu, nn.relu, nn.softplus]
+Policy_act_funcs = [nn.relu, nn.relu, None]
 
 # %% ### PPO policy initialization ###
 
@@ -121,8 +122,8 @@ if args.ppo_load_file == '':
     ppo_state = PPO(fun,
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
-                    neurons_per_layer=neurons_per_layer,
-                    activation_functions=activation_functions)
+                    neurons_per_layer=neurons_per_layer[:-1],
+                    activation_functions=Policy_act_funcs[:-1])
 
     # Save checkpoint of PPO state
     ckpt = {'model': ppo_state}
@@ -149,18 +150,20 @@ env = LinearEnv()
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Initialize certificate network
-certificate_model = MLP_softplus(neurons_per_layer + [1], activation_functions)
+certificate_model = MLP(neurons_per_layer, V_act_funcs)
 V_state = create_train_state(
     model=certificate_model,
+    act_funcs=V_act_funcs,
     rng=jax.random.PRNGKey(1),
     in_dim=2,
     learning_rate=5e-4,
 )
 
 # Initialize policy network
-policy_model = MLP(neurons_per_layer + [1], activation_functions)
+policy_model = MLP(neurons_per_layer, Policy_act_funcs)
 Policy_state = create_train_state(
     model=policy_model,
+    act_funcs=Policy_act_funcs,
     rng=jax.random.PRNGKey(1),
     in_dim=2,
     learning_rate=5e-5,
@@ -326,3 +329,27 @@ for i in range(args.cegis_iterations):
 
 # 2D plot for the certificate function over the state space
 plot_certificate_2D(env, V_state)
+
+# %%
+
+import jax_verify
+import functools
+import jax.numpy as jnp
+
+initial_mean = verify.C_init_adj[0:1]
+eps = np.array([0.1, 0.1])
+
+initial_bound = jax_verify.IntervalBound(
+      jnp.minimum(jnp.maximum(initial_mean - eps, -3), 3.0),
+      jnp.minimum(jnp.maximum(initial_mean + eps, -3), 3.0))
+
+fn = jax.jit(functools.partial(V_state.apply_fn, V_state.params))
+final_bound = jax_verify.interval_bound_propagation(fn, initial_bound)
+
+lb, ub = V_state.ibp_fn(V_state.params, initial_mean, eps)
+
+max_diff_lb = np.max(np.abs(lb - final_bound.lower))
+max_diff_ub = np.max(np.abs(ub - final_bound.upper))
+
+print('Max abs. diff. in lower bound:', max_diff_lb)
+print('Max abs. diff. in upper bound:', max_diff_ub)

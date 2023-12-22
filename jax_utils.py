@@ -1,14 +1,56 @@
 import jax.numpy as jnp
-from flax.training import train_state
 import optax
 import jax
 from functools import partial
+from flax.training.train_state import TrainState
+from typing import Callable
+from flax import struct
 
 vsplit_fun = jax.vmap(jax.random.split)
 def vsplit(keys):
     return vsplit_fun(keys)
 
-def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0, params=None):
+def apply_ibp_rectangular(act_fns, params, mean, radius):
+    '''
+    Implementation of the interval bound propagation (IBP) method from https://arxiv.org/abs/1810.12715.
+    We use IBP to compute upper and lower bounds for (hyper)rectangular input sets.
+
+    This function returns the same result as jax_verify.interval_bound_propagation(apply_fn, initial_bounds). However,
+    the jax_verify version is generally slower, because it is written to handle more general neural networks.
+
+    :param act_fns: List of flax.nn activation functions.
+    :param params: Parameter dictionary of the network.
+    :param mean: 2d array, with each row being an input point of dimension n.
+    :param radius: 1d array, specifying the radius of the input in every dimension.
+    :return: lb and ub (both 2d arrays of the same shape as `mean`
+    '''
+
+    # Broadcast radius to match shape of the mean numpy array
+    radius = jnp.broadcast_to(radius, mean.shape)
+
+    # Enumerate over the layers of the network
+    for i,act_fn in enumerate(act_fns):
+        layer = 'Dense_'+str(i)
+
+        # Compute mean and radius after the current fully connected layer
+        mean = mean @ params['params'][layer]['kernel'] + params['params'][layer]['bias']
+        radius = radius @ jnp.abs(params['params'][layer]['kernel'])
+
+        # Then, apply the activation function and determine the lower and upper bounds
+        lb = act_fn(mean - radius)
+        ub = act_fn(mean + radius)
+
+        # Use these upper bounds to determine the mean and radius after the layer
+        mean = (ub + lb) / 2
+        radius = (ub - lb) / 2
+
+    return lb, ub
+
+class AgentState(TrainState):
+    # Setting default values for agent functions to make TrainState work in jitted function
+    ibp_fn: Callable = struct.field(pytree_node=False)
+
+def create_train_state(model, act_funcs, rng, in_dim, learning_rate=0.01, ema=0, params=None):
 
     if params is None:
         params = model.init(rng, jnp.ones([1, in_dim]))
@@ -18,7 +60,8 @@ def create_train_state(model, rng, in_dim, learning_rate=0.01, ema=0, params=Non
     tx = optax.adam(learning_rate)
     if ema > 0:
         tx = optax.chain(tx, optax.ema(ema))
-    return train_state.TrainState.create(apply_fn=model.apply, params=params, tx=tx)
+    return AgentState.create(apply_fn=jax.jit(model.apply), params=params, tx=tx,
+                             ibp_fn=jax.jit(partial(apply_ibp_rectangular, act_funcs)))
 
 @partial(jax.jit, static_argnums=(1,2,))
 def lipschitz_coeff_l1(params, weights=True, CPLip=True):

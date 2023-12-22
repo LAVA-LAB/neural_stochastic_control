@@ -183,22 +183,22 @@ class Learner:
         return loss, diff
 
 
-class MLP_softplus(nn.Module):
-    features: Sequence[int]
-    activation_func: list
-
-    def setup(self):
-        # we automatically know what to do with lists, dicts of submodules
-        self.layers = [nn.Dense(feat) for feat in self.features]
-        # for single submodules, we would just write:
-        # self.layer1 = nn.Dense(feat1)
-
-    @nn.compact
-    def __call__(self, x):
-        for act_func, feat in zip(self.activation_func, self.features[:-1]):
-            x = act_func(nn.Dense(feat)(x))
-        x = nn.softplus(nn.Dense(self.features[-1])(x))
-        return x
+# class MLP_softplus(nn.Module):
+#     features: Sequence[int]
+#     activation_func: list
+#
+#     def setup(self):
+#         # we automatically know what to do with lists, dicts of submodules
+#         self.layers = [nn.Dense(feat) for feat in self.features]
+#         # for single submodules, we would just write:
+#         # self.layer1 = nn.Dense(feat1)
+#
+#     @nn.compact
+#     def __call__(self, x):
+#         for act_func, feat in zip(self.activation_func, self.features[:-1]):
+#             x = act_func(nn.Dense(feat)(x))
+#         x = nn.softplus(nn.Dense(self.features[-1])(x))
+#         return x
 
 
 class MLP(nn.Module):
@@ -213,9 +213,11 @@ class MLP(nn.Module):
 
     @nn.compact
     def __call__(self, x):
-        for act_func, feat in zip(self.activation_func, self.features[:-1]):
-            x = act_func(nn.Dense(feat)(x))
-        x = nn.Dense(self.features[-1])(x)
+        for act_func, feat in zip(self.activation_func, self.features):
+            if act_func is None:
+                x = nn.Dense(feat)(x)
+            else:
+                x = act_func(nn.Dense(feat)(x))
         return x
 
 
