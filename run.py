@@ -64,8 +64,10 @@ parser.add_argument('--noise_partition_cells', type=int, default=12,
                     help="Number of cells to partition the noise space in per dimension (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
-parser.add_argument('--verify_mesh_tau_min', type=float, default=0.0005,
-                    help="Lowest allowed verification grid mesh size")
+parser.add_argument('--verify_mesh_tau_min', type=float, default=0.002,
+                    help="Lowest allowed verification grid mesh size in the training loop")
+parser.add_argument('--verify_mesh_tau_min_final', type=float, default=0.0002,
+                    help="Lowest allowed verification grid mesh size in the final verification")
 parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
@@ -290,8 +292,10 @@ for i in range(args.cegis_iterations):
             print('\n ===Successfully learned martingale! ===')
             break
 
-        # If the suggested mesh is within the limit and also smaller than the current value, then try it
-        if suggested_mesh >= args.verify_mesh_tau_min and suggested_mesh < args.verify_mesh_tau:
+        # If the suggested mesh is within the limit and also smaller than the current value,
+        # and if there are no init or unsafe violations, then try it
+        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
+              and len(C_init_violations) == 0 and len(C_unsafe_violations) == 0:
             args.verify_mesh_tau = suggested_mesh
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
         else:
