@@ -7,7 +7,7 @@ from jax import random, numpy as jnp
 from flax.training.train_state import TrainState
 import flax.linen as nn
 from jax_utils import lipschitz_coeff_l1
-
+import time
 
 class Learner:
 
@@ -30,7 +30,7 @@ class Learner:
 
         return
 
-    import time
+    
 
     @partial(jax.jit, static_argnums=(0,))
     def train_step(self,
