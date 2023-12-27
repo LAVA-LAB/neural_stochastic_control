@@ -78,8 +78,12 @@ parser.add_argument('--update_certificate', type=bool, default=True,
                     help="If True, certificate network is updated by the Learner")
 parser.add_argument('--update_policy', type=bool, default=False,
                     help="If True, policy network is updated by the Learner")
+parser.add_argument('--plot_intermediate', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, plots are generated throughout the CEGIS iterations (increases runtime)")
 args = parser.parse_args()
 args.cwd = os.getcwd()
+
+args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
@@ -207,9 +211,6 @@ for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     iteration_init = time.time()
 
-    if i >= 3:
-        args.update_policy = True
-
     # Experiment by perturbing the training grid
     key, perturbation_key = jax.random.split(key, 2)
     perturbation = jax.random.uniform(perturbation_key, train_buffer.data.shape,
@@ -217,8 +218,9 @@ for i in range(args.cegis_iterations):
                                       maxval=0.5 * args.train_mesh_cell_width)
 
     # Plot dataset
-    filename = f"plots/data_{start_datetime}_iteration={i}"
-    plot_layout(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
+    if args.plot_intermediate:
+        filename = f"plots/data_{start_datetime}_iteration={i}"
+        plot_layout(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
     if args.batches == -1:
         # Automatically determine number of batches
@@ -240,8 +242,6 @@ for i in range(args.cegis_iterations):
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
                                                              len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
-    decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease))))
-
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
@@ -256,7 +256,7 @@ for i in range(args.cegis_iterations):
                 C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
                 C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
                 C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
-                decrease_eps = decrease_eps,
+                decrease_eps = np.vstack((np.zeros(len(batch_C_decrease)), 0.1*np.ones(len(batch_X_decrease)))),
                 max_grid_perturb = args.train_mesh_cell_width,
                 verify_mesh_tau = args.verify_mesh_tau,
                 probability_bound = args.probability_bound)
@@ -264,7 +264,7 @@ for i in range(args.cegis_iterations):
             # Update parameters
             if args.update_certificate:
                 V_state = V_state.apply_gradients(grads=V_grads)
-            if args.update_policy:
+            if args.update_policy and i >= 3:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
@@ -274,8 +274,9 @@ for i in range(args.cegis_iterations):
     print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j in [True, False]])
     print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
 
-    filename = f"plots/certificate_{start_datetime}_iteration={i}"
-    plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
+    if args.plot_intermediate:
+        filename = f"plots/certificate_{start_datetime}_iteration={i}"
+        plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
     verify_done = False
     while not verify_done:
@@ -324,7 +325,7 @@ for i in range(args.cegis_iterations):
     plt.close('all')
     print('\n================\n')
 
-print(f'Total CEGIS (learner-verifier) runtime: {(cegis_start_time-time.time()):.2f}')
+print(f'Total CEGIS (learner-verifier) runtime: {(time.time() - cegis_start_time):.2f}')
 
 # 2D plot for the certificate function over the state space
 plot_certificate_2D(env, V_state)

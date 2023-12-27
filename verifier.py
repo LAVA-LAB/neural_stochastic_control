@@ -70,7 +70,7 @@ class Verifier:
         # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
-        self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
+        self.C_decrease_adj = self.env.target_space.not_contains(jnp.array(self.buffer.data),
                                  delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
 
         self.C_init_adj = self.env.init_space.contains(self.buffer.data,
