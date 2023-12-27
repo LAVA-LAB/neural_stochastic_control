@@ -81,8 +81,6 @@ parser.add_argument('--update_policy', type=bool, default=False,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
-args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
-
 if args.model == 'LinearEnv':
     fun = LinearEnv
 elif args.model == 'PendulumEnv':
