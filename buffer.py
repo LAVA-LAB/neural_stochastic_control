@@ -65,6 +65,21 @@ def define_grid(low, high, size):
     '''
 
     points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
-    grid = np.array(list(itertools.product(*points)))
+    # grid = np.array(list(itertools.product(*points)))
+    grid = np.vstack(list(map(np.ravel, np.meshgrid(*points)))).T
+
+    return grid
+
+def define_grid_fast(low, high, size):
+    '''
+    Set rectangular grid over state space for neural network learning
+
+    :param low: ndarray
+    :param high: ndarray
+    :param size: List of ints (entries per dimension)
+    '''
+
+    points = (np.linspace(low[i], high[i], size[i]) for i in range(len(size)))
+    grid = np.reshape(np.meshgrid(*points), (len(size), -1)).T
 
     return grid

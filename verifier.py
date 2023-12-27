@@ -53,6 +53,8 @@ class Verifier:
         :return: 
         '''
 
+        t = time.time()
+
         # Width of each cell in the partition. The grid points are the centers of the cells.
         verify_mesh_cell_width = mesh_size * (2 / env.state_dim)
 
@@ -67,17 +69,26 @@ class Verifier:
                            size=num_per_dimension)
         self.buffer.append(grid)
 
+        print('- Define grid:', time.time() - t)
+
         # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
-        self.C_decrease_adj = self.env.target_space.not_contains(jnp.array(self.buffer.data),
+        t = time.time()
+        self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
                                  delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
 
+        print('- C_decrease_adj:', time.time() - t)
+
+        t = time.time()
         self.C_init_adj = self.env.init_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
+        print('- C_init_adj:', time.time() - t)
 
+        t = time.time()
         self.C_unsafe_adj = self.env.unsafe_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
+        print('- C_unsafe_adj:', time.time() - t)
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''

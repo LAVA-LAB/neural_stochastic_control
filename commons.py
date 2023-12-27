@@ -74,7 +74,7 @@ class RectangularSet:
         :return: list of booleans
         '''
 
-        bools = np.any(xvector < self.low - delta, axis=1) + np.any(xvector > self.high + delta, axis=1)
+        bools = jnp.any(xvector < self.low - delta, axis=1) + jnp.any(xvector > self.high + delta, axis=1)
 
         if return_indices:
             return bools
