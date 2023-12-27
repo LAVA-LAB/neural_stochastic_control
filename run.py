@@ -140,6 +140,8 @@ else:
 
 # %%
 
+cegis_start_time = time.time()
+
 # Restore state of policy network
 raw_restored = orbax_checkpointer.restore(checkpoint_path)
 ppo_state = raw_restored['model']
@@ -288,7 +290,7 @@ for i in range(args.cegis_iterations):
         samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
 
         if len(samples_to_add) == 0:
-            print('\n ===Successfully learned martingale! ===')
+            print('\n=== Successfully learned martingale! ===')
             break
 
         # If the suggested mesh is within the limit and also smaller than the current value,
@@ -321,6 +323,8 @@ for i in range(args.cegis_iterations):
 
     plt.close('all')
     print('\n================\n')
+
+print(f'Total CEGIS (learner-verifier) runtime: {(cegis_start_time-time.time()):.2f}')
 
 # 2D plot for the certificate function over the state space
 plot_certificate_2D(env, V_state)
