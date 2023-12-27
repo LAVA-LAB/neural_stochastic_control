@@ -143,8 +143,8 @@ class Verifier:
         # Width of each cell in the partition. The grid points are the centers of the cells.
         verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)
 
-        lip_policy = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
-        lip_certificate = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
+        lip_policy, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
+        lip_certificate, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')

@@ -369,7 +369,7 @@ def update_ppo_jit(
         entropy_loss = entropy.mean()
 
         # Loss for lipschitz coefficient
-        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor']) - max_policy_lipschitz, 0)
+        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor'])[0] - max_policy_lipschitz, 0)
 
         # main loss as sum of each part loss
         loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
@@ -523,7 +523,7 @@ def update_ppo(
         entropy_loss = entropy.mean()
 
         # Loss for lipschitz coefficient
-        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor']) - max_policy_lipschitz, 0)
+        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor'])[0] - max_policy_lipschitz, 0)
 
         # main loss as sum of each part loss
         loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
@@ -663,7 +663,7 @@ def PPO(environment_function,
         for key,info in losses.items():
             print(f'--- {key}: {info:.4f}')
 
-        lip_policy = lipschitz_coeff_l1(agent_state.params['actor'])
+        lip_policy = lipschitz_coeff_l1(agent_state.params['actor'])[0]
 
         print(f'- Lipschitz coefficient (L1-norm) of policy network: {lip_policy:.3f}')
 
