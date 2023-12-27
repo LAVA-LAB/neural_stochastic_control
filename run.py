@@ -79,7 +79,7 @@ parser.add_argument('--update_policy', type=bool, default=False,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
@@ -176,7 +176,8 @@ for layer in Policy_state.params['params'].keys():
 
 # Define Learner
 learn = Learner(env)
-verify = Verifier(env, args)
+verify = Verifier(env)
+verify.partition_noise(env, args)
 
 # Set training dataset (by plain grid over the state space)
 num_per_dimension_train = np.array(

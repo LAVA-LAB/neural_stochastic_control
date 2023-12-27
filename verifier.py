@@ -19,26 +19,30 @@ cpu_device = jax.devices('cpu')[0]
 
 class Verifier:
 
-    def __init__(self, env, args):
+    def __init__(self, env):
 
         self.env = env
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.V_step_vectorized = jax.vmap(self.V_step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
-        self.V_step_expectation = jax.vmap(self.V_step, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+        self.V_step_expectation = jax.vmap(self.V_step_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+
+        return
+
+
+    def partition_noise(self, env, args):
 
         # Discretize the noise space
         cell_width = (env.noise_space.high - env.noise_space.low) / args.noise_partition_cells
-        num_cells = np.array(args.noise_partition_cells*np.ones(len(cell_width)), dtype=int)
-        self.noise_vertices = define_grid(env.noise_space.low + 0.5 * cell_width, env.noise_space.high - 0.5 * cell_width,
+        num_cells = np.array(args.noise_partition_cells * np.ones(len(cell_width)), dtype=int)
+        self.noise_vertices = define_grid(env.noise_space.low + 0.5 * cell_width,
+                                          env.noise_space.high - 0.5 * cell_width,
                                           size=num_cells)
         self.noise_lb = self.noise_vertices - 0.5 * cell_width
         self.noise_ub = self.noise_vertices + 0.5 * cell_width
 
         # Integrated probabilities for the noise distribution
         self.noise_int_lb, self.noise_int_ub = env.integrate_noise(self.noise_lb, self.noise_ub)
-
-        return
 
 
     def set_verification_grid(self, env, mesh_size):
@@ -132,7 +136,8 @@ class Verifier:
             return output_lb, output_ub
 
 
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False,
+                         debug_noise_integration = False):
         ''' If IBP is True, then interval bound propagation is used. '''
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
@@ -171,14 +176,18 @@ class Verifier:
             x = check_expDecr_at[i:j]
             u = actions[i:j]
 
-            # Vdiff[i:j] = self.V_step_expectation(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-            #                                      self.noise_lb, self.noise_ub, self.noise_int_ub)
+            Vdiff[i:j] = self.V_step_expectation(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                                 self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
 
-            noise_key, subkey = jax.random.split(noise_key)
-            noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
+            if debug_noise_integration:
+                # Approximate decrease in V (by sampling the noise, instead of numerical integration)
+                noise_key, subkey = jax.random.split(noise_key)
+                noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
-            Vdiff[i:j] = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                                noise_keys).flatten()
+                V_old = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                                    noise_keys).flatten()
+
+                print('Max diff:', np.max(Vdiff[i:j] - V_old),'Min diff:', np.min(Vdiff[i:j] - V_old))
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -221,14 +230,16 @@ class Verifier:
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
-    def V_step(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+    def V_step_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
 
         # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
         state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
 
         # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
         _, V_new = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
-        V_expected = jnp.dot(V_new, prob_ub)
+
+        # Compute expectation by multiplying each V_new by the respective probability
+        V_expected = jnp.dot(V_new.flatten(), prob_ub)
 
         V_old = jit(V_state.apply_fn)(V_state.params, x)
 
