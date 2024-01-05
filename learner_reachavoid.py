@@ -258,6 +258,12 @@ def batch_training_data(key, C, total_samples, epochs, batch_size):
 
     size_C_decrease = int(batch_size - size_C_init - size_C_unsafe - size_C_target)
 
+    print('Number of items in batch per category:')
+    print('- size_C_decrease:', size_C_decrease)
+    print('- size_C_init:', size_C_init)
+    print('- size_C_unsafe:', size_C_unsafe)
+    print('- size_C_target:', size_C_target)
+
     idxs_C_decrease = jax.random.choice(permutation_keys[0], len(C['decrease']),
                                         shape=(epochs, size_C_decrease),
                                         replace=True)
