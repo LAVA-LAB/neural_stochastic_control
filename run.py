@@ -244,14 +244,6 @@ for i in range(args.cegis_iterations):
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
-    print('len:', len(batch_X_decrease))
-
-    counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease[0])), np.ones(len(batch_X_decrease[0]))))
-
-    import jax.numpy as jnp
-    print(jnp.sum(counterx_indicator))
-    print(np.sum(counterx_indicator))
-
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
@@ -264,7 +256,7 @@ for i in range(args.cegis_iterations):
                 C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
                 C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
                 C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
-                decrease_eps = counterx_indicator,
+                decrease_eps = np.concatenate((np.zeros(len(batch_C_decrease[k])), np.ones(len(batch_X_decrease[k])))),
                 max_grid_perturb = args.train_mesh_cell_width,
                 verify_mesh_tau = args.verify_mesh_tau,
                 probability_bound = args.probability_bound)
