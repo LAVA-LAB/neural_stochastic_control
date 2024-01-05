@@ -82,7 +82,7 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease) + jnp.sum(jnp.multiply(decrease_eps, exp_decrease)) / (10 * jnp.sum(decrease_eps))
+            loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.sum(jnp.multiply(decrease_eps, exp_decrease)) / jnp.sum(decrease_eps)
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
@@ -178,7 +178,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + epsilon)
+        loss = jnp.maximum(0, diff + tau * K + 0.1*epsilon)
 
         return loss, diff
 
