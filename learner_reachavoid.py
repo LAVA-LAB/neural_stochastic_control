@@ -82,7 +82,7 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, decrease_eps, V_state,
                                                           certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.sum(jnp.multiply(decrease_eps, exp_decrease)) / jnp.sum(decrease_eps)
+            loss_exp_decrease = jnp.mean(exp_decrease) + 0.1 * jnp.sum(jnp.multiply(decrease_eps, exp_decrease)) / 30000
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
