@@ -246,7 +246,7 @@ for i in range(args.cegis_iterations):
 
     print('len:', len(batch_X_decrease))
 
-    counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease)), np.ones(batch_X_decrease.shape[1])))
+    counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease[0])), np.ones(len(batch_X_decrease[0]))))
 
     import jax.numpy as jnp
     print(jnp.sum(counterx_indicator))
