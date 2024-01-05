@@ -246,6 +246,10 @@ for i in range(args.cegis_iterations):
 
     counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease)), np.ones(len(batch_X_decrease))))
 
+    import jax.numpy as jnp
+    print(jnp.sum(counterx_indicator))
+    print(np.sum(counterx_indicator))
+
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
