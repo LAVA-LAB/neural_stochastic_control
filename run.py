@@ -260,7 +260,7 @@ for i in range(args.cegis_iterations):
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,
-                verify_mesh_tau_min_final = args.verify_mesh_tau_final,
+                verify_mesh_tau_min_final = args.verify_mesh_tau_min_final,
                 probability_bound = args.probability_bound)
 
             # Update parameters
