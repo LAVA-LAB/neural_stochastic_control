@@ -45,7 +45,7 @@ class Verifier:
         self.noise_int_lb, self.noise_int_ub = env.integrate_noise(self.noise_lb, self.noise_ub)
 
 
-    def set_verification_grid(self, env, mesh_size):
+    def set_verification_grid(self, env, mesh_size, verbose = False):
         '''
         Defines a rectangular gridding of the state space, used by the verifier
         :param env: Gym environment object
@@ -69,7 +69,8 @@ class Verifier:
                            size=num_per_dimension)
         self.buffer.append(grid)
 
-        print(f'- Time to define grid: {(time.time() - t):.4f}')
+        if verbose:
+            print(f'- Time to define grid: {(time.time() - t):.4f}')
 
         # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
@@ -77,17 +78,20 @@ class Verifier:
         t = time.time()
         self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
                                  delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
-        print(f'- Time to define C_decrease_adj: {(time.time() - t):.4f}')
+        if verbose:
+            print(f'- Time to define C_decrease_adj: {(time.time() - t):.4f}')
 
         t = time.time()
         self.C_init_adj = self.env.init_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
-        print(f'- Time to define C_init_adj: {(time.time() - t):.4f}')
+        if verbose:
+            print(f'- Time to define C_init_adj: {(time.time() - t):.4f}')
 
         t = time.time()
         self.C_unsafe_adj = self.env.unsafe_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
-        print(f'- Time to define C_unsafe_adj: {(time.time() - t):.4f}')
+        if verbose:
+            print(f'- Time to define C_unsafe_adj: {(time.time() - t):.4f}')
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''
@@ -161,12 +165,12 @@ class Verifier:
 
         # Expected decrease condition check on all states outside target set
         if IBP:
-            Vvalues_expDecr, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
+            Vvalues_expDecr_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
                                                                0.5 * verify_mesh_cell_width, 1)
-            idxs = (Vvalues_expDecr < 1 / (1 - args.probability_bound)).flatten()
+            idxs = (Vvalues_expDecr_lb < 1 / (1 - args.probability_bound)).flatten()
         else:
-            Vvalues_expDecr = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
-            idxs = (Vvalues_expDecr - lip_certificate * args.verify_mesh_tau
+            Vvalues_expDecr_lb = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
+            idxs = (Vvalues_expDecr_lb - lip_certificate * args.verify_mesh_tau
                     < 1 / (1 - args.probability_bound)).flatten()
         check_expDecr_at = self.C_decrease_adj[idxs]
 
@@ -195,7 +199,8 @@ class Verifier:
                 V_old = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
                                                     noise_keys).flatten()
 
-                print('Max diff:', np.max(Vdiff[i:j] - V_old),'Min diff:', np.min(Vdiff[i:j] - V_old))
+                print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
+                      '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -205,34 +210,36 @@ class Verifier:
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
-        print(f'-- Vdiff - min: {np.min(Vdiff):.3f} mean: {np.mean(Vdiff):.3f} max: {np.max(Vdiff):.3f}')
+        print(f"-- Statistics of V[x']-VVdiff: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         print(f'-- Suggested mesh for verification grid: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         if IBP:
-            _, Vvalues_init = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
+            _, Vvalues_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
                                              0.5 * verify_mesh_cell_width)
-            idxs = (Vvalues_init > 1).flatten()
+            idxs = (Vvalues_init_ub > 1).flatten()
         else:
-            Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
-            idxs = ((Vvalues_init + lip_certificate * args.verify_mesh_tau) > 1).flatten()
+            Vvalues_init_ub = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
+            idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
 
         C_init_violations = self.C_init_adj[idxs]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
+        print(f"-- Statistics of V_init_ub: min={np.min(Vvalues_init_ub):.3f}; mean={np.mean(Vvalues_init_ub):.3f}; max={np.max(Vvalues_init_ub):.3f}")
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         if IBP:
-            Vvalues_unsafe, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
+            Vvalues_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
                                              0.5 * verify_mesh_cell_width)
-            idxs = (Vvalues_unsafe < 1 / (1 - args.probability_bound)).flatten()
+            idxs = (Vvalues_unsafe_lb < 1 / (1 - args.probability_bound)).flatten()
         else:
-            Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
+            Vvalues_unsafe_lb = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
 
-            idxs = ((Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
+            idxs = ((Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[idxs]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
+        print(f"-- Statistics of V_unsafe_lb: min={np.min(Vvalues_unsafe_lb):.3f}; mean={np.mean(Vvalues_unsafe_lb):.3f}; max={np.max(Vvalues_unsafe_lb):.3f}")
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
@@ -243,14 +250,14 @@ class Verifier:
         state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
 
         # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
-        _, V_new = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
+        _, V_new_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
 
         # Compute expectation by multiplying each V_new by the respective probability
-        V_expected = jnp.dot(V_new.flatten(), prob_ub)
+        V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
 
         V_old = jit(V_state.apply_fn)(V_state.params, x)
 
-        return V_expected - V_old
+        return V_expected_ub - V_old
 
     @partial(jax.jit, static_argnums=(0,))
     def V_step_noise_batch(self, V_state, V_params, x, u, noise_key):
