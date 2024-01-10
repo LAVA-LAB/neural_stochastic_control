@@ -227,7 +227,7 @@ class Verifier:
         C_init_violations = self.C_init_adj[(V > 0).flatten()]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
-        print(f"-- Statistics of V_init_ub: min={np.min(Vvalues_init_ub):.3f}; mean={np.mean(Vvalues_init_ub):.3f}; max={np.max(Vvalues_init_ub):.3f}")
+        print(f"-- Statistics of V_init_ub (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         if IBP:
@@ -242,7 +242,7 @@ class Verifier:
         C_unsafe_violations = self.C_unsafe_adj[(V < 0).flatten()]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
-        print(f"-- Statistics of V_unsafe_lb: min={np.min(Vvalues_unsafe_lb):.3f}; mean={np.mean(Vvalues_unsafe_lb):.3f}; max={np.max(Vvalues_unsafe_lb):.3f}")
+        print(f"-- Stats. of V_unsafe_lb (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
