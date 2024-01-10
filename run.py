@@ -296,8 +296,8 @@ for i in range(args.cegis_iterations):
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
-        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
-              and len(C_init_violations) == 0 and len(C_unsafe_violations) == 0:
+        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau: # \
+              # and len(C_init_violations) == 0 and len(C_unsafe_violations) == 0:
             args.verify_mesh_tau = suggested_mesh
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
         else:
