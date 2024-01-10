@@ -74,6 +74,9 @@ class Learner:
 
         def loss_fun(certificate_params, policy_params):
 
+            # Factor by which to strengthen the loss_init and loss_unsafe with (K * tau)
+            strengthen_eps = 1.1
+
             # Compute Lipschitz coefficients
             lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
             lip_policy, _ = lipschitz_coeff_l1(policy_params)
@@ -82,14 +85,11 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * 1.1 * verify_mesh_tau_min_final - 1)
-            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * strengthen_eps * verify_mesh_tau_min_final - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * 1.1 * verify_mesh_tau_min_final)
-            # loss_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) -
-            #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * strengthen_eps * verify_mesh_tau_min_final)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -103,7 +103,7 @@ class Learner:
             if self.expected_decrease_loss == 0:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
             elif self.expected_decrease_loss == 1:
-                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(exp_decrease2)
+                loss_exp_decrease = 0.2 * jnp.mean(exp_decrease) + 0.8 * jnp.mean(exp_decrease2)
             elif self.expected_decrease_loss == 2:
                 loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
 

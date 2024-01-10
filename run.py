@@ -263,7 +263,7 @@ for i in range(args.cegis_iterations):
                 C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
                 C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
                 C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
-                counterx_indicator = np.concatenate((np.ones(len(batch_C_decrease[k])), 2*np.ones(len(batch_X_decrease[k])))),
+                counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease[k])), np.ones(len(batch_X_decrease[k])))),
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,
