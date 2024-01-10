@@ -244,11 +244,6 @@ for i in range(args.cegis_iterations):
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
-    if i <= 0:
-        epochs = args.epochs * 4
-    else:
-        epochs = args.epochs
-
     for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
