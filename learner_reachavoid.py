@@ -61,7 +61,6 @@ class Learner:
             perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
                                               minval=-0.5*max_grid_perturb,
                                               maxval=0.5*max_grid_perturb)
-
         else:
             perturbation = 0
 
@@ -97,6 +96,8 @@ class Learner:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
             elif expected_decrease_loss == 1:
                 loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(exp_decrease2)
+            elif expected_decrease_loss == 2:
+                loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
