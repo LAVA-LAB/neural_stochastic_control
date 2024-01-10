@@ -19,6 +19,10 @@ class Learner:
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
 
+        print(f'- Setting: Expected decrease loss type is: {self.expected_decrease_loss}')
+        if self.perturb_samples:
+            print('- Setting: Training samples are slightly perturbed')
+
         self.env = env
 
         # Lipschitz factor
