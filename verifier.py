@@ -161,6 +161,7 @@ class Verifier:
         lip_certificate, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
+        print(f'- Verify conditions with mesh size tau = {args.verify_mesh_tau:.3f}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
@@ -210,8 +211,8 @@ class Verifier:
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
-        print(f"-- Statistics of V[x']-VVdiff: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
-        print(f'-- Suggested mesh for verification grid: {suggested_mesh:.5f}')
+        print(f"-- Stats of V[x']-V[x]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         if IBP:
@@ -228,6 +229,8 @@ class Verifier:
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
         print(f"-- Statistics of V_init_ub (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (1 - np.max(V)) / lip_certificate)
+        print(f'-- Suggested mesh based on initial state violations: {suggested_mesh3:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         if IBP:
@@ -243,6 +246,8 @@ class Verifier:
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
         print(f"-- Stats. of V_unsafe_lb (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (np.min(V) - 1 / (1-args.probability_bound))/lip_certificate)
+        print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
