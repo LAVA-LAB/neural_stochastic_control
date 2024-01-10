@@ -244,7 +244,12 @@ for i in range(args.cegis_iterations):
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
-    for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
+    if i <= 2:
+        epochs = args.epochs * 8
+    else:
+        epochs = args.epochs
+
+    for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
