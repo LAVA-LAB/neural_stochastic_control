@@ -76,13 +76,13 @@ parser.add_argument('--counterx_fraction', type=float, default=0.25,
 ###
 parser.add_argument('--update_certificate', type=bool, default=True,
                     help="If True, certificate network is updated by the Learner")
-parser.add_argument('--update_policy', type=bool, default=False,
+parser.add_argument('--update_policy', type=bool, default=True,
                     help="If True, policy network is updated by the Learner")
 parser.add_argument('--plot_intermediate', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, plots are generated throughout the CEGIS iterations (increases runtime)")
 
 ### ARGUMENTS TO EXPERIMENT WITH ###
-parser.add_argument('--perturb_train_samples', type=bool, default=True,
+parser.add_argument('--perturb_train_samples', type=bool, default=False,
                     help="If True, samples are (slightly) perturbed by the learner")
 parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")

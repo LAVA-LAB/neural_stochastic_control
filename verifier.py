@@ -69,7 +69,7 @@ class Verifier:
                            size=num_per_dimension)
         self.buffer.append(grid)
 
-        print('- Define grid:', time.time() - t)
+        print(f'- Time to define grid: {(time.time() - t):.4f}')
 
         # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
@@ -77,18 +77,17 @@ class Verifier:
         t = time.time()
         self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
                                  delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
-
-        print('- C_decrease_adj:', time.time() - t)
+        print(f'- Time to define C_decrease_adj: {(time.time() - t):.4f}')
 
         t = time.time()
         self.C_init_adj = self.env.init_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
-        print('- C_init_adj:', time.time() - t)
+        print(f'- Time to define C_init_adj: {(time.time() - t):.4f}')
 
         t = time.time()
         self.C_unsafe_adj = self.env.unsafe_space.contains(self.buffer.data,
                                  delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
-        print('- C_unsafe_adj:', time.time() - t)
+        print(f'- Time to define C_unsafe_adj: {(time.time() - t):.4f}')
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''
