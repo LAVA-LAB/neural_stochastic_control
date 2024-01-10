@@ -11,8 +11,14 @@ import time
 
 class Learner:
 
-    def __init__(self, env):
-        
+    def __init__(self,
+                 env,
+                 expected_decrease_loss = 1,
+                 perturb_samples = 0):
+
+        self.expected_decrease_loss = expected_decrease_loss
+        self.perturb_samples = perturb_samples
+
         self.env = env
 
         # Lipschitz factor
@@ -47,8 +53,6 @@ class Learner:
                    verify_mesh_tau,
                    verify_mesh_tau_min_final,
                    probability_bound,
-                   expected_decrease_loss = 2,
-                   perturb_samples = 0
                    ):
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
@@ -57,7 +61,7 @@ class Learner:
         noise_cond2_keys = jax.random.split(noise_key, (len(C_decrease), self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
-        if perturb_samples:
+        if self.perturb_samples:
             perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
                                               minval=-0.5*max_grid_perturb,
                                               maxval=0.5*max_grid_perturb)
@@ -92,11 +96,11 @@ class Learner:
             exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state, certificate_params,
                                                                C_decrease + perturbation, actions, noise_cond2_keys)
 
-            if expected_decrease_loss == 0:
+            if self.expected_decrease_loss == 0:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
-            elif expected_decrease_loss == 1:
+            elif self.expected_decrease_loss == 1:
                 loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(exp_decrease2)
-            elif expected_decrease_loss == 2:
+            elif self.expected_decrease_loss == 2:
                 loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
