@@ -14,7 +14,7 @@ class Learner:
     def __init__(self,
                  env,
                  expected_decrease_loss = 1,
-                 perturb_samples = 0):
+                 perturb_samples = True):
 
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
@@ -55,6 +55,7 @@ class Learner:
                    max_grid_perturb,
                    train_mesh_tau,
                    verify_mesh_tau,
+                   verify_mesh_tau_min,
                    verify_mesh_tau_min_final,
                    probability_bound,
                    ):

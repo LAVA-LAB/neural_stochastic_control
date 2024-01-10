@@ -82,7 +82,7 @@ parser.add_argument('--plot_intermediate', action=argparse.BooleanOptionalAction
                     help="If True, plots are generated throughout the CEGIS iterations (increases runtime)")
 
 ### ARGUMENTS TO EXPERIMENT WITH ###
-parser.add_argument('--perturb_train_samples', type=bool, default=False,
+parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAction,
                     help="If True, samples are (slightly) perturbed by the learner")
 parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")
