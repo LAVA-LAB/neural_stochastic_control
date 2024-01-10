@@ -244,8 +244,8 @@ for i in range(args.cegis_iterations):
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
-    if i <= 2:
-        epochs = args.epochs * 8
+    if i <= 0:
+        epochs = args.epochs * 4
     else:
         epochs = args.epochs
 
