@@ -47,7 +47,8 @@ class Learner:
                    verify_mesh_tau,
                    verify_mesh_tau_min_final,
                    probability_bound,
-                   expected_decrease_loss = 0
+                   expected_decrease_loss = 0,
+                   perturb_samples = 0
                    ):
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
@@ -56,9 +57,13 @@ class Learner:
         noise_cond2_keys = jax.random.split(noise_key, (len(C_decrease), self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
-        perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
-                                          minval=-0.5*max_grid_perturb,
-                                          maxval=0.5*max_grid_perturb)
+        if perturb_samples:
+            perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
+                                              minval=-0.5*max_grid_perturb,
+                                              maxval=0.5*max_grid_perturb)
+
+        else:
+            perturbation = 0
 
         def loss_fun(certificate_params, policy_params):
 
@@ -67,7 +72,7 @@ class Learner:
             lip_policy, _ = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, C_decrease)
+            actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
 
             # Loss in initial state set
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * verify_mesh_tau - 1)
@@ -82,12 +87,11 @@ class Learner:
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state,
-                                                             certificate_params, C_decrease, actions, noise_cond2_keys)
+            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state, certificate_params,
+                                                             C_decrease + perturbation, actions, noise_cond2_keys)
 
-            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state,
-                                                             certificate_params, C_decrease, actions,
-                                                             noise_cond2_keys)
+            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state, certificate_params,
+                                                               C_decrease + perturbation, actions, noise_cond2_keys)
 
             if expected_decrease_loss == 0:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
@@ -111,7 +115,7 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz + loss_aux)
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_aux)
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
