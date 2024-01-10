@@ -99,7 +99,7 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state, certificate_params,
                                                              C_decrease + perturbation, actions, noise_cond2_keys)
 
-            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state, certificate_params,
+            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final, K, V_state, certificate_params,
                                                                C_decrease + perturbation, actions, noise_cond2_keys)
 
             if self.expected_decrease_loss == 0:
