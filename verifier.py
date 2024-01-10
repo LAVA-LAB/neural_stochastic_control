@@ -172,8 +172,6 @@ class Verifier:
         check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
-
-        # TODO: For now, this expected decrease condition is approximate
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at,
                                             env.action_space.shape[0])
@@ -205,7 +203,6 @@ class Verifier:
         # Negative is violation
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         C_expDecr_violations = check_expDecr_at[idxs]
-        # TODO: Insert (exact) expected decrease condition check here
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)

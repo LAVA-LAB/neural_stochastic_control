@@ -43,8 +43,11 @@ class Learner:
                    C_target,
                    counterx_indicator,
                    max_grid_perturb,
+                   train_mesh_tau,
                    verify_mesh_tau,
-                   probability_bound
+                   verify_mesh_tau_min_final,
+                   probability_bound,
+                   expected_decrease_loss = 0
                    ):
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
@@ -79,10 +82,17 @@ class Learner:
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, counterx_indicator, V_state,
+            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state,
                                                              certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
+            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state,
+                                                             certificate_params, C_decrease + perturbation, actions,
+                                                             noise_cond2_keys)
+
+            if expected_decrease_loss == 0:
+                loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
+            elif expected_decrease_loss == 1:
+                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(exp_decrease2)
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
@@ -90,7 +100,6 @@ class Learner:
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
-            # loss_lipschitz = jnp.maximum(K - 60, 0)
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.glob_min)
@@ -159,7 +168,7 @@ class Learner:
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
 
-    def loss_exp_decrease(self, tau, K, counterx_indicator, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, tau, K, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -178,7 +187,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + 0.1*counterx_indicator)
+        loss = jnp.maximum(0, diff + tau * K)
 
         return loss, diff
 
