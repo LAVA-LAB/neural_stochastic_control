@@ -41,7 +41,7 @@ class Learner:
                    C_init,
                    C_unsafe,
                    C_target,
-                   decrease_eps,
+                   counterx_indicator,
                    max_grid_perturb,
                    verify_mesh_tau,
                    probability_bound
@@ -79,10 +79,10 @@ class Learner:
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, decrease_eps, V_state,
-                                                          certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
+            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, counterx_indicator, V_state,
+                                                             certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(decrease_eps, exp_decrease)) / jnp.sum(decrease_eps)
+            loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
@@ -159,7 +159,7 @@ class Learner:
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
 
-    def loss_exp_decrease(self, tau, K, epsilon, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, tau, K, counterx_indicator, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -178,7 +178,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K + 0.1*epsilon)
+        loss = jnp.maximum(0, diff + tau * K + 0.1*counterx_indicator)
 
         return loss, diff
 
