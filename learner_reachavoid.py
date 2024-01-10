@@ -82,12 +82,12 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * verify_mesh_tau_min_final - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * 1.1 * verify_mesh_tau_min_final - 1)
             # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * verify_mesh_tau_min_final)
+                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) + lip_certificate * 1.1 * verify_mesh_tau_min_final)
             # loss_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) -
             #                           jnp.min(V_state.apply_fn(certificate_params, C_unsafe)) )
 
