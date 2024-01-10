@@ -85,14 +85,14 @@ class Learner:
             exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state,
                                                              certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
-            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final*1.1, K, V_state,
+            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state,
                                                              certificate_params, C_decrease + perturbation, actions,
                                                              noise_cond2_keys)
 
             if expected_decrease_loss == 0:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
             elif expected_decrease_loss == 1:
-                loss_exp_decrease = jnp.mean(exp_decrease) + 10 * jnp.mean(exp_decrease2)
+                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(exp_decrease2)
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)
