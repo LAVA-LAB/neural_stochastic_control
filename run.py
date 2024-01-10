@@ -262,8 +262,6 @@ for i in range(args.cegis_iterations):
                 verify_mesh_tau = args.verify_mesh_tau,
                 verify_mesh_tau_min_final = args.verify_mesh_tau_min_final,
                 probability_bound = args.probability_bound,
-                expected_decrease_loss = 2,
-                perturb_samples = 0
             )
 
             # Update parameters
