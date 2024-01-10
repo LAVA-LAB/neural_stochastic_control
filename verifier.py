@@ -217,12 +217,14 @@ class Verifier:
         if IBP:
             _, Vvalues_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
                                              0.5 * verify_mesh_cell_width)
-            idxs = (Vvalues_init_ub > 1).flatten()
+            V = Vvalues_init_ub - 1
+            # idxs = (Vvalues_init_ub > 1).flatten()
         else:
             Vvalues_init_ub = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
-            idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
+            V = (Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) -  1
+            # idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
 
-        C_init_violations = self.C_init_adj[idxs]
+        C_init_violations = self.C_init_adj[(V > 0).flatten()]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
         print(f"-- Statistics of V_init_ub: min={np.min(Vvalues_init_ub):.3f}; mean={np.mean(Vvalues_init_ub):.3f}; max={np.max(Vvalues_init_ub):.3f}")
@@ -231,12 +233,13 @@ class Verifier:
         if IBP:
             Vvalues_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
                                              0.5 * verify_mesh_cell_width)
-            idxs = (Vvalues_unsafe_lb < 1 / (1 - args.probability_bound)).flatten()
+            V = Vvalues_unsafe_lb - 1 / (1 - args.probability_bound)
+            # idxs = (Vvalues_unsafe_lb < 1 / (1 - args.probability_bound)).flatten()
         else:
             Vvalues_unsafe_lb = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
-
-            idxs = ((Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
-        C_unsafe_violations = self.C_unsafe_adj[idxs]
+            V = (Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) - 1 / (1-args.probability_bound)
+            # idxs = ((Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
+        C_unsafe_violations = self.C_unsafe_adj[(V < 0).flatten()]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
         print(f"-- Statistics of V_unsafe_lb: min={np.min(Vvalues_unsafe_lb):.3f}; mean={np.mean(Vvalues_unsafe_lb):.3f}; max={np.max(Vvalues_unsafe_lb):.3f}")
