@@ -67,7 +67,7 @@ class Learner:
             lip_policy, _ = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
+            actions = Policy_state.apply_fn(policy_params, C_decrease)
 
             # Loss in initial state set
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init)) + lip_certificate * verify_mesh_tau - 1)
@@ -83,10 +83,10 @@ class Learner:
 
             # Loss for expected decrease condition
             exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state,
-                                                             certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
+                                                             certificate_params, C_decrease, actions, noise_cond2_keys)
 
             exp_decrease2, diff2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final, K, V_state,
-                                                             certificate_params, C_decrease + perturbation, actions,
+                                                             certificate_params, C_decrease, actions,
                                                              noise_cond2_keys)
 
             if expected_decrease_loss == 0:
