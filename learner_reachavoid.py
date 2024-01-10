@@ -47,7 +47,7 @@ class Learner:
                    verify_mesh_tau,
                    verify_mesh_tau_min_final,
                    probability_bound,
-                   expected_decrease_loss = 0
+                   expected_decrease_loss = 1
                    ):
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
