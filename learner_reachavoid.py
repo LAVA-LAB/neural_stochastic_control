@@ -147,13 +147,13 @@ class Learner:
                 'test 3': jnp.average(jnp.ravel(jax.lax.stop_gradient(loss_expdecr)), weights=jnp.ravel(w_decrease)),
             }
 
-            return loss_total, infos
+            return loss_total, (infos, loss_expdecr)
 
         # Compute gradients
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
-        (loss_val, infos), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
+        (loss_val, (infos, loss_expdecr)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
-        return V_grads, Policy_grads, infos, key
+        return V_grads, Policy_grads, infos, key, loss_expdecr
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_full_state_space(self, rng, n):

@@ -265,7 +265,7 @@ for i in range(args.cegis_iterations):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
-            V_grads, Policy_grads, infos, key = learn.train_step(
+            V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
@@ -286,6 +286,10 @@ for i in range(args.cegis_iterations):
                 V_state = V_state.apply_gradients(grads=V_grads)
             if args.update_policy and i >= 3:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
+
+    print(loss_expdecr)
+
+    assert False
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
