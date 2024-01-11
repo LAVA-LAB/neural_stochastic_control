@@ -290,7 +290,7 @@ for i in range(args.cegis_iterations):
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
     for ky, info in infos.items():
-        print(f' - {ky}: {info:.8f}')
+        print(f' - {ky}: {info}')
     print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j in [True, False]])
     print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
 
