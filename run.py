@@ -338,4 +338,5 @@ for i in range(args.cegis_iterations):
 print(f'Total CEGIS (learner-verifier) runtime: {(time.time() - cegis_start_time):.2f}')
 
 # 2D plot for the certificate function over the state space
-plot_certificate_2D(env, V_state)
+filename = f"plots/certificate_{start_datetime}_iteration={i}"
+plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)

@@ -210,9 +210,9 @@ class Verifier:
         C_expDecr_violations = check_expDecr_at[idxs]
 
         print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
-        print(f"-- Stats of V[x']-V[x]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
-        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
+        suggested_mesh1 = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
+        print(f"-- Stats of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh1:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         if IBP:
@@ -222,7 +222,7 @@ class Verifier:
             # idxs = (Vvalues_init_ub > 1).flatten()
         else:
             Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
-            V = (Vvalues_init + lip_certificate * args.verify_mesh_tau) -  1
+            V = (Vvalues_init + lip_certificate * args.verify_mesh_tau) - 1
             # idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
 
         C_init_violations = self.C_init_adj[(V > 0).flatten()]
@@ -248,6 +248,8 @@ class Verifier:
         print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
         print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
+
+        suggested_mesh = np.min([suggested_mesh1, suggested_mesh2, suggested_mesh3])
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
 
