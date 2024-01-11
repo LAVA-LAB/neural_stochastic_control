@@ -228,8 +228,8 @@ class Verifier:
         C_init_violations = self.C_init_adj[(V > 0).flatten()]
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
-        print(f"-- Statistics of V_init_ub (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (1 - np.max(V)) / lip_certificate)
+        print(f"-- Statistics of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.max(V) / lip_certificate)
         print(f'-- Suggested mesh based on initial state violations: {suggested_mesh3:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
@@ -245,8 +245,8 @@ class Verifier:
         C_unsafe_violations = self.C_unsafe_adj[(V < 0).flatten()]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
-        print(f"-- Stats. of V_unsafe_lb (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (np.min(V) - (1 / (1-args.probability_bound)))/lip_certificate)
+        print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
         print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
