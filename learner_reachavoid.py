@@ -107,7 +107,7 @@ class Learner:
             if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
 
-            elif self.expected_decrease_loss == 1: # Loss function Thom
+            elif self.expected_decrease_loss == 1: # Loss function Thom (Note: there is actually a mistake in this function, but somehow it does work well...)
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
 
             elif self.expected_decrease_loss == 2: # Loss function Wietze
@@ -130,7 +130,7 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + 0.1 * loss_lipschitz + loss_aux)
+            loss_total = (loss_init + loss_unsafe + 2 * loss_exp_decrease + loss_lipschitz + loss_aux)
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
