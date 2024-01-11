@@ -202,7 +202,7 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
-counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size weighted=True)
+counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, weighted=True)
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid,
                                   weights=np.zeros(len(initial_train_grid)))
 
@@ -260,7 +260,7 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 x_decrease = np.vstack(( C['decrease'][idx_X_decrease[k]], CX['decrease'][idx_CX_decrease[k]] )),
-                w_decrease = np.concatenate(( np.zeros(len(idx_X_decrease[k])), np.zeros(len(idx_CD_decrease[k])) )),
+                w_decrease = np.concatenate(( np.zeros(len(idx_X_decrease[k])), np.zeros(len(idx_CX_decrease[k])) )),
                 x_init = np.vstack((C['init'][idx_X_init[k]], CX['init'][idx_CX_init[k]])),
                 x_unsafe = np.vstack((C['unsafe'][idx_X_unsafe[k]], CX['unsafe'][idx_CX_unsafe[k]])),
                 x_target = np.vstack((C['init'][idx_X_target[k]], CX['init'][idx_CX_target[k]])),
