@@ -260,6 +260,8 @@ for i in range(args.cegis_iterations):
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
+            print(np.concatenate((np.ones(len(X_decrease[k])), 1+CX_weights['decrease'][idx_decrease[k]])))
+
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key = learn.train_step(
                 key = key,
