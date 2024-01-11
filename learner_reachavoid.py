@@ -114,7 +114,7 @@ class Learner:
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
 
             elif self.expected_decrease_loss == 3: # Weighted average implementation 2
-                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.len(w_decrease)
+                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / len(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
