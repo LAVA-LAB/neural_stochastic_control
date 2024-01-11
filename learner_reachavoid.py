@@ -113,9 +113,6 @@ class Learner:
             elif self.expected_decrease_loss == 5: # Weighted average implementation 2
                 loss_exp_decrease = jnp.average(jnp.ravel(loss_expdecr), weights=w_decrease)
 
-
-            jax.debug.print(loss_exp_decrease)
-
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
@@ -145,8 +142,6 @@ class Learner:
         # Compute gradients
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
         (loss_val, infos), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
-
-        assert False
 
         return V_grads, Policy_grads, infos, key
 
