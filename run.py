@@ -312,13 +312,19 @@ for i in range(args.cegis_iterations):
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
-        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
-                and len(counterx_hard) == 0:
+        if len(counterx_hard) != 0:
+            print(f-'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
+            verify_done = True
+        elif suggested_mesh < args.verify_mesh_tau_min_final:
+            print(f'\n- Skip refinement, because suggested mesh ({suggested_mesh:.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
+            verify_done = True
+        elif suggested_mesh >= args.verify_mesh_tau:
+            print(f'\n- Skip refinement, because suggest mesh ({suggested_mesh:.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
+            verify_done = True
+        else:
             args.verify_mesh_tau = suggested_mesh
             print(f'- Refine mesh size to {args.verify_mesh_tau:.5f}')
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
-        else:
-            verify_done = True
 
     if len(counterx) == 0:
         break
