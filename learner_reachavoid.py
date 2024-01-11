@@ -114,7 +114,7 @@ class Learner:
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
 
             elif self.expected_decrease_loss == 3: # Weighted average
-                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / jnp.len(w_decrease)
+                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / len(w_decrease)
 
             elif self.expected_decrease_loss == 5: # Weighted average implementation 2
                 loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
