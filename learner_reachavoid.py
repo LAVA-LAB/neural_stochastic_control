@@ -102,18 +102,16 @@ class Learner:
             loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
                                                         V_state, certificate_params, x_decrease + perturbation, actions, noise_cond2_keys)
 
-            if self.expected_decrease_loss == 0:
-                loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
-            elif self.expected_decrease_loss == 1:
-                loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
-            elif self.expected_decrease_loss == 2:
-                loss_exp_decrease = jnp.mean(jnp.multiply(w_decrease, loss_expdecr))
-            elif self.expected_decrease_loss == 3:
-                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / jnp.sum(w_decrease)
-            elif self.expected_decrease_loss == 4:
+            if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
-            elif self.expected_decrease_loss == 5:
-                loss_exp_decrease = jnp.average(loss_expdecr, weights=w_decrease)
+            elif self.expected_decrease_loss == 1: # Loss function Thom
+                loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
+            elif self.expected_decrease_loss == 2: # Loss function Wietze
+                loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
+            elif self.expected_decrease_loss == 3: # Weighted average
+                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / jnp.sum(w_decrease)
+            elif self.expected_decrease_loss == 5: # Weighted average implementation 2
+                loss_exp_decrease = jnp.average(jnp.ravel(loss_expdecr), weights=w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
