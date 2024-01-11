@@ -72,6 +72,8 @@ class Learner:
         else:
             perturbation = 0
 
+        w_decrease = jax.lax.stop_gradient(w_decrease)
+
         def loss_fun(certificate_params, policy_params):
 
             # Factor by which to strengthen the loss_init and loss_unsafe with (K * tau)
@@ -101,8 +103,6 @@ class Learner:
 
             loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
                                                         V_state, certificate_params, x_decrease + perturbation, actions, noise_cond2_keys)
-
-            w_decrease = jax.lax.stop_gradient(w_decrease)
 
             if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
