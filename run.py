@@ -272,7 +272,7 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 x_decrease = np.vstack((X_decrease[k], CX_decrease[k])),
-                w_decrease = np.concatenate((np.ones(len(X_decrease[k])), 1+args.weight_multiplier*CX_weights['decrease'][idx_decrease[k]])),
+                w_decrease = np.concatenate((np.zeros(len(X_decrease[k])), args.weight_multiplier*CX_weights['decrease'][idx_decrease[k]])),
                 x_init = np.vstack((X_init[k], CX_init[k])),
                 x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k])),
                 x_target = np.vstack((X_target[k], CX_target[k])),

@@ -113,11 +113,8 @@ class Learner:
             elif self.expected_decrease_loss == 2: # Loss function Wietze
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
 
-            elif self.expected_decrease_loss == 3: # Weighted average
-                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / len(w_decrease)
-
-            elif self.expected_decrease_loss == 5: # Weighted average implementation 2
-                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
+            elif self.expected_decrease_loss == 3: # Weighted average implementation 2
+                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.len(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
@@ -141,10 +138,6 @@ class Learner:
                 '3. loss_exp_decrease': loss_exp_decrease,
                 '4. loss_lipschitz': loss_lipschitz,
                 '5. loss_aux': loss_aux,
-                'test 0': jnp.sum(jnp.multiply(w_decrease, jax.lax.stop_gradient(loss_expdecr))) / jnp.sum(w_decrease),
-                'test 1': jnp.sum(jnp.multiply(jnp.ravel(w_decrease), jnp.ravel(jax.lax.stop_gradient(loss_expdecr)))) / jnp.sum(w_decrease),
-                'test 2': jnp.dot(jnp.ravel(w_decrease), jnp.ravel(jax.lax.stop_gradient(loss_expdecr))) / jnp.sum(w_decrease),
-                'test 3': jnp.average(jnp.ravel(jax.lax.stop_gradient(loss_expdecr)), weights=jnp.ravel(w_decrease)),
             }
 
             return loss_total, (infos, loss_expdecr)
