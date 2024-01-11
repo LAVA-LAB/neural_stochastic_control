@@ -56,6 +56,8 @@ parser.add_argument('--probability_bound', type=float, default=0.8,
                     help="Bound on the reach-avoid probability to verify")
 parser.add_argument('--train_mesh_tau', type=float, default=0.01,
                     help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
+parser.add_argument('--weight_multiplier', type=float, default=1,
+                    help="Multiply the weight on counterexamples by this value.")
 
 ### VERIFIER ARGUMENTS
 parser.add_argument('--verify_batch_size', type=int, default=10000,
@@ -270,7 +272,7 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 x_decrease = np.vstack((X_decrease[k], CX_decrease[k])),
-                w_decrease = np.concatenate((np.ones(len(X_decrease[k])), 1+CX_weights['decrease'][idx_decrease[k]])),
+                w_decrease = np.concatenate((np.ones(len(X_decrease[k])), 1+args.weight_multiplier*CX_weights['decrease'][idx_decrease[k]])),
                 x_init = np.vstack((X_init[k], CX_init[k])),
                 x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k])),
                 x_target = np.vstack((X_target[k], CX_target[k])),
