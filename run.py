@@ -287,10 +287,6 @@ for i in range(args.cegis_iterations):
             if args.update_policy and i >= 3:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-    print(loss_expdecr)
-
-    assert False
-
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
     for ky, info in infos.items():
