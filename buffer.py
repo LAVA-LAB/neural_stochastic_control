@@ -65,7 +65,7 @@ class Buffer:
         if self.weighted:
             old_weights = self.weights[old_idxs]
             new_weights = weights[new_idxs]
-            self.data = np.concatenate((old_weights, new_weights), dtype=np.float32)
+            self.weights = np.concatenate((old_weights, new_weights), dtype=np.float32)
 
 
 
