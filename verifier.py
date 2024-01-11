@@ -150,8 +150,7 @@ class Verifier:
             return output_lb, output_ub
 
 
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key, IBP = False,
-                         debug_noise_integration = False):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, debug_noise_integration = False):
         ''' If IBP is True, then interval bound propagation is used. '''
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
@@ -161,18 +160,15 @@ class Verifier:
         lip_certificate, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
+        print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Verify conditions with mesh size tau = {args.verify_mesh_tau:.3f}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
-        if IBP:
-            Vvalues_expDecr_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
-                                                               0.5 * verify_mesh_cell_width, 1)
-            idxs = (Vvalues_expDecr_lb < 1 / (1 - args.probability_bound)).flatten()
-        else:
-            Vvalues_expDecr_lb = self.batched_forward_pass(V_state.apply_fn, V_state.params, self.C_decrease_adj, 1)
-            idxs = (Vvalues_expDecr_lb - lip_certificate * args.verify_mesh_tau
-                    < 1 / (1 - args.probability_bound)).flatten()
+        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
+                                                           0.5 * verify_mesh_cell_width, 1)
+        idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
+
         check_expDecr_at = self.C_decrease_adj[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
@@ -207,51 +203,53 @@ class Verifier:
 
         # Negative is violation
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
-        C_expDecr_violations = check_expDecr_at[idxs]
+        counterx_expDecr = check_expDecr_at[idxs]
 
-        print(f'- {len(C_expDecr_violations)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        suggested_mesh1 = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
+        print(f'- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
+        suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
         print(f"-- Stats of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
-        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh1:.5f}')
+        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        if IBP:
-            _, Vvalues_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
-                                             0.5 * verify_mesh_cell_width)
-            V = Vvalues_init_ub - 1
-            # idxs = (Vvalues_init_ub > 1).flatten()
-        else:
-            Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
-            V = (Vvalues_init + lip_certificate * args.verify_mesh_tau) - 1
-            # idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
+        _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
+                                      0.5 * verify_mesh_cell_width)
+        V = V_init_ub - 1
 
-        C_init_violations = self.C_init_adj[(V > 0).flatten()]
+        # Set counterexamples (for initial states)
+        counterx_init = self.C_init_adj[(V > 0).flatten()]
 
-        print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
+        # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
+        V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init)
+        counterx_init_hard = counterx_init[(V_init > 1).flatten()]
+
+        print(f'- {len(counterx_init)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
+        print(f'- Number of hard violations: {len(counterx_init_hard)} out of {len(counterx_init)}')
         print(f"-- Statistics of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
-        print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
+        # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
+        # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        if IBP:
-            Vvalues_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
-                                             0.5 * verify_mesh_cell_width)
-            V = Vvalues_unsafe_lb - 1 / (1 - args.probability_bound)
-            # idxs = (Vvalues_unsafe_lb < 1 / (1 - args.probability_bound)).flatten()
-        else:
-            Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
-            V = (Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) - 1 / (1-args.probability_bound)
-            # idxs = ((Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
-        C_unsafe_violations = self.C_unsafe_adj[(V < 0).flatten()]
+        V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
+                                         0.5 * verify_mesh_cell_width)
+        V = V_unsafe_lb - 1 / (1 - args.probability_bound)
 
-        print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
+        # Set counterexamples (for unsafe states)
+        counterx_unsafe = self.C_unsafe_adj[(V < 0).flatten()]
+
+        # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
+        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe)
+        counterx_init_hard = counterx_init[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
+
+        print(f'- {len(counterx_unsafe)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
+        print(f'- Number of hard violations: {len(counterx_init_hard)} out of {len(counterx_unsafe)}')
         print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
-        print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
+        # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
+        # print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
-        suggested_mesh = np.min([suggested_mesh1, suggested_mesh2, suggested_mesh3])
+        counterx = np.unique(np.vstack([counterx_expDecr, counterx_init, counterx_unsafe]), axis=0)
+        counterx_hard = np.unique(np.vstack([counterx_init_hard, counterx_unsafe]), axis=0)
 
-        return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
+        return counterx, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
     def V_step_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):

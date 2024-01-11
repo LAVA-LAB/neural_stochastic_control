@@ -291,42 +291,35 @@ for i in range(args.cegis_iterations):
     verify_done = False
     while not verify_done:
         print(f'\nCheck martingale conditions...')
-        print(f'- Total number of samples: {len(verify.buffer.data)}')
-        print(f'- Verification mesh size (tau): {args.verify_mesh_tau:.5f}')
+        counterx, counterx_hard, key, suggested_mesh = verify.check_conditions(env, args, V_state, Policy_state, key)
 
-        C_expDecr_violations, C_init_violations, C_unsafe_violations, key, suggested_mesh = \
-            verify.check_conditions(env, args, V_state, Policy_state, key, IBP = True)
-
-        # Samples to add to dataset
-        samples_to_add = np.unique(np.vstack([C_expDecr_violations, C_init_violations, C_unsafe_violations]), axis=0)
-
-        if len(samples_to_add) == 0:
+        if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
             break
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
-        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau: # \
-              # and len(C_init_violations) == 0 and len(C_unsafe_violations) == 0:
+        if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
+                and len(counterx_hard) == 0:
             args.verify_mesh_tau = suggested_mesh
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
         else:
             verify_done = True
 
-    if len(samples_to_add) == 0:
+    if len(counterx) == 0:
         break
 
     # If the counterexample fraction (of total train data) is zero, then we simply add the counterexamples to the
     # training buffer.
     if args.counterx_fraction == 0:
-        train_buffer.append(samples_to_add)
+        train_buffer.append(counterx)
 
     else:
         # Add counterexamples to the counterexample buffer
         if i > 0:
-            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=samples_to_add)
+            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx)
         else:
-            counterx_buffer.append_and_remove(refresh_fraction=1, samples=samples_to_add)
+            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
