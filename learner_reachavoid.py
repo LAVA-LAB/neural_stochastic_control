@@ -133,7 +133,6 @@ class Learner:
                 '3. loss_exp_decrease': loss_exp_decrease,
                 '4. loss_lipschitz': loss_lipschitz,
                 '5. loss_aux': loss_aux,
-                'debug': loss_expdecr.shape
             }
 
             return loss_total, infos
