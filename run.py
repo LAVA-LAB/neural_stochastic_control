@@ -260,16 +260,13 @@ for i in range(args.cegis_iterations):
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
-            print(idx_decrease[k].shape)
-            print(CX_weights['decrease'].shape)
-
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
                 x_decrease = np.vstack((X_decrease[k], CX_decrease[k])),
-                w_decrease = np.concatenate((np.zeros(len(X_decrease[k])), CX_weights['decrease'][idx_decrease[k]])),
+                w_decrease = np.concatenate((np.ones(len(X_decrease[k])), CX_weights['decrease'][idx_decrease[k]])),
                 x_init = np.vstack((X_init[k], CX_init[k])),
                 x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k])),
                 x_target = np.vstack((X_target[k], CX_target[k])),
@@ -300,7 +297,8 @@ for i in range(args.cegis_iterations):
     verify_done = False
     while not verify_done:
         print(f'\nCheck martingale conditions...')
-        counterx, counterx_hard, key, suggested_mesh = verify.check_conditions(env, args, V_state, Policy_state, key)
+        counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
+            verify.check_conditions(env, args, V_state, Policy_state, key)
 
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
@@ -328,7 +326,8 @@ for i in range(args.cegis_iterations):
     else:
         # Add counterexamples to the counterexample buffer
         if i > 0:
-            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx)
+            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx,
+                                              weights=counterx_weights)
         else:
             counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx)
 

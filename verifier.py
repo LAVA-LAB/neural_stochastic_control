@@ -204,6 +204,7 @@ class Verifier:
         # Negative is violation
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
+        weights_expDecr = np.maximum(0, Vdiff[idxs] + args.verify_mesh_tau * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
@@ -246,10 +247,12 @@ class Verifier:
         # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
         # print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
-        counterx = np.unique(np.vstack([counterx_expDecr, counterx_init, counterx_unsafe]), axis=0)
-        counterx_hard = np.unique(np.vstack([counterx_init_hard, counterx_unsafe]), axis=0)
+        counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
+        counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe])
 
-        return counterx, counterx_hard, noise_key, suggested_mesh
+        counterx_weights = np.concatenate([weights_expDecr, np.zeros(len(counterx_init) + len(counterx_unsafe))])
+
+        return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
     def V_step_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
