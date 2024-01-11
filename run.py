@@ -263,7 +263,7 @@ for i in range(args.cegis_iterations):
                 w_decrease = np.concatenate(( np.zeros(len(idx_X_decrease[k])), np.zeros(len(idx_CX_decrease[k])) )),
                 x_init = np.vstack((C['init'][idx_X_init[k]], CX['init'][idx_CX_init[k]])),
                 x_unsafe = np.vstack((C['unsafe'][idx_X_unsafe[k]], CX['unsafe'][idx_CX_unsafe[k]])),
-                x_target = np.vstack((C['init'][idx_X_target[k]], CX['init'][idx_CX_target[k]])),
+                x_target = np.vstack((C['target'][idx_X_target[k]], CX['target'][idx_CX_target[k]])),
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,
