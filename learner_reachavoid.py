@@ -109,7 +109,7 @@ class Learner:
             elif self.expected_decrease_loss == 2:
                 loss_exp_decrease = jnp.mean(jnp.multiply(w_decrease, loss_expdecr))
             elif self.expected_decrease_loss == 3:
-                loss_exp_decrease = jnp.dot(w_decrease, loss_expdecr) / jnp.sum(w_decrease)
+                loss_exp_decrease = jnp.dot(w_decrease, jnp.ravel(loss_expdecr)) / jnp.sum(w_decrease)
             elif self.expected_decrease_loss == 4:
                 loss_exp_decrease = jnp.mean(loss_expdecr)
             elif self.expected_decrease_loss == 5:
