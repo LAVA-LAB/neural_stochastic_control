@@ -238,7 +238,7 @@ class Verifier:
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe)
-        counterx_init_hard = counterx_init[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
+        counterx_init_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
 
         print(f'- {len(counterx_unsafe)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
         print(f'- Number of hard violations: {len(counterx_init_hard)} out of {len(counterx_unsafe)}')
