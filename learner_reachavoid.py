@@ -141,8 +141,8 @@ class Learner:
                 '3. loss_exp_decrease': loss_exp_decrease,
                 '4. loss_lipschitz': loss_lipschitz,
                 '5. loss_aux': loss_aux,
-                'test 1': jnp.sum(jnp.multiply(w_decrease, jax.lax.stop_gradient(loss_expdecr))),
-                'test 2': jnp.ravel(jnp.dot(w_decrease, jax.lax.stop_gradient(loss_expdecr))),
+                'test 1': jnp.sum(jnp.multiply(jnp.ravel(w_decrease), jnp.ravel(jax.lax.stop_gradient(loss_expdecr)))),
+                'test 2': jnp.ravel(jnp.dot(jnp.ravel(w_decrease), jnp.ravel(jax.lax.stop_gradient(loss_expdecr)))),
             }
 
             return loss_total, infos
