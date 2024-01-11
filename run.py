@@ -329,7 +329,7 @@ for i in range(args.cegis_iterations):
             counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx,
                                               weights=counterx_weights)
         else:
-            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx)
+            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx, weights=counterx_weights)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
