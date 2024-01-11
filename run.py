@@ -242,12 +242,12 @@ for i in range(args.cegis_iterations):
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
     C['decrease'] = train_buffer.data
-    key, batch_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target = batch_training_data(key, C,
-                                                             len(train_buffer.data), num_batches, (1-fraction_counterx) * args.batch_size)
+    key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = \
+        batch_training_data(key, C, len(train_buffer.data), num_batches, (1 - fraction_counterx) * args.batch_size)
 
-    X = format_training_data(env, counterx_buffer.data)
-    key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = batch_training_data(key, X,
-                                                             len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
+    CX = format_training_data(env, counterx_buffer.data)
+    key, batch_CX_decrease, batch_CX_init, batch_CX_unsafe, batch_CX_target = \
+        batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
@@ -259,11 +259,11 @@ for i in range(args.cegis_iterations):
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
-                C_decrease = np.vstack((batch_C_decrease[k], batch_X_decrease[k])),
-                C_init = np.vstack((batch_C_init[k], batch_X_init[k])),
-                C_unsafe = np.vstack((batch_C_unsafe[k], batch_X_unsafe[k])),
-                C_target = np.vstack((batch_C_target[k], batch_X_target[k])),
-                counterx_indicator = np.concatenate((np.zeros(len(batch_C_decrease[k])), np.ones(len(batch_X_decrease[k])))),
+                x_decrease = np.vstack((batch_X_decrease[k], batch_CX_decrease[k])),
+                w_decrease=np.concatenate((np.zeros(len(batch_X_decrease[k])), np.ones(len(batch_CX_decrease[k])))),
+                x_init = np.vstack((batch_X_init[k], batch_CX_init[k])),
+                x_unsafe = np.vstack((batch_X_unsafe[k], batch_CX_unsafe[k])),
+                x_target = np.vstack((batch_X_target[k], batch_CX_target[k])),
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,

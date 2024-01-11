@@ -47,11 +47,11 @@ class Learner:
                    key: jax.Array,
                    V_state: TrainState,
                    Policy_state: TrainState,
-                   C_decrease,
-                   C_init,
-                   C_unsafe,
-                   C_target,
-                   counterx_indicator,
+                   x_decrease,
+                   w_decrease,
+                   x_init,
+                   x_unsafe,
+                   x_target,
                    max_grid_perturb,
                    train_mesh_tau,
                    verify_mesh_tau,
@@ -62,11 +62,11 @@ class Learner:
         key, noise_key, perturbation_key = jax.random.split(key, 3)
 
         # Split RNG keys for process noise in environment stap
-        noise_cond2_keys = jax.random.split(noise_key, (len(C_decrease), self.N_expectation))
+        noise_cond2_keys = jax.random.split(noise_key, (len(x_decrease), self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
-            perturbation = jax.random.uniform(perturbation_key, C_decrease.shape,
+            perturbation = jax.random.uniform(perturbation_key, x_decrease.shape,
                                               minval=-0.5*max_grid_perturb,
                                               maxval=0.5*max_grid_perturb)
         else:
@@ -82,25 +82,25 @@ class Learner:
             lip_policy, _ = lipschitz_coeff_l1(policy_params)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, C_decrease + perturbation)
+            actions = Policy_state.apply_fn(policy_params, x_decrease + perturbation)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, C_init))
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
                                     + lip_certificate * strengthen_eps * verify_mesh_tau_min_final - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, C_unsafe))
+                                      jnp.min(V_state.apply_fn(certificate_params, x_unsafe))
                                       + lip_certificate * strengthen_eps * verify_mesh_tau_min_final)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
             loss_expdecr = self.loss_exp_decrease_vmap(verify_mesh_tau * K, V_state, certificate_params,
-                                                       C_decrease + perturbation, actions, noise_cond2_keys)
+                                                       x_decrease + perturbation, actions, noise_cond2_keys)
 
             loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
-                                                        V_state, certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
+                                                        V_state, certificate_params, x_decrease + perturbation, actions, noise_cond2_keys)
 
             if self.expected_decrease_loss == 0:
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, loss_expdecr)) / jnp.sum(counterx_indicator)
@@ -116,11 +116,11 @@ class Learner:
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
-            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) - self.glob_min)
-            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
-                                        jnp.min(V_state.apply_fn(certificate_params, C_init)))
-            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, C_target)) -
-                                          jnp.min(V_state.apply_fn(certificate_params, C_unsafe)))
+            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) - self.glob_min)
+            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) -
+                                        jnp.min(V_state.apply_fn(certificate_params, x_init)))
+            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) -
+                                          jnp.min(V_state.apply_fn(certificate_params, x_unsafe)))
 
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
@@ -205,23 +205,6 @@ class Learner:
         return loss
 
 
-# class MLP_softplus(nn.Module):
-#     features: Sequence[int]
-#     activation_func: list
-#
-#     def setup(self):
-#         # we automatically know what to do with lists, dicts of submodules
-#         self.layers = [nn.Dense(feat) for feat in self.features]
-#         # for single submodules, we would just write:
-#         # self.layer1 = nn.Dense(feat1)
-#
-#     @nn.compact
-#     def __call__(self, x):
-#         for act_func, feat in zip(self.activation_func, self.features[:-1]):
-#             x = act_func(nn.Dense(feat)(x))
-#         x = nn.softplus(nn.Dense(self.features[-1])(x))
-#         return x
-
 
 class MLP(nn.Module):
     features: Sequence[int]
@@ -253,7 +236,7 @@ def format_training_data(env, data):
     }
 
 
-def batch_training_data(key, C, total_samples, epochs, batch_size):
+def batch_training_data(key, samples, total_samples, epochs, batch_size):
 
     # Convert train dataset into batches
     # TODO: Tidy up this stuff..
@@ -263,44 +246,44 @@ def batch_training_data(key, C, total_samples, epochs, batch_size):
     # If the length of a specific array is nonzero, then select at least one element (otherwise errors can be caused in
     # the learner). However, if the length of an array is zero, then we set the batch size for that array to zero, as
     # there is nothing to select.
-    if len(C['init']) == 0:
-        size_C_init = 0
+    if len(samples['init']) == 0:
+        num_init = 0
     else:
-        size_C_init = int(max(1, len(C['init']) * batch_size / total_samples))
+        num_init = int(max(1, len(samples['init']) * batch_size / total_samples))
 
-    if len(C['unsafe']) == 0:
-        size_C_unsafe = 0
+    if len(samples['unsafe']) == 0:
+        num_unsafe = 0
     else:
-        size_C_unsafe = int(max(1, len(C['unsafe']) * batch_size / total_samples))
+        num_unsafe = int(max(1, len(samples['unsafe']) * batch_size / total_samples))
 
-    if len(C['target']) == 0:
-        size_C_target = 0
+    if len(samples['target']) == 0:
+        num_target = 0
     else:
-        size_C_target = int(max(1, len(C['target']) * batch_size / total_samples))
+        num_target = int(max(1, len(samples['target']) * batch_size / total_samples))
 
-    size_C_decrease = int(batch_size - size_C_init - size_C_unsafe - size_C_target)
+    num_decrease = int(batch_size - num_init - num_unsafe - num_target)
 
-    print('Number of items in batch per category:')
-    print('- size_C_decrease:', size_C_decrease)
-    print('- size_C_init:', size_C_init)
-    print('- size_C_unsafe:', size_C_unsafe)
-    print('- size_C_target:', size_C_target)
+    print('Number of items in batch per element type:')
+    print('- Decrease:', num_decrease)
+    print('- Init:', num_init)
+    print('- Unsafe:', num_unsafe)
+    print('- Target:', num_target)
 
-    idxs_C_decrease = jax.random.choice(permutation_keys[0], len(C['decrease']),
-                                        shape=(epochs, size_C_decrease),
+    idxs_decrease = jax.random.choice(permutation_keys[0], len(samples['decrease']),
+                                        shape=(epochs, num_decrease),
                                         replace=True)
-    batches_C_decrease = [C['decrease'][idx] for idx in idxs_C_decrease]
+    batched_decrease = [samples['decrease'][idx] for idx in idxs_decrease]
 
-    idxs_C_init = jax.random.choice(permutation_keys[1], len(C['init']), shape=(epochs, size_C_init),
+    idxs_init = jax.random.choice(permutation_keys[1], len(samples['init']), shape=(epochs, num_init),
                                     replace=True)
-    batch_C_init = [C['init'][idx] for idx in idxs_C_init]
+    batched_init = [samples['init'][idx] for idx in idxs_init]
 
-    idxs_C_unsafe = jax.random.choice(permutation_keys[2], len(C['unsafe']), shape=(epochs, size_C_unsafe),
+    idxs_unsafe = jax.random.choice(permutation_keys[2], len(samples['unsafe']), shape=(epochs, num_unsafe),
                                       replace=True)
-    batch_C_unsafe = [C['unsafe'][idx] for idx in idxs_C_unsafe]
+    batched_unsafe = [samples['unsafe'][idx] for idx in idxs_unsafe]
 
-    idxs_C_target = jax.random.choice(permutation_keys[3], len(C['target']), shape=(epochs, size_C_target),
+    idxs_target = jax.random.choice(permutation_keys[3], len(samples['target']), shape=(epochs, num_target),
                                       replace=True)
-    batch_C_target = [C['target'][idx] for idx in idxs_C_target]
+    batched_target = [samples['target'][idx] for idx in idxs_target]
 
-    return key, batches_C_decrease, batch_C_init, batch_C_unsafe, batch_C_target
+    return key, batched_decrease, batched_init, batched_unsafe, batched_target
