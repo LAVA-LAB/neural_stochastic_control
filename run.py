@@ -255,7 +255,7 @@ for i in range(args.cegis_iterations):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
-            V_grads, Policy_grads, infos, key, diff = learn.train_step(
+            V_grads, Policy_grads, infos, key = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
@@ -313,7 +313,6 @@ for i in range(args.cegis_iterations):
     # training buffer.
     if args.counterx_fraction == 0:
         train_buffer.append(counterx)
-
     else:
         # Add counterexamples to the counterexample buffer
         if i > 0:

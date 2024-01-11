@@ -36,7 +36,7 @@ class Learner:
         self.N_expectation = 16
 
         # Define vectorized functions for loss computation
-        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, None, 0, 0, 0), out_axes=(0, 0))
+        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, 0, 0, 0), out_axes=0)
 
         return
 
@@ -96,23 +96,20 @@ class Learner:
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            exp_decrease, diff = self.loss_exp_decrease_vmap(verify_mesh_tau, K, V_state, certificate_params,
-                                                             C_decrease + perturbation, actions, noise_cond2_keys)
+            loss_expdecr = self.loss_exp_decrease_vmap(verify_mesh_tau * K, V_state, certificate_params,
+                                                       C_decrease + perturbation, actions, noise_cond2_keys)
 
-            exp_decrease2, diff2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final, K, V_state, certificate_params,
-                                                               C_decrease + perturbation, actions, noise_cond2_keys)
+            loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
+                                                        V_state, certificate_params, C_decrease + perturbation, actions, noise_cond2_keys)
 
             if self.expected_decrease_loss == 0:
-                loss_exp_decrease = jnp.mean(exp_decrease) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, exp_decrease)) / jnp.sum(counterx_indicator)
+                loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(counterx_indicator, loss_expdecr)) / jnp.sum(counterx_indicator)
             elif self.expected_decrease_loss == 1:
-                loss_exp_decrease = jnp.mean(exp_decrease) + 10 * jnp.mean(exp_decrease2)
+                loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
             elif self.expected_decrease_loss == 2:
-                loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
+                loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, loss_expdecr))
             elif self.expected_decrease_loss == 3:
-                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
-
-            violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
-            violations = jnp.mean(violations)
+                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.mean(jnp.multiply(counterx_indicator, loss_expdecr))
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
@@ -136,17 +133,15 @@ class Learner:
                 '3. loss_exp_decrease': loss_exp_decrease,
                 '4. loss_lipschitz': loss_lipschitz,
                 '5. loss_aux': loss_aux,
-                'a. exp. decrease violations': violations,
-                'b. Total lipschitz coeff. (K)': K,
             }
 
-            return loss_total, (infos, diff)
+            return loss_total, infos
 
         # Compute gradients
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
-        (loss_val, (infos, diff)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
+        (loss_val, infos), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
-        return V_grads, Policy_grads, infos, key, diff
+        return V_grads, Policy_grads, infos, key
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_full_state_space(self, rng, n):
@@ -185,7 +180,7 @@ class Learner:
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
 
-    def loss_exp_decrease(self, tau, K, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -204,9 +199,10 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        loss = jnp.maximum(0, diff + tau * K)
+        # Cap at zero
+        loss = jnp.maximum(0, diff + delta)
 
-        return loss, diff
+        return loss
 
 
 # class MLP_softplus(nn.Module):
