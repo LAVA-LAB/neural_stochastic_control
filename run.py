@@ -304,8 +304,6 @@ for i in range(args.cegis_iterations):
             print('\n=== Successfully learned martingale! ===')
             break
 
-        print('len counterx_hard:', len(counterx_hard))
-
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
         if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
