@@ -284,6 +284,5 @@ def batch_training_data(key, samples, total_samples, epochs, batch_size):
 
     idxs_target = jax.random.choice(permutation_keys[3], len(samples['target']), shape=(epochs, num_target),
                                       replace=True)
-    batched_target = [samples['target'][idx] for idx in idxs_target]
 
-    return key, batched_decrease, batched_init, batched_unsafe, batched_target
+    return key, idxs_decrease, idxs_init, idxs_unsafe, idxs_target

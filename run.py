@@ -202,8 +202,9 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
-counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size)
-counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
+counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size weighted=True)
+counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid,
+                                  weights=np.zeros(len(initial_train_grid)))
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
@@ -241,11 +242,11 @@ for i in range(args.cegis_iterations):
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
-    key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = \
+    key, idx_X_decrease, idx_X_init, idx_X_unsafe, idx_X_target = \
         batch_training_data(key, C, len(train_buffer.data), num_batches, (1 - fraction_counterx) * args.batch_size)
 
     CX = format_training_data(env, counterx_buffer.data)
-    key, batch_CX_decrease, batch_CX_init, batch_CX_unsafe, batch_CX_target = \
+    key, idx_CX_decrease, idx_CX_init, idx_CX_unsafe, idx_CX_target = \
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
@@ -258,11 +259,11 @@ for i in range(args.cegis_iterations):
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
-                x_decrease = np.vstack((batch_X_decrease[k], batch_CX_decrease[k])),
-                w_decrease=np.concatenate((np.zeros(len(batch_X_decrease[k])), np.ones(len(batch_CX_decrease[k])))),
-                x_init = np.vstack((batch_X_init[k], batch_CX_init[k])),
-                x_unsafe = np.vstack((batch_X_unsafe[k], batch_CX_unsafe[k])),
-                x_target = np.vstack((batch_X_target[k], batch_CX_target[k])),
+                x_decrease = np.vstack(( C['decrease'][idx_X_decrease[k]], CX['decrease'][idx_CX_decrease[k]] )),
+                w_decrease = np.concatenate(( np.zeros(len(idx_X_decrease[k])), np.zeros(len(idx_CD_decrease[k])) )),
+                x_init = np.vstack((C['init'][idx_X_init[k]], CX['init'][idx_CX_init[k]])),
+                x_unsafe = np.vstack((C['unsafe'][idx_X_unsafe[k]], CX['unsafe'][idx_CX_unsafe[k]])),
+                x_target = np.vstack((C['init'][idx_X_target[k]], CX['init'][idx_CX_target[k]])),
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,
