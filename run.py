@@ -256,8 +256,8 @@ for i in range(args.cegis_iterations):
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
-
-    numpy.set_printoptions(threshold=sys.maxsize)
+    import sys
+    np.set_printoptions(threshold=sys.maxsize)
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
