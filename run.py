@@ -297,13 +297,14 @@ for i in range(args.cegis_iterations):
             print('\n=== Successfully learned martingale! ===')
             break
 
-        print('len counterx_hard:', counterx_hard)
+        print('len counterx_hard:', len(counterx_hard))
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
         if suggested_mesh >= args.verify_mesh_tau_min_final and suggested_mesh < args.verify_mesh_tau \
                 and len(counterx_hard) == 0:
             args.verify_mesh_tau = suggested_mesh
+            print(f'- Refine mesh size to {args.verify_mesh_tau:.5f}')
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
         else:
             verify_done = True

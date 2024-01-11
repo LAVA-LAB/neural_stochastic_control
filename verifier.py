@@ -161,7 +161,7 @@ class Verifier:
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
-        print(f'- Verify conditions with mesh size tau = {args.verify_mesh_tau:.3f}')
+        print(f'- Verify conditions with mesh size tau = {args.verify_mesh_tau:.5f}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
