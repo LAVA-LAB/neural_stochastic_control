@@ -247,10 +247,10 @@ for i in range(args.cegis_iterations):
 
     CX_idxs, CX = format_training_data(env, counterx_buffer.data)
     CX_weights = {
-        'init': counterx_buffer.data[CX_idxs['init']],
-        'unsafe': counterx_buffer.data[CX_idxs['unsafe']],
-        'decrease': counterx_buffer.data[CX_idxs['decrease']],
-        'target': counterx_buffer.data[CX_idxs['target']],
+        'init': counterx_buffer.weights[CX_idxs['init']],
+        'unsafe': counterx_buffer.weights[CX_idxs['unsafe']],
+        'decrease': counterx_buffer.weights[CX_idxs['decrease']],
+        'target': counterx_buffer.weights[CX_idxs['target']],
     }
     key, idx_decrease, CX_decrease, _, CX_init, _, CX_unsafe, _, CX_target = \
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
