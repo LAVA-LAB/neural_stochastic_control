@@ -108,6 +108,8 @@ class Learner:
                 loss_exp_decrease = jnp.mean(exp_decrease) + 10 * jnp.mean(exp_decrease2)
             elif self.expected_decrease_loss == 2:
                 loss_exp_decrease = jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
+            elif self.expected_decrease_loss == 3:
+                loss_exp_decrease = jnp.mean(exp_decrease) + jnp.mean(jnp.multiply(counterx_indicator, exp_decrease))
 
             violations = (diff >= -verify_mesh_tau * K).astype(jnp.float32)
             violations = jnp.mean(violations)

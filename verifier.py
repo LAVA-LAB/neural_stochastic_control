@@ -221,8 +221,8 @@ class Verifier:
             V = Vvalues_init_ub - 1
             # idxs = (Vvalues_init_ub > 1).flatten()
         else:
-            Vvalues_init_ub = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
-            V = (Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) -  1
+            Vvalues_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_init_adj)
+            V = (Vvalues_init + lip_certificate * args.verify_mesh_tau) -  1
             # idxs = ((Vvalues_init_ub + lip_certificate * args.verify_mesh_tau) > 1).flatten()
 
         C_init_violations = self.C_init_adj[(V > 0).flatten()]
@@ -239,14 +239,14 @@ class Verifier:
             V = Vvalues_unsafe_lb - 1 / (1 - args.probability_bound)
             # idxs = (Vvalues_unsafe_lb < 1 / (1 - args.probability_bound)).flatten()
         else:
-            Vvalues_unsafe_lb = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
-            V = (Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) - 1 / (1-args.probability_bound)
+            Vvalues_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj)
+            V = (Vvalues_unsafe - lip_certificate * args.verify_mesh_tau) - 1 / (1-args.probability_bound)
             # idxs = ((Vvalues_unsafe_lb - lip_certificate * args.verify_mesh_tau) < 1 / (1-args.probability_bound)).flatten()
         C_unsafe_violations = self.C_unsafe_adj[(V < 0).flatten()]
 
         print(f'- {len(C_unsafe_violations)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
         print(f"-- Stats. of V_unsafe_lb (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (np.min(V) - 1 / (1-args.probability_bound))/lip_certificate)
+        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + (np.min(V) - (1 / (1-args.probability_bound)))/lip_certificate)
         print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
         return C_expDecr_violations, C_init_violations, C_unsafe_violations, noise_key, suggested_mesh
