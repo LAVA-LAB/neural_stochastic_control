@@ -241,7 +241,7 @@ for i in range(args.cegis_iterations):
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
     C = format_training_data(env, train_buffer.data)
-    C['decrease'] = train_buffer.data
+    # C['decrease'] = train_buffer.data
     key, batch_X_decrease, batch_X_init, batch_X_unsafe, batch_X_target = \
         batch_training_data(key, C, len(train_buffer.data), num_batches, (1 - fraction_counterx) * args.batch_size)
 
