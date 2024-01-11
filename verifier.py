@@ -229,8 +229,8 @@ class Verifier:
 
         print(f'- {len(C_init_violations)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
         print(f"-- Statistics of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.max(V) / lip_certificate)
-        print(f'-- Suggested mesh based on initial state violations: {suggested_mesh3:.5f}')
+        suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
+        print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         if IBP:
