@@ -205,7 +205,7 @@ class Verifier:
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
 
-        print(f'- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
+        print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
         print(f"-- Stats of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
@@ -222,8 +222,8 @@ class Verifier:
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init)
         counterx_init_hard = counterx_init[(V_init > 1).flatten()]
 
-        print(f'- {len(counterx_init)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
-        print(f'- Number of hard violations: {len(counterx_init_hard)} out of {len(counterx_init)}')
+        print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
+        print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
         print(f"-- Statistics of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
         # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
@@ -238,10 +238,10 @@ class Verifier:
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe)
-        counterx_init_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
+        counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
 
-        print(f'- {len(counterx_unsafe)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
-        print(f'- Number of hard violations: {len(counterx_init_hard)} out of {len(counterx_unsafe)}')
+        print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
+        print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
         print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
         # print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
