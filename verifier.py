@@ -199,8 +199,6 @@ class Verifier:
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
-
         # Negative is violation
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
@@ -208,7 +206,7 @@ class Verifier:
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
-        print(f"-- Stats of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+        print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
@@ -225,7 +223,7 @@ class Verifier:
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
-        print(f"-- Statistics of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
         # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
