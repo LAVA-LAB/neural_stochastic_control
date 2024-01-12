@@ -101,7 +101,7 @@ class Verifier:
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
-            np.ceil((points_ub - points_lb) / new_cell_widths), dtype=int)
+            np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
         grid_plus = [[]]*len(new_mesh_size)
 
