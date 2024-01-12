@@ -326,13 +326,15 @@ for i in range(args.cegis_iterations):
         else:
 
             if args.local_refinement:
+                args.verify_mesh_tau = np.min(suggested_mesh)
+                print(f'\n- Locally refine mesh size to between [{args.verify_mesh_tau:.5f}, {np.max(suggested_mesh):.5f}]')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
                 verify.local_grid_refinement(env, counterx, suggested_mesh)
 
             else:
                 # If global refinement is used, then use the lowest of all suggested mesh values
                 args.verify_mesh_tau = np.min(suggested_mesh)
-                print(f'\n- Refine mesh size to {args.verify_mesh_tau:.5f}')
+                print(f'\n- Globally refine mesh size to {args.verify_mesh_tau:.5f}')
                 verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
     if len(counterx) == 0:
