@@ -301,9 +301,6 @@ for i in range(args.cegis_iterations):
         filename = f"plots/certificate_{start_datetime}_iteration={i}"
         plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
-    verify.local_grid_refinement(env, counterx, np.full(len(counterx), fill_value=0.001))
-    assert False
-
     verify_done = False
     while not verify_done:
         print(f'\nCheck martingale conditions...')
@@ -313,6 +310,9 @@ for i in range(args.cegis_iterations):
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
             break
+
+        verify.local_grid_refinement(env, counterx, np.full(len(counterx), fill_value=0.001))
+        assert False
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
