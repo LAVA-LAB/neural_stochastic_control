@@ -198,8 +198,17 @@ verify.partition_noise(env, args)
 num_per_dimension_train = np.array(
     np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 train_buffer = Buffer(dim = env.observation_space.shape[0])
+
+t = time.time()
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
                                   env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
+print(f'took {time.time()-t}')
+
+t = time.time()
+initial_train_grid = define_grid_fast(env.observation_space.low + 0.5 * args.train_mesh_tau,
+                                  env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
+print(f'took {time.time()-t}')
+
 train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
