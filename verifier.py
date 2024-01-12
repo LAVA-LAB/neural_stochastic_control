@@ -271,7 +271,8 @@ class Verifier:
         weights_expDecr = np.maximum(0, Vdiff[idxs] + args.verify_mesh_tau * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+        if len(Vdiff) > 0:
+            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
 
@@ -289,7 +290,8 @@ class Verifier:
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
-        print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        if len(V) > 0:
+            print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
         # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
@@ -307,7 +309,8 @@ class Verifier:
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
-        print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        if len(V) > 0:
+            print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
         # print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
