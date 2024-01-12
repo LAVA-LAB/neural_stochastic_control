@@ -98,10 +98,13 @@ class RectangularSet:
         else:
             xvector_trim = xvector
 
-        print('\n------')
-        print(xvector_trim.shape)
-        print(self.low.shape)
-        print(delta.shape)
+        try:
+            print('\n------')
+            print(xvector_trim.shape)
+            print(self.low.shape)
+            print(delta.shape)
+        except:
+            print('skip')
 
         bools = jnp.any(xvector_trim < self.low - delta, axis=1) + jnp.any(xvector_trim > self.high + delta, axis=1)
 
