@@ -92,7 +92,7 @@ parser.add_argument('--expdecrease_loss_type', type=int, default=0,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
-args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-27_16-20-37'
+# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-27_16-20-37'
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
