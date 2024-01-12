@@ -108,12 +108,12 @@ class Verifier:
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
 
-            print('\nFrom point:', points[i])
-            print('lb:', lb, 'ub:', ub)
-
-            print(lb + 0.5 * cell_width)
-            print(ub - 0.5 * cell_width)
-            print(num)
+            # print('\nFrom point:', points[i])
+            # print('lb:', lb, 'ub:', ub)
+            #
+            # print(lb + 0.5 * cell_width)
+            # print(ub - 0.5 * cell_width)
+            # print(num)
 
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
@@ -122,7 +122,13 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
+        # Store in the buffer
+        self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
+        stacked_grid_plus = np.vstack(grid_plus)
+        self.buffer.append(stacked_grid_plus)
 
+        # Format the verification grid into the relevant regions of the state space
+        self.format_verification_grid(verify_mesh_cell_width=stacked_grid_plus[:,-1])
 
 
     def format_verification_grid(self, verify_mesh_cell_width, verbose=False):
