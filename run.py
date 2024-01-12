@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from learner_reachavoid import MLP, Learner, format_training_data, batch_training_data
-from buffer import Buffer, define_grid, define_grid_fast
+from buffer import Buffer, define_grid
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_layout
@@ -46,7 +46,7 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
-parser.add_argument('--epochs', type=int, default=2,
+parser.add_argument('--epochs', type=int, default=25,
                     help="Number of epochs to run in each iteration")
 parser.add_argument('--batches', type=int, default=-1,
                     help="Number of batches to run in each epoch (-1 means iterate over the full train dataset once)")
@@ -92,7 +92,7 @@ parser.add_argument('--expdecrease_loss_type', type=int, default=0,
 args = parser.parse_args()
 args.cwd = os.getcwd()
 
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-18_15-23-28'
+args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-27_16-20-37'
 
 if args.model == 'LinearEnv':
     fun = LinearEnv
@@ -198,17 +198,8 @@ verify.partition_noise(env, args)
 num_per_dimension_train = np.array(
     np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 train_buffer = Buffer(dim = env.observation_space.shape[0])
-
-t = time.time()
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
                                   env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
-print(f'took {time.time()-t}')
-
-t = time.time()
-initial_train_grid = define_grid_fast(env.observation_space.low + 0.5 * args.train_mesh_tau,
-                                  env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
-print(f'took {time.time()-t}')
-
 train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
@@ -322,7 +313,7 @@ for i in range(args.cegis_iterations):
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
         if len(counterx_hard) != 0:
-            print(f-'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
+            print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
         elif suggested_mesh < args.verify_mesh_tau_min_final:
             print(f'\n- Skip refinement, because suggested mesh ({suggested_mesh:.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
@@ -332,7 +323,7 @@ for i in range(args.cegis_iterations):
             verify_done = True
         else:
             args.verify_mesh_tau = suggested_mesh
-            print(f'- Refine mesh size to {args.verify_mesh_tau:.5f}')
+            print(f'\n- Refine mesh size to {args.verify_mesh_tau:.5f}')
             verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
     if len(counterx) == 0:

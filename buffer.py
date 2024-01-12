@@ -1,5 +1,7 @@
 import numpy as np
 import itertools
+import jax.numpy as jnp
+import jax
 
 # TODO: Make this buffer efficient.
 class Buffer:
@@ -95,5 +97,27 @@ def define_grid_fast(low, high, size):
 
     points = (np.linspace(low[i], high[i], size[i]) for i in range(len(size)))
     grid = np.reshape(np.meshgrid(*points), (len(size), -1)).T
+
+    return grid
+
+@jax.jit
+def meshgrid_jax(points, size):
+    '''
+        Set rectangular grid over state space for neural network learning
+
+        :param low: ndarray
+        :param high: ndarray
+        :param size: List of ints (entries per dimension)
+        '''
+
+
+    meshgrid = jnp.asarray(jnp.meshgrid(*points))
+    grid = jnp.reshape(meshgrid, (len(size), -1)).T
+
+    return grid
+
+def define_grid_jax(low, high, size):
+    points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
+    grid = meshgrid_jax(points, size)
 
     return grid

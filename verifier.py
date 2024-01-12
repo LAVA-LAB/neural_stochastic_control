@@ -7,7 +7,7 @@ import time
 from jax_utils import lipschitz_coeff_l1
 import os
 from tqdm import tqdm
-from buffer import Buffer, define_grid
+from buffer import Buffer, define_grid, define_grid_jax
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
@@ -64,9 +64,22 @@ class Verifier:
 
         # Create the (rectangular) verification grid and add it to the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0])
+
+        tt = time.time()
         grid = define_grid(env.observation_space.low + 0.5 * verify_mesh_cell_width,
                            env.observation_space.high - 0.5 * verify_mesh_cell_width,
                            size=num_per_dimension)
+        print(f'- Default gridding function took: {(time.time()-tt):.5f}')
+
+        tt = time.time()
+        grid2 = define_grid_jax(env.observation_space.low + 0.5 * verify_mesh_cell_width,
+                           env.observation_space.high - 0.5 * verify_mesh_cell_width,
+                           size=num_per_dimension)
+
+        print(f'- Default gridding function took: {(time.time() - tt):.5f}')
+
+        assert np.all(np.isclose(grid, grid2))
+
         self.buffer.append(grid)
 
         if verbose:
