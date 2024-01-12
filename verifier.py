@@ -89,7 +89,7 @@ class Verifier:
 
         dim = self.buffer.dim
 
-        points = data[:, dim]
+        points = data[:, :dim]
         cell_widths = data[:,-1]
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
@@ -110,6 +110,10 @@ class Verifier:
 
             print('\nFrom point:', points[i])
             print('lb:', lb, 'ub:', ub)
+
+            print(lb + 0.5 * cell_width)
+            print(ub - 0.5 * cell_width)
+            print(num)
 
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
