@@ -259,7 +259,7 @@ for i in range(args.cegis_iterations):
 
     # print('Max weight:', np.max(np.concatenate((np.ones(len(X_decrease[0])), 1 + CX_weights['decrease'][idx_decrease[0]]))))
 
-    print(CX_decrease[0:10])
+    print(CX_decrease[0][0:10])
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
