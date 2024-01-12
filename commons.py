@@ -77,7 +77,7 @@ class RectangularSet:
         else:
             xvector_trim = xvector
 
-        bools = np.all(xvector_trim >= self.low - delta, axis=1) * np.all(xvector_trim <= self.high + delta, axis=1)
+        bools = np.all((xvector_trim.T + delta) >= self.low, axis=1) * np.all((xvector_trim.T - delta).T <= self.high, axis=1)
 
         if return_indices:
             return bools
@@ -106,7 +106,7 @@ class RectangularSet:
         except:
             print('skip')
 
-        bools = jnp.any(xvector_trim < self.low - delta, axis=1) + jnp.any(xvector_trim > self.high + delta, axis=1)
+        bools = jnp.any((xvector_trim.T + delta).T < self.low, axis=1) + jnp.any((xvector_trim.T - delta).T > self.high, axis=1)
 
         if return_indices:
             return bools
