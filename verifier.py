@@ -244,7 +244,7 @@ class Verifier:
         counterx_init = self.check_init[(V > 0).flatten()]
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-        V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init)
+        V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
         counterx_init_hard = counterx_init[(V_init > 1).flatten()]
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
@@ -262,7 +262,7 @@ class Verifier:
         counterx_unsafe = self.check_unsafe[(V < 0).flatten()]
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe)
+        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe[:, :self.buffer.dim])
         counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
