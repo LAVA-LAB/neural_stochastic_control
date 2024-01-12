@@ -74,7 +74,7 @@ class Verifier:
 
         # Add the cell width column to the grid and store in the buffer
         grid_plus = np.hstack((grid, cell_width_column))
-        self.buffer.append(grid_plus, cell_width=np.full(len(grid), fill_value=verify_mesh_cell_width))
+        self.buffer.append(grid_plus)
 
         if verbose:
             print(f'- Time to define grid: {(time.time() - t):.4f}')
