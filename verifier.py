@@ -106,10 +106,12 @@ class Verifier:
         grid_plus = [[]]*len(new_mesh_size)
 
         # For each given point, compute the subgrid
-        for i, (lb, ub, cell_width) in enumerate(zip(points_lb, points_ub, new_cell_widths)):
-            print('\nFrom lb:', lb, 'ub:', ub)
+        for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
 
-            grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num_per_dimension)
+            print('\nFrom point:', points[i])
+            print('lb:', lb, 'ub:', ub)
+
+            grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
             print('To grid:', grid[i])
 
