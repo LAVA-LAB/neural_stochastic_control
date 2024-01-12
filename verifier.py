@@ -316,7 +316,7 @@ class Verifier:
         counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
 
         suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
-                                                                         fill_value=np.min(suggested_mesh_expDecr)])
+                                                                         fill_value=np.min(suggested_mesh_expDecr))])
 
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
