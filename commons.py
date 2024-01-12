@@ -77,6 +77,8 @@ class RectangularSet:
         else:
             xvector_trim = xvector
 
+        # Note: we actually want to check that x >= low - delta, but we rewrite this to avoid issues with dimensions
+        # caused by numpy (same for the other expression).
         bools = np.all((xvector_trim.T + delta).T >= self.low, axis=1) * np.all((xvector_trim.T - delta).T <= self.high, axis=1)
 
         if return_indices:
@@ -98,14 +100,8 @@ class RectangularSet:
         else:
             xvector_trim = xvector
 
-        try:
-            print('\n------')
-            print(xvector_trim.shape)
-            print(self.low.shape)
-            print(delta.shape)
-        except:
-            print('skip')
-
+        # Note: we actually want to check that x < low - delta, but we rewrite this to avoid issues with dimensions
+        # caused by numpy (same for the other expression).
         bools = jnp.any((xvector_trim.T + delta).T < self.low, axis=1) + jnp.any((xvector_trim.T - delta).T > self.high, axis=1)
 
         if return_indices:

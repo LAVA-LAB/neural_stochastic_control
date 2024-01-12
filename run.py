@@ -311,23 +311,28 @@ for i in range(args.cegis_iterations):
             print('\n=== Successfully learned martingale! ===')
             break
 
-        verify.local_grid_refinement(env, counterx, np.full(len(counterx), fill_value=0.002))
-
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
         if len(counterx_hard) != 0:
             print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
-        elif suggested_mesh < args.verify_mesh_tau_min_final:
-            print(f'\n- Skip refinement, because suggested mesh ({suggested_mesh:.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
+        elif np.min(suggested_mesh) < args.verify_mesh_tau_min_final:
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
             verify_done = True
-        elif suggested_mesh >= args.verify_mesh_tau:
-            print(f'\n- Skip refinement, because suggest mesh ({suggested_mesh:.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
+        elif np.min(suggested_mesh) >= args.verify_mesh_tau:
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
             verify_done = True
         else:
-            args.verify_mesh_tau = suggested_mesh
-            print(f'\n- Refine mesh size to {args.verify_mesh_tau:.5f}')
-            verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
+
+            if args.local_refinement:
+                # If local refinement is used, then use a different suggested mesh for each counterexample
+                verify.local_grid_refinement(env, counterx, suggested_mesh)
+
+            else:
+                # If global refinement is used, then use the lowest of all suggested mesh values
+                args.verify_mesh_tau = np.min(suggested_mesh)
+                print(f'\n- Refine mesh size to {args.verify_mesh_tau:.5f}')
+                verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
     if len(counterx) == 0:
         break

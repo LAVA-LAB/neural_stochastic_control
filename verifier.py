@@ -87,6 +87,9 @@ class Verifier:
         Refine the given array of points in the state space.
         '''
 
+        assert len(data) == len(new_mesh_size), \
+            f"Length of data ({len(data)}) incompatible with mesh size values ({len(new_mesh_size)})"
+
         dim = self.buffer.dim
 
         points = data[:, :dim]
@@ -264,12 +267,12 @@ class Verifier:
         # Negative is violation
         idxs = (Vdiff >= -args.verify_mesh_tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
         weights_expDecr = np.maximum(0, Vdiff[idxs] + args.verify_mesh_tau * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
-        suggested_mesh = np.maximum(0, 0.95 * -np.max(Vdiff) / K)
         print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
-        print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
+        print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
@@ -310,7 +313,10 @@ class Verifier:
         counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
         counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe])
 
-        counterx_weights = np.concatenate([weights_expDecr, np.zeros(len(counterx_init) + len(counterx_unsafe))])
+        counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
+
+        suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
+                                                                         fill_value=np.min(suggested_mesh_expDecr)])
 
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
