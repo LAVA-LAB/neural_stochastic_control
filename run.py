@@ -74,6 +74,8 @@ parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
                     help="Fraction of counter examples, compared to the total train data set.")
+parser.add_argument('--local_refinement', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, local grid refinements are performed")
 
 ###
 parser.add_argument('--update_certificate', action=argparse.BooleanOptionalAction, default=True,
@@ -258,8 +260,7 @@ for i in range(args.cegis_iterations):
     np.set_printoptions(threshold=sys.maxsize)
 
     # print('Max weight:', np.max(np.concatenate((np.ones(len(X_decrease[0])), 1 + CX_weights['decrease'][idx_decrease[0]]))))
-
-    print(CX_decrease[0][0:10])
+    # print(CX_decrease[0][0:10])
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
