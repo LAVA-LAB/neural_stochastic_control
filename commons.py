@@ -16,10 +16,16 @@ class MultiRectangularSet:
     def __init__(self, sets):
         self.sets = sets
 
-    def contains(self, xvector, delta=0, return_indices=False):
+    def contains(self, xvector, dim=-1, delta=0, return_indices=False):
+
+        # Remove the extra columns from the data (storing additional data beyond the grid points)
+        if dim != -1:
+            xvector_trim = xvector[:, :dim]
+        else:
+            xvector_trim = xvector
 
         # bools[x] = 1 if x is contained in set
-        bools = np.array([set.contains(xvector, delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.contains(xvector_trim, delta, return_indices=True) for set in self.sets])
         # Point is contained if it is contained in any of the sets
         bools = np.any(bools, axis=0)
 
@@ -28,10 +34,16 @@ class MultiRectangularSet:
         else:
             return xvector[bools]
 
-    def not_contains(self, xvector, delta=0, return_indices=False):
+    def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
+
+        # Remove the extra columns from the data (storing additional data beyond the grid points)
+        if dim != -1:
+            xvector_trim = xvector[:, :dim]
+        else:
+            xvector_trim = xvector
 
         # bools[x] = 1 if x is *not* contained in set
-        bools = np.array([set.contains(xvector, delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.contains(xvector_trim, delta, return_indices=True) for set in self.sets])
         # Point is not contained if it is contained in none of the sets
         bools = np.all(bools, axis=0)
 
@@ -51,7 +63,7 @@ class RectangularSet:
         self.high = np.array(high, dtype=dtype)
         self.gymspace = spaces.Box(low=low, high=high, dtype=dtype)
 
-    def contains(self, xvector, delta=0, return_indices=False):
+    def contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is contained in the rectangular set, expanded by a value of delta.
         :param xvector: vector of points
@@ -59,14 +71,20 @@ class RectangularSet:
         :return: list of booleans
         '''
 
-        bools = np.all(xvector >= self.low - delta, axis=1) * np.all(xvector <= self.high + delta, axis=1)
+        # Remove the extra columns from the data (storing additional data beyond the grid points)
+        if dim != -1:
+            xvector_trim = xvector[:, :dim]
+        else:
+            xvector_trim = xvector
+
+        bools = np.all(xvector_trim >= self.low - delta, axis=1) * np.all(xvector_trim <= self.high + delta, axis=1)
 
         if return_indices:
             return bools
         else:
             return xvector[bools]
 
-    def not_contains(self, xvector, delta=0, return_indices=False):
+    def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is *not* contained in the rectangular set, expanded by a value of delta.
         :param xvector: vector of points
@@ -74,7 +92,13 @@ class RectangularSet:
         :return: list of booleans
         '''
 
-        bools = jnp.any(xvector < self.low - delta, axis=1) + jnp.any(xvector > self.high + delta, axis=1)
+        # Remove the extra columns from the data (storing additional data beyond the grid points)
+        if dim != -1:
+            xvector_trim = xvector[:, :dim]
+        else:
+            xvector_trim = xvector
+
+        bools = jnp.any(xvector_trim < self.low - delta, axis=1) + jnp.any(xvector_trim > self.high + delta, axis=1)
 
         if return_indices:
             return bools

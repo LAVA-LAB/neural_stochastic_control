@@ -63,48 +63,61 @@ class Verifier:
             np.ceil((env.observation_space.high - env.observation_space.low) / verify_mesh_cell_width), dtype=int)
 
         # Create the (rectangular) verification grid and add it to the buffer
-        self.buffer = Buffer(dim=env.observation_space.shape[0])
+        self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
 
-        tt = time.time()
-        grid = define_grid(env.observation_space.low + 0.5 * verify_mesh_cell_width,
-                           env.observation_space.high - 0.5 * verify_mesh_cell_width,
-                           size=num_per_dimension)
-        print(f'- Default gridding function took: {(time.time()-tt):.5f}')
-
-        tt = time.time()
-        grid2 = define_grid_jax(env.observation_space.low + 0.5 * verify_mesh_cell_width,
+        grid = define_grid_jax(env.observation_space.low + 0.5 * verify_mesh_cell_width,
                            env.observation_space.high - 0.5 * verify_mesh_cell_width,
                            size=num_per_dimension)
 
-        print(f'- Default gridding function took: {(time.time() - tt):.5f}')
+        # Also store the cell width associated with each point
+        cell_width_column = np.full((len(grid), 1), fill_value = verify_mesh_cell_width)
 
-        assert np.all(np.isclose(grid, grid2))
-
-        self.buffer.append(grid)
+        # Add the cell width column to the grid and store in the buffer
+        grid_plus = np.hstack((grid, cell_width_column))
+        self.buffer.append(grid_plus, cell_width=np.full(len(grid), fill_value=verify_mesh_cell_width))
 
         if verbose:
             print(f'- Time to define grid: {(time.time() - t):.4f}')
+
+        # Format the verification grid into the relevant regions of the state space
+        self.format_verification_grid(verify_mesh_cell_width, verbose)
+
+    def local_grid_refinement(self, env, points, old_mesh_sizes, new_mesh_sizes):
+        '''
+        Refine the given array of points in the state space.
+        '''
+
+        for p, old_tau, new_tau in zip(points, old_mesh_sizes, new_mesh_sizes):
+
+            old_cell_width = old_tau * (2 / env.state_dim)
+
+            lb = p - old_cell_width
+            ub = p + old_cell_width
+
+
+    def format_verification_grid(self, verify_mesh_cell_width, verbose=False):
 
         # In the verifier, we must check conditions for all grid points whose cells have a nonempty intersection with
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
         t = time.time()
-        self.C_decrease_adj = self.env.target_space.not_contains(self.buffer.data,
-                                 delta=-0.5 * verify_mesh_cell_width) # Shrink target set by halfwidth of the cell
+        self.check_decrease = self.env.target_space.not_contains(self.buffer.data, self.buffer.dim,
+                                                                 delta=-0.5 * verify_mesh_cell_width)  # Shrink target set by halfwidth of the cell
         if verbose:
-            print(f'- Time to define C_decrease_adj: {(time.time() - t):.4f}')
+            print(f'- Time to define check_decrease: {(time.time() - t):.4f}')
 
         t = time.time()
-        self.C_init_adj = self.env.init_space.contains(self.buffer.data,
-                                 delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
+        self.check_init = self.env.init_space.contains(self.buffer.data, self.buffer.dim,
+                                                       delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
         if verbose:
-            print(f'- Time to define C_init_adj: {(time.time() - t):.4f}')
+            print(f'- Time to define check_init: {(time.time() - t):.4f}')
 
         t = time.time()
-        self.C_unsafe_adj = self.env.unsafe_space.contains(self.buffer.data,
-                                 delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
+        self.check_unsafe = self.env.unsafe_space.contains(self.buffer.data, self.buffer.dim,
+                                                           delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
         if verbose:
-            print(f'- Time to define C_unsafe_adj: {(time.time() - t):.4f}')
+            print(f'- Time to define check_unsafe: {(time.time() - t):.4f}')
+
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
         '''
@@ -178,15 +191,15 @@ class Verifier:
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
-        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.C_decrease_adj,
+        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
                                                            0.5 * verify_mesh_cell_width, 1)
         idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
 
-        check_expDecr_at = self.C_decrease_adj[idxs]
+        check_expDecr_at = self.check_decrease[idxs]
 
         print('-- Done computing set of vertices to check expected decrease for')
         # Determine actions for every point in subgrid
-        actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at,
+        actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
                                             env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
@@ -195,7 +208,7 @@ class Verifier:
         ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
 
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Verifying exp. decrease condition'):
-            x = check_expDecr_at[i:j]
+            x = check_expDecr_at[i:j, :self.buffer.dim]
             u = actions[i:j]
 
             Vdiff[i:j] = self.V_step_expectation(V_state, jax.lax.stop_gradient(V_state.params), x, u,
@@ -223,36 +236,36 @@ class Verifier:
         print(f'-- Suggested mesh based on expected decrease violations: {suggested_mesh:.5f}')
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_init_adj,
+        _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
                                       0.5 * verify_mesh_cell_width)
         V = V_init_ub - 1
 
         # Set counterexamples (for initial states)
-        counterx_init = self.C_init_adj[(V > 0).flatten()]
+        counterx_init = self.check_init[(V > 0).flatten()]
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init)
         counterx_init_hard = counterx_init[(V_init > 1).flatten()]
 
-        print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.C_init_adj)} checked vertices)')
+        print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
         print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
         # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.C_unsafe_adj,
+        V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
                                          0.5 * verify_mesh_cell_width)
         V = V_unsafe_lb - 1 / (1 - args.probability_bound)
 
         # Set counterexamples (for unsafe states)
-        counterx_unsafe = self.C_unsafe_adj[(V < 0).flatten()]
+        counterx_unsafe = self.check_unsafe[(V < 0).flatten()]
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe)
         counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
 
-        print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.C_unsafe_adj)} checked vertices)')
+        print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
         print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
         # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)

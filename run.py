@@ -204,7 +204,7 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
-counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, weighted=True)
+counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, store_weights=True)
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid,
                                   weights=np.zeros(len(initial_train_grid)))
 
@@ -254,6 +254,7 @@ for i in range(args.cegis_iterations):
         'decrease': counterx_buffer.weights[CX_idxs['decrease']],
         'target': counterx_buffer.weights[CX_idxs['target']],
     }
+
     key, idx_decrease, CX_decrease, _, CX_init, _, CX_unsafe, _, CX_target = \
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
@@ -306,6 +307,9 @@ for i in range(args.cegis_iterations):
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
+        print(counterx)
+        print(counterx_hard)
+
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
             break
@@ -336,10 +340,11 @@ for i in range(args.cegis_iterations):
     else:
         # Add counterexamples to the counterexample buffer
         if i > 0:
-            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx,
-                                              weights=counterx_weights)
+            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
+                                              samples=counterx[:, :verify.buffer.dim], weights=counterx_weights)
         else:
-            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx, weights=counterx_weights)
+            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx[:, :verify.buffer.dim],
+                                              weights=counterx_weights)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)

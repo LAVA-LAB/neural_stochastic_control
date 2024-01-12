@@ -3,21 +3,30 @@ import itertools
 import jax.numpy as jnp
 import jax
 
-# TODO: Make this buffer efficient.
+# TODO: Make this buffer more clean.
 class Buffer:
     '''
-    Class to store samples to train Martingale over
+    Class to store samples in a buffer.
     '''
 
-    def __init__(self, dim, max_size = 10_000_000, weighted = False):
+    def __init__(self, dim, extra_dims = 0, max_size = 10_000_000, store_weights = False):
+        '''
+        :param dim: The length (i.e., dimension) of each sample
+        :param extra_dims: The number of extra dimensions that are added to the samples, to store extra data
+        :param max_size: Maximize size of the buffer
+        :param store_weights: If True, weights are stored for each sample
+        '''
         self.dim = dim
-        self.data = np.zeros(shape=(0,dim), dtype=np.float32)
+        self.extra_dims = extra_dims
+        self.data = np.zeros(shape=(0,dim+extra_dims), dtype=np.float32)
         self.max_size = max_size
-        self.weighted = weighted
-        if self.weighted:
+
+        # If store_weights is True, then a weight is stored for each sample in the buffer
+        self.store_weights = store_weights
+        if self.store_weights:
             self.weights = np.zeros(shape=(0), dtype=np.float32)
 
-    def append(self, samples, weights = None):
+    def append(self, samples, weights = None, cell_width = None):
         '''
         Append given samples to training buffer
 
@@ -25,18 +34,20 @@ class Buffer:
         :return:
         '''
 
-        # Check if buffer exceeds length. If not, add new samples
-        assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
+        assert samples.shape[1] == self.dim+self.extra_dims, \
+            f"Samples have wrong dimension (namely of shape {samples.shape})"
 
+        # Check if buffer exceeds length. If not, add new samples
         if not (self.max_size is not None and len(self.data) > self.max_size):
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
-            if self.weighted:
+            if self.store_weights:
                 append_weights = np.array(weights, dtype=np.float32)
+                assert len(append_weights) == len(append_samples), "Wrong number of weights given"
                 self.weights = np.concatenate((self.weights, append_weights), dtype=np.float32)
 
-    def append_and_remove(self, refresh_fraction, samples, weights = None):
+    def append_and_remove(self, refresh_fraction, samples, weights = None, cell_width = None):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
@@ -45,8 +56,8 @@ class Buffer:
         :return:
         '''
 
-        # Check if buffer exceeds length. If not, add new samples
-        assert samples.shape[1] == self.dim, f"Samples have wrong dimension (namely of shape {samples.shape})"
+        assert samples.shape[1] == self.dim + self.extra_dims, \
+            f"Samples have wrong dimension (namely of shape {samples.shape})"
 
         # Determine how many old and new samples are kept in the buffer
         nr_old = int((1-refresh_fraction) * len(self.data))
@@ -64,9 +75,10 @@ class Buffer:
         new_samples = samples[new_idxs]
         self.data = np.vstack((old_samples, new_samples), dtype=np.float32)
 
-        if self.weighted:
+        if self.store_weights:
             old_weights = self.weights[old_idxs]
             new_weights = weights[new_idxs]
+            assert len(new_weights) == len(new_samples), "Wrong number of weights given"
             self.weights = np.concatenate((old_weights, new_weights), dtype=np.float32)
 
 
