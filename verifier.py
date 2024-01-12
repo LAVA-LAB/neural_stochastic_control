@@ -101,19 +101,19 @@ class Verifier:
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
         t = time.time()
-        self.check_decrease = self.env.target_space.not_contains(self.buffer.data, self.buffer.dim,
+        self.check_decrease = self.env.target_space.not_contains(self.buffer.data, dim=self.buffer.dim,
                                                                  delta=-0.5 * verify_mesh_cell_width)  # Shrink target set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_decrease: {(time.time() - t):.4f}')
 
         t = time.time()
-        self.check_init = self.env.init_space.contains(self.buffer.data, self.buffer.dim,
+        self.check_init = self.env.init_space.contains(self.buffer.data, dim=self.buffer.dim,
                                                        delta=0.5 * verify_mesh_cell_width)  # Enlarge initial set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_init: {(time.time() - t):.4f}')
 
         t = time.time()
-        self.check_unsafe = self.env.unsafe_space.contains(self.buffer.data, self.buffer.dim,
+        self.check_unsafe = self.env.unsafe_space.contains(self.buffer.data, dim=self.buffer.dim,
                                                            delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_unsafe: {(time.time() - t):.4f}')

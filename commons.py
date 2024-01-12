@@ -25,7 +25,7 @@ class MultiRectangularSet:
             xvector_trim = xvector
 
         # bools[x] = 1 if x is contained in set
-        bools = np.array([set.contains(xvector_trim, delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
         # Point is contained if it is contained in any of the sets
         bools = np.any(bools, axis=0)
 
@@ -43,7 +43,7 @@ class MultiRectangularSet:
             xvector_trim = xvector
 
         # bools[x] = 1 if x is *not* contained in set
-        bools = np.array([set.contains(xvector_trim, delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
         # Point is not contained if it is contained in none of the sets
         bools = np.all(bools, axis=0)
 
