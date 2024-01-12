@@ -82,7 +82,7 @@ class Verifier:
         # Format the verification grid into the relevant regions of the state space
         self.format_verification_grid(verify_mesh_cell_width, verbose)
 
-    def local_grid_refinement(self, env, data, mesh_size):
+    def local_grid_refinement(self, env, data, new_mesh_size):
         '''
         Refine the given array of points in the state space.
         '''
@@ -92,22 +92,29 @@ class Verifier:
         points = data[:, dim]
         cell_widths = data[:,-1]
 
-        # Retrieve bounding box of cell in old grid
-        points_lb = points - cell_widths
-        points_ub = points + cell_widths
-
         # Width of each cell in the partition. The grid points are the centers of the cells.
-        new_cell_widths = mesh_size * (2 / env.state_dim)
+        new_cell_widths = new_mesh_size * (2 / env.state_dim)
+
+        # Retrieve bounding box of cell in old grid
+        points_lb = points - 0.5 * cell_widths
+        points_ub = points + 0.5 * cell_widths
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
             np.ceil((points_ub - points_lb) / new_cell_widths), dtype=int)
 
-        print(num_per_dimension)
-        print(num_per_dimension.shape)
+        grid_plus = [[]]*len(new_mesh_size)
 
-        # for point, new_mesh in points, mesh_size:
+        # For each given point, compute the subgrid
+        for i, (lb, ub, cell_width) in enumerate(zip(points_lb, points_ub, new_cell_widths)):
+            print('\nFrom lb:', lb, 'ub:', ub)
 
+            grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num_per_dimension)
+
+            print('To grid:', grid[i])
+
+            cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
+            grid_plus[i] = np.hstack((grid, cell_width_column))
 
 
 
