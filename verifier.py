@@ -96,8 +96,8 @@ class Verifier:
         new_cell_widths = new_mesh_size * (2 / env.state_dim)
 
         # Retrieve bounding box of cell in old grid
-        points_lb = points - 0.5 * cell_widths
-        points_ub = points + 0.5 * cell_widths
+        points_lb = (points.T - 0.5 * cell_widths).T
+        points_ub = (points.T + 0.5 * cell_widths).T
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
