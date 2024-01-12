@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from learner_reachavoid import MLP, Learner, format_training_data, batch_training_data
-from buffer import Buffer, define_grid
+from buffer import Buffer, define_grid, define_grid_fast
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_layout
