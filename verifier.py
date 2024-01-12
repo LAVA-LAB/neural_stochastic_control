@@ -82,17 +82,34 @@ class Verifier:
         # Format the verification grid into the relevant regions of the state space
         self.format_verification_grid(verify_mesh_cell_width, verbose)
 
-    def local_grid_refinement(self, env, points, old_mesh_sizes, new_mesh_sizes):
+    def local_grid_refinement(self, env, data, mesh_size):
         '''
         Refine the given array of points in the state space.
         '''
 
-        for p, old_tau, new_tau in zip(points, old_mesh_sizes, new_mesh_sizes):
+        dim = self.buffer.dim
 
-            old_cell_width = old_tau * (2 / env.state_dim)
+        points = data[:, dim]
+        cell_widths = data[:,-1]
 
-            lb = p - old_cell_width
-            ub = p + old_cell_width
+        # Retrieve bounding box of cell in old grid
+        points_lb = points - cell_widths
+        points_ub = points + cell_widths
+
+        # Width of each cell in the partition. The grid points are the centers of the cells.
+        new_cell_widths = mesh_size * (2 / env.state_dim)
+
+        # Number of cells per dimension of the state space
+        num_per_dimension = np.array(
+            np.ceil((points_ub - points_lb) / new_cell_widths), dtype=int)
+
+        print(num_per_dimension)
+        print(num_per_dimension.shape)
+
+        # for point, new_mesh in points, mesh_size:
+
+
+
 
 
     def format_verification_grid(self, verify_mesh_cell_width, verbose=False):

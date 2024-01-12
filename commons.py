@@ -73,7 +73,6 @@ class RectangularSet:
 
         # Remove the extra columns from the data (storing additional data beyond the grid points)
         if dim != -1:
-            print(dim)
             xvector_trim = xvector[:, :dim]
         else:
             xvector_trim = xvector
