@@ -117,7 +117,7 @@ class Verifier:
 
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
-            print('To grid:', grid)
+            # print('To grid:', grid)
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
