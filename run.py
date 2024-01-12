@@ -204,9 +204,11 @@ train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
-counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, store_weights=True)
-counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid,
-                                  weights=np.zeros(len(initial_train_grid)))
+counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, extra_dims = 1)
+
+# Attach weights to the counterexamples (as extra column)
+initial_train_grid = np.hstack(( initial_train_grid, np.zeros((len(initial_train_grid), 1)) ))
+counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
 verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
@@ -243,40 +245,38 @@ for i in range(args.cegis_iterations):
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
-    _, C = format_training_data(env, train_buffer.data)
-    key, _, X_decrease, _, X_init, _, X_unsafe, _, X_target = \
+    C = format_training_data(env, data=train_buffer.data, dim=train_buffer.dim)
+    key, X_decrease, X_init, X_unsafe, X_target = \
         batch_training_data(key, C, len(train_buffer.data), num_batches, (1 - fraction_counterx) * args.batch_size)
 
-    CX_idxs, CX = format_training_data(env, counterx_buffer.data)
-    CX_weights = {
-        'init': counterx_buffer.weights[CX_idxs['init']],
-        'unsafe': counterx_buffer.weights[CX_idxs['unsafe']],
-        'decrease': counterx_buffer.weights[CX_idxs['decrease']],
-        'target': counterx_buffer.weights[CX_idxs['target']],
-    }
-
-    key, idx_decrease, CX_decrease, _, CX_init, _, CX_unsafe, _, CX_target = \
+    CX = format_training_data(env, data=counterx_buffer.data, dim=counterx_buffer.dim)
+    key, CX_decrease, CX_init, CX_unsafe, CX_target = \
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
     import sys
     np.set_printoptions(threshold=sys.maxsize)
 
-    print('Max weight:', np.max(np.concatenate((np.ones(len(X_decrease[0])), 1 + CX_weights['decrease'][idx_decrease[0]]))))
+    # print('Max weight:', np.max(np.concatenate((np.ones(len(X_decrease[0])), 1 + CX_weights['decrease'][idx_decrease[0]]))))
+
+    print(CX_decrease[0:10])
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
+
+            d1 = train_buffer.dim
+            d2 = counterx_buffer.dim
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
-                x_decrease = np.vstack((X_decrease[k], CX_decrease[k])),
-                w_decrease = np.concatenate((np.zeros(len(X_decrease[k])), args.weight_multiplier*CX_weights['decrease'][idx_decrease[k]])),
-                x_init = np.vstack((X_init[k], CX_init[k])),
-                x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k])),
-                x_target = np.vstack((X_target[k], CX_target[k])),
+                x_decrease = np.vstack((X_decrease[k, :d1], CX_decrease[k, :d2])),
+                w_decrease = np.concatenate((np.zeros(len(X_decrease[k, :d1])), args.weight_multiplier * CX_decrease[k, -1])),
+                x_init = np.vstack((X_init[k, :d1], CX_init[k, :d2])),
+                x_unsafe = np.vstack((X_unsafe[k, :d1], CX_unsafe[k, :d2])),
+                x_target = np.vstack((X_target[k, :d1], CX_target[k, :d2])),
                 max_grid_perturb = args.train_mesh_cell_width,
                 train_mesh_tau = args.train_mesh_tau,
                 verify_mesh_tau = args.verify_mesh_tau,
@@ -307,9 +307,6 @@ for i in range(args.cegis_iterations):
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
-        print(counterx)
-        print(counterx_hard)
-
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
             break
@@ -338,13 +335,16 @@ for i in range(args.cegis_iterations):
     if args.counterx_fraction == 0:
         train_buffer.append(counterx)
     else:
+        # Remove additional
+        weight_column = counterx_weights.reshape(-1,1)
+        counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
+
         # Add counterexamples to the counterexample buffer
         if i > 0:
             counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
-                                              samples=counterx[:, :verify.buffer.dim], weights=counterx_weights)
+                                              samples=counterx_plus_weights)
         else:
-            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx[:, :verify.buffer.dim],
-                                              weights=counterx_weights)
+            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx_plus_weights)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)

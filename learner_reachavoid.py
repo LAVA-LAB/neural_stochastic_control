@@ -235,24 +235,17 @@ class MLP(nn.Module):
         return x
 
 
-def format_training_data(env, data):
+def format_training_data(env, data, dim):
     # Define other datasets (for init, unsafe, and decrease sets)
 
-    idxs = {
-        'init': env.init_space.contains(data, return_indices=True),
-        'unsafe': env.unsafe_space.contains(data, return_indices=True),
-        'decrease': env.target_space.not_contains(data, return_indices=True),
-        'target': env.target_space.contains(data, return_indices=True)
-    }
-
     data = {
-        'init': data[idxs['init']],
-        'unsafe': data[idxs['unsafe']],
-        'decrease': data[idxs['decrease']],
-        'target': data[idxs['target']],
+        'init': env.init_space.contains(data, dim=dim),
+        'unsafe': env.unsafe_space.contains(data, dim=dim),
+        'decrease': env.target_space.not_contains(data, dim=dim),
+        'target': env.target_space.contains(data, dim=dim)
     }
 
-    return idxs, data
+    return data
 
 
 def batch_training_data(key, samples, total_samples, epochs, batch_size):
@@ -305,8 +298,4 @@ def batch_training_data(key, samples, total_samples, epochs, batch_size):
                                       replace=True)
     batched_target = [samples['target'][idx] for idx in idxs_target]
 
-    return key, \
-        idxs_decrease, batched_decrease, \
-        idxs_init, batched_init, \
-        idxs_unsafe, batched_unsafe, \
-        idxs_target, batched_target
+    return key, batched_decrease, batched_init, batched_unsafe, batched_target
