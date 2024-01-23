@@ -201,6 +201,8 @@ class Verifier:
             # If the number of samples is below the maximum batch size, then just do one pass
             print(samples.shape)
             print(epsilon.shape)
+            print(jnp.broadcast_to(epsilon, samples.T.shape).T)
+
 
             return apply_fn(jax.lax.stop_gradient(params), samples, epsilon)
 
