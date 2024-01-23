@@ -230,7 +230,7 @@ for i in range(args.cegis_iterations):
 
     # Plot dataset
     if args.plot_intermediate:
-        filename = f"plots/train_samples_{start_datetime}_iteration={i}"
+        filename = f"plots/{start_datetime}_train_samples_iteration={i}"
         plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
     if args.batches == -1:
@@ -291,7 +291,7 @@ for i in range(args.cegis_iterations):
     print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
 
     if args.plot_intermediate:
-        filename = f"plots/certificate_{start_datetime}_iteration={i}"
+        filename = f"plots/{start_datetime}_certificate_iteration={i}"
         plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
     verify_done = False
@@ -302,7 +302,7 @@ for i in range(args.cegis_iterations):
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
         if args.plot_intermediate:
-            filename = f"plots/verify_samples_{start_datetime}_iteration={i}_refine_nr={refine_nr}"
+            filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
             plot_dataset(env, verify.buffer.data, folder=args.cwd, filename=filename)
 
         if len(counterx) == 0:
@@ -361,5 +361,5 @@ for i in range(args.cegis_iterations):
 print(f'Total CEGIS (learner-verifier) runtime: {(time.time() - cegis_start_time):.2f}')
 
 # 2D plot for the certificate function over the state space
-filename = f"plots/certificate_{start_datetime}_iteration={i}"
+filename = f"plots/{start_datetime}_certificate_iteration={i}"
 plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
