@@ -332,7 +332,7 @@ class Verifier:
         #####
 
         counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
-        counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe])
+        counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe_hard])
 
         counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
 
