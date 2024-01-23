@@ -264,7 +264,7 @@ class Verifier:
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
 
-        # Compute mesh size for every relevant cell
+        # Compute mesh size for every cell that is checked
         tau = L1_cell_width2mesh(check_expDecr_at[:, -1], env.state_dim)
 
         # Negative is violation
@@ -272,7 +272,7 @@ class Verifier:
         idxs = (Vdiff >= -tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
-        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau * K)
+        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
