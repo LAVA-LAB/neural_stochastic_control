@@ -282,7 +282,7 @@ class Verifier:
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
-                                      0.5 * self.check_init[:, -1])
+                                      0.5 * self.check_init[:, [-1]].T)
         V = V_init_ub - 1
 
         # Set counterexamples (for initial states)
