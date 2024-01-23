@@ -273,9 +273,12 @@ class Verifier:
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
-            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; "
+                  f"mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
+
+        #####
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
@@ -285,14 +288,22 @@ class Verifier:
         # Set counterexamples (for initial states)
         counterx_init = self.check_init[(V > 0).flatten()]
 
+        print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
+        if len(V) > 0:
+            print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
+                  f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
-        counterx_init_hard = counterx_init[(V_init > 1).flatten()]
+        V_mean = V_init - 1
+        counterx_init_hard = counterx_init[(V_mean > 0).flatten()]
 
-        print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
-        if len(V) > 0:
-            print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        if len(counterx_init_hard) > 0:
+            print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.3f}; "
+                  f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
+
+        #####
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
@@ -302,14 +313,23 @@ class Verifier:
         # Set counterexamples (for unsafe states)
         counterx_unsafe = self.check_unsafe[(V < 0).flatten()]
 
-        # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe[:, :self.buffer.dim])
-        counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 1/(1-args.probability_bound)).flatten()]
-
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
+        if len(V) > 0:
+            print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; "
+                  f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+
+        # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
+        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                         counterx_unsafe[:, :self.buffer.dim])
+        V_mean =  V_unsafe - 1 / (1 - args.probability_bound)
+        counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 0).flatten()]
+
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
         if len(V) > 0:
-            print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+            print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.3f}; "
+                  f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
+
+        #####
 
         counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
         counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe])
