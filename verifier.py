@@ -226,8 +226,10 @@ class Verifier:
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
-        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
-                                                0.5 * self.check_decrease[:, -1], 1)
+        V_lb, V_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
+                                                0.5 * self.check_decrease[0, -1], 1)
+
+        print(V_lb, V_ub)
         idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
 
         check_expDecr_at = self.check_decrease[idxs]
