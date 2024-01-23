@@ -280,9 +280,11 @@ class Verifier:
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
 
+        print(self.check_init[:, [-1]].shape)
+
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
-                                      0.5 * self.check_init[:, [-1]].T)
+                                      0.5 * self.check_init[:, [-1]])
         V = V_init_ub - 1
 
         # Set counterexamples (for initial states)
