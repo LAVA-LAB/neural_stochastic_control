@@ -348,8 +348,11 @@ for i in range(args.cegis_iterations):
     # else:
     #     refresh_fraction = 1
 
+    refresh_fraction = args.counterx_refresh_fraction
+
     # Add counterexamples to the counterexample buffer
-    counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction, samples=counterx_plus_weights)
+    print(f'\nRefresh {refresh_fraction}% of the counterexample buffer')
+    counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
