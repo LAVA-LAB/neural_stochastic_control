@@ -265,7 +265,7 @@ class Verifier:
 
 
         # Compute mesh size for every relevant cell
-        tau = L1_cell_width2mesh(self.check_decrease[:, -1], env.dim)
+        tau = L1_cell_width2mesh(self.check_decrease[:, -1], env.state_dim)
 
         # Negative is violation
         idxs = (Vdiff >= -tau * K)
