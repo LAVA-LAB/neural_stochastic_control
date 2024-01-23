@@ -210,7 +210,7 @@ class Verifier:
             ends = np.minimum(starts + batch_size, len(samples))
 
             for (i, j) in zip(starts, ends):
-                output_lb[i:j], output_ub[i:j] = apply_fn(jax.lax.stop_gradient(params), samples[i:j], np.atleast_2d(epsilon).T)
+                output_lb[i:j], output_ub[i:j] = apply_fn(jax.lax.stop_gradient(params), samples[i:j], np.atleast_2d(epsilon[i:j]).T)
 
             return output_lb, output_ub
 
