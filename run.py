@@ -351,7 +351,7 @@ for i in range(args.cegis_iterations):
     refresh_fraction = args.counterx_refresh_fraction
 
     # Add counterexamples to the counterexample buffer
-    print(f'\nRefresh {refresh_fraction}% of the counterexample buffer')
+    print(f'\nRefresh fraction {refresh_fraction} of the counterexample buffer')
     counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights)
 
     # Refine mesh and discretization
