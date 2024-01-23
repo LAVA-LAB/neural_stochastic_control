@@ -311,6 +311,8 @@ for i in range(args.cegis_iterations):
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
+        print(len(counterx_hard))
+
         if len(counterx_hard) != 0:
             print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
