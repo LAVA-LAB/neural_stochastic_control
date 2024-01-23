@@ -333,6 +333,8 @@ for i in range(args.cegis_iterations):
                 print(f'\n- Globally refine mesh size to {args.verify_mesh_tau:.5f}')
                 verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
 
+        refine_nr += 1
+
     if len(counterx) == 0:
         break
 
