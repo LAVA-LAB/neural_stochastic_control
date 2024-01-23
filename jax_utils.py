@@ -26,7 +26,7 @@ def apply_ibp_rectangular(act_fns, params, mean, radius):
     '''
 
     # Broadcast radius to match shape of the mean numpy array
-    radius = jnp.broadcast_to(radius, mean.T.shape).T
+    radius = jnp.broadcast_to(radius, mean.shape)
 
     # Enumerate over the layers of the network
     for i,act_fn in enumerate(act_fns):
