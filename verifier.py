@@ -199,6 +199,8 @@ class Verifier:
 
         if len(samples) <= batch_size:
             # If the number of samples is below the maximum batch size, then just do one pass
+            print(epsilon)
+
             return apply_fn(jax.lax.stop_gradient(params), samples, epsilon)
 
         else:
@@ -226,10 +228,8 @@ class Verifier:
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
-        V_lb, V_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
-                                                0.5 * self.check_decrease[0, -1], 1)
-
-        print(V_lb, V_ub)
+        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
+                                                0.5 * self.check_decrease[:, -1], 1)
         idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
 
         check_expDecr_at = self.check_decrease[idxs]
