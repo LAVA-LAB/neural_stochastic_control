@@ -241,6 +241,9 @@ class Verifier:
                                             env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
+
+        assert len(Vdiff) == len(check_expDecr_at[:, -1])
+
         num_batches = np.ceil(len(check_expDecr_at) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
