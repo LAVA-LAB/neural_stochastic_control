@@ -325,7 +325,7 @@ class Verifier:
         counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 0).flatten()]
 
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
-        if len(V) > 0:
+        if len(counterx_unsafe_hard) > 0:
             print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.3f}; "
                   f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
 
