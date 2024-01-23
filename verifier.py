@@ -7,7 +7,7 @@ import time
 from jax_utils import lipschitz_coeff_l1
 import os
 from tqdm import tqdm
-from buffer import Buffer, define_grid, define_grid_jax
+from buffer import Buffer, define_grid, define_grid_jax, L1_mesh2cell_width, L1_cell_width2mesh
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
@@ -45,7 +45,7 @@ class Verifier:
         self.noise_int_lb, self.noise_int_ub = env.integrate_noise(self.noise_lb, self.noise_ub)
 
 
-    def set_verification_grid(self, env, mesh_size, verbose = False):
+    def set_uniform_grid(self, env, mesh_size, verbose = False):
         '''
         Defines a rectangular gridding of the state space, used by the verifier
         :param env: Gym environment object
@@ -56,7 +56,7 @@ class Verifier:
         t = time.time()
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
-        verify_mesh_cell_width = mesh_size * (2 / env.state_dim)
+        verify_mesh_cell_width = L1_mesh2cell_width(mesh_size, env.state_dim)
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
@@ -82,13 +82,13 @@ class Verifier:
         # Format the verification grid into the relevant regions of the state space
         self.format_verification_grid(verify_mesh_cell_width, verbose)
 
-    def local_grid_refinement(self, env, data, new_mesh_size):
+    def local_grid_refinement(self, env, data, new_mesh_sizes):
         '''
         Refine the given array of points in the state space.
         '''
 
-        assert len(data) == len(new_mesh_size), \
-            f"Length of data ({len(data)}) incompatible with mesh size values ({len(new_mesh_size)})"
+        assert len(data) == len(new_mesh_sizes), \
+            f"Length of data ({len(data)}) incompatible with mesh size values ({len(new_mesh_sizes)})"
 
         dim = self.buffer.dim
 
@@ -96,7 +96,7 @@ class Verifier:
         cell_widths = data[:,-1]
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
-        new_cell_widths = new_mesh_size * (2 / env.state_dim)
+        new_cell_widths = L1_mesh2cell_width(new_mesh_sizes, env.state_dim)
 
         # Retrieve bounding box of cell in old grid
         points_lb = (points.T - 0.5 * cell_widths).T
@@ -106,7 +106,7 @@ class Verifier:
         num_per_dimension = np.array(
             np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
-        grid_plus = [[]]*len(new_mesh_size)
+        grid_plus = [[]]*len(new_mesh_sizes)
 
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
@@ -218,20 +218,16 @@ class Verifier:
     def check_conditions(self, env, args, V_state, Policy_state, noise_key, debug_noise_integration = False):
         ''' If IBP is True, then interval bound propagation is used. '''
 
-        # Width of each cell in the partition. The grid points are the centers of the cells.
-        verify_mesh_cell_width = args.verify_mesh_tau * (2 / env.state_dim)
-
         lip_policy, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
         lip_certificate, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
         K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
-        print(f'- Verify conditions with mesh size tau = {args.verify_mesh_tau:.5f}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
 
         # Expected decrease condition check on all states outside target set
         V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
-                                                           0.5 * verify_mesh_cell_width, 1)
+                                                0.5 * self.check_decrease[:, -1], 1)
         idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
 
         check_expDecr_at = self.check_decrease[idxs]
@@ -264,11 +260,15 @@ class Verifier:
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
+
+        # Compute mesh size for every relevant cell
+        tau = L1_cell_width2mesh(self.check_decrease[:, -1], env.dim)
+
         # Negative is violation
-        idxs = (Vdiff >= -args.verify_mesh_tau * K)
+        idxs = (Vdiff >= -tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
-        weights_expDecr = np.maximum(0, Vdiff[idxs] + args.verify_mesh_tau * K)
+        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
@@ -278,7 +278,7 @@ class Verifier:
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
-                                      0.5 * verify_mesh_cell_width)
+                                      0.5 * self.check_init[:, -1])
         V = V_init_ub - 1
 
         # Set counterexamples (for initial states)
@@ -292,12 +292,10 @@ class Verifier:
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        # suggested_mesh2 = np.maximum(0, args.verify_mesh_tau + (-np.max(V)) / lip_certificate)
-        # print(f'-- Suggested mesh based on initial state violations: {suggested_mesh2:.5f}')
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
-                                         0.5 * verify_mesh_cell_width)
+                                         0.5 * self.check_unsafe[:, -1])
         V = V_unsafe_lb - 1 / (1 - args.probability_bound)
 
         # Set counterexamples (for unsafe states)
@@ -311,8 +309,6 @@ class Verifier:
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        # suggested_mesh3 = np.maximum(0, args.verify_mesh_tau + np.min(V) / lip_certificate)
-        # print(f'-- Suggested mesh based on unsafe state violations: {suggested_mesh3:.5f}')
 
         counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
         counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe])

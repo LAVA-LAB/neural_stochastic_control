@@ -116,3 +116,11 @@ def define_grid_jax(low, high, size):
     grid = meshgrid_jax(points, size)
 
     return grid
+
+def L1_mesh2cell_width(mesh, dim):
+    ''' Convert mesh size in L1 norm to cell width in a rectangular gridding '''
+    return mesh * (2 / dim)
+
+def L1_cell_width2mesh(cell_width, dim):
+    ''' Convert mesh size in L1 norm to cell width in a rectangular gridding '''
+    return cell_width * (dim / 2)

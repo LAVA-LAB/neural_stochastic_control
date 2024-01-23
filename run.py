@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from learner_reachavoid import MLP, Learner, format_training_data, batch_training_data
-from buffer import Buffer, define_grid
+from buffer import Buffer, define_grid, L1_mesh2cell_width
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
 from plot import plot_certificate_2D, plot_dataset
@@ -165,7 +165,7 @@ ppo_state = raw_restored['model']
 env = LinearEnv()
 
 # TODO: This applies to L1-norm grid only
-args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
+args.train_mesh_cell_width = L1_mesh2cell_width(args.train_mesh_tau, env.state_dim)
 
 # Initialize certificate network
 certificate_model = MLP(neurons_per_layer, V_act_funcs)
@@ -214,7 +214,7 @@ initial_train_grid = np.hstack(( initial_train_grid, np.zeros((len(initial_train
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
-verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
+verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
 
 # %%
 
@@ -312,14 +312,13 @@ for i in range(args.cegis_iterations):
         elif np.min(suggested_mesh) < args.verify_mesh_tau_min_final:
             print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
             verify_done = True
-        elif np.min(suggested_mesh) >= args.verify_mesh_tau:
-            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
-            verify_done = True
+        # elif np.max(suggested_mesh) >= args.verify_mesh_tau:
+        #     print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
+        #     verify_done = True
         else:
 
             if args.local_refinement:
-                args.verify_mesh_tau = np.min(suggested_mesh)
-                print(f'\n- Locally refine mesh size to between [{args.verify_mesh_tau:.5f}, {np.max(suggested_mesh):.5f}]')
+                print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
                 verify.local_grid_refinement(env, counterx, suggested_mesh)
 
@@ -327,7 +326,7 @@ for i in range(args.cegis_iterations):
                 # If global refinement is used, then use the lowest of all suggested mesh values
                 args.verify_mesh_tau = np.min(suggested_mesh)
                 print(f'\n- Globally refine mesh size to {args.verify_mesh_tau:.5f}')
-                verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
+                verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
 
     if len(counterx) == 0:
         # If there are no counterexamples left, we're done, so break the main loop
@@ -348,7 +347,7 @@ for i in range(args.cegis_iterations):
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
-    verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
+    verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
 
     plt.close('all')
     print('\n================\n')
