@@ -280,8 +280,6 @@ class Verifier:
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
 
-        print(self.check_init[:, [-1]].shape)
-
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
                                       0.5 * self.check_init[:, [-1]])
@@ -301,7 +299,7 @@ class Verifier:
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
-                                         0.5 * self.check_unsafe[:, -1])
+                                         0.5 * self.check_unsafe[:, [-1]])
         V = V_unsafe_lb - 1 / (1 - args.probability_bound)
 
         # Set counterexamples (for unsafe states)
