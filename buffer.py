@@ -9,7 +9,7 @@ class Buffer:
     Class to store samples in a buffer.
     '''
 
-    def __init__(self, dim, extra_dims = 0, max_size = 10_000_000):
+    def __init__(self, dim, extra_dims = 0, max_size = 100_000_000):
         '''
         :param dim: The length (i.e., dimension) of each sample
         :param extra_dims: The number of extra dimensions that are added to the samples, to store extra data

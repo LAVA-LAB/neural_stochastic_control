@@ -19,7 +19,7 @@ from learner_reachavoid import MLP, Learner, format_training_data, batch_trainin
 from buffer import Buffer, define_grid
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
-from plot import plot_certificate_2D, plot_layout
+from plot import plot_certificate_2D, plot_dataset
 
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -164,6 +164,7 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = LinearEnv()
 
+# TODO: This applies to L1-norm grid only
 args.train_mesh_cell_width = args.train_mesh_tau * (2 / env.state_dim) # The width in each dimension is the mesh
 
 # Initialize certificate network
@@ -221,20 +222,16 @@ verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 key = jax.random.PRNGKey(args.seed)
 ticDiff()
 
+update_policy_after_iteration = 3
+
 for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     iteration_init = time.time()
 
-    # Experiment by perturbing the training grid
-    key, perturbation_key = jax.random.split(key, 2)
-    perturbation = jax.random.uniform(perturbation_key, train_buffer.data.shape,
-                                      minval=-0.5 * args.train_mesh_cell_width,
-                                      maxval=0.5 * args.train_mesh_cell_width)
-
     # Plot dataset
     if args.plot_intermediate:
         filename = f"plots/data_{start_datetime}_iteration={i}"
-        plot_layout(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
+        plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
     if args.batches == -1:
         # Automatically determine number of batches
@@ -256,11 +253,6 @@ for i in range(args.cegis_iterations):
         batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
-    import sys
-    np.set_printoptions(threshold=sys.maxsize)
-
-    # print('Max weight:', np.max(np.concatenate((np.ones(len(X_decrease[0])), 1 + CX_weights['decrease'][idx_decrease[0]]))))
-    # print(CX_decrease[0][0:10])
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
@@ -288,7 +280,7 @@ for i in range(args.cegis_iterations):
             # Update parameters
             if args.update_certificate:
                 V_state = V_state.apply_gradients(grads=V_grads)
-            if args.update_policy and i >= 3:
+            if args.update_policy and i >= update_policy_after_iteration:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
@@ -338,23 +330,21 @@ for i in range(args.cegis_iterations):
                 verify.set_verification_grid(env = env, mesh_size = args.verify_mesh_tau)
 
     if len(counterx) == 0:
+        # If there are no counterexamples left, we're done, so break the main loop
         break
 
-    # If the counterexample fraction (of total train data) is zero, then we simply add the counterexamples to the
-    # training buffer.
-    if args.counterx_fraction == 0:
-        train_buffer.append(counterx)
-    else:
-        # Remove additional
-        weight_column = counterx_weights.reshape(-1,1)
-        counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
+    # Append weights to the counterexamples
+    weight_column = counterx_weights.reshape(-1,1)
+    counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
 
-        # Add counterexamples to the counterexample buffer
-        if i > 0:
-            counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
-                                              samples=counterx_plus_weights)
-        else:
-            counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx_plus_weights)
+    # After first iteration, refresh all the counterexamples
+    if i > 0:
+        refresh_fraction = args.counterx_refresh_fraction
+    else:
+        refresh_fraction = 1
+
+    # Add counterexamples to the counterexample buffer
+    counterx_buffer.append_and_remove(refresh_fraction=1, samples=counterx_plus_weights)
 
     # Refine mesh and discretization
     args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
