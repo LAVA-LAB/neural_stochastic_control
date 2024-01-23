@@ -268,6 +268,7 @@ class Verifier:
         tau = L1_cell_width2mesh(self.check_decrease[:, -1], env.state_dim)
 
         # Negative is violation
+        assert len(tau) == len(Vdiff)
         idxs = (Vdiff >= -tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
