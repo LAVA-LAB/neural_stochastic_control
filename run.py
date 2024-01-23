@@ -52,7 +52,7 @@ parser.add_argument('--batches', type=int, default=-1,
                     help="Number of batches to run in each epoch (-1 means iterate over the full train dataset once)")
 parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
-parser.add_argument('--probability_bound', type=float, default=0.8,
+parser.add_argument('--probability_bound', type=float, default=0.9,
                     help="Bound on the reach-avoid probability to verify")
 parser.add_argument('--train_mesh_tau', type=float, default=0.01,
                     help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
@@ -66,9 +66,9 @@ parser.add_argument('--noise_partition_cells', type=int, default=12,
                     help="Number of cells to partition the noise space in per dimension (to numerically integrate stochastic noise)")
 parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
                     help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
-parser.add_argument('--verify_mesh_tau_min', type=float, default=0.002,
+parser.add_argument('--verify_mesh_tau_min', type=float, default=0.01,
                     help="Lowest allowed verification grid mesh size in the training loop")
-parser.add_argument('--verify_mesh_tau_min_final', type=float, default=0.0002,
+parser.add_argument('--verify_mesh_tau_min_final', type=float, default=0.0001,
                     help="Lowest allowed verification grid mesh size in the final verification")
 parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")

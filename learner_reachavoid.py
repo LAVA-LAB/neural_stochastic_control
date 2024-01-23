@@ -88,12 +88,12 @@ class Learner:
 
             # Loss in initial state set
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
-                                    + lip_certificate * strengthen_eps * verify_mesh_tau_min_final - 1)
+                                    + lip_certificate * strengthen_eps * verify_mesh_tau - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
                                       jnp.min(V_state.apply_fn(certificate_params, x_unsafe))
-                                      + lip_certificate * strengthen_eps * verify_mesh_tau_min_final)
+                                      + lip_certificate * strengthen_eps * verify_mesh_tau)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -113,7 +113,7 @@ class Learner:
             elif self.expected_decrease_loss == 2: # Loss function Wietze
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
 
-            elif self.expected_decrease_loss == 3: # Weighted average implementation 2
+            elif self.expected_decrease_loss == 3: # Weighted average implementation 1
                 loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr))) / len(w_decrease)
 
             elif self.expected_decrease_loss == 4: # Weighted average implementation 2
