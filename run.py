@@ -230,7 +230,7 @@ for i in range(args.cegis_iterations):
 
     # Plot dataset
     if args.plot_intermediate:
-        filename = f"plots/data_{start_datetime}_iteration={i}"
+        filename = f"plots/train_samples_{start_datetime}_iteration={i}"
         plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
     if args.batches == -1:
@@ -295,10 +295,15 @@ for i in range(args.cegis_iterations):
         plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
     verify_done = False
+    refine_nr = 0
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
+
+        if args.plot_intermediate:
+            filename = f"plots/verify_samples_{start_datetime}_iteration={i}_refine_nr={refine_nr}"
+            plot_dataset(env, verify.buffer.data, folder=args.cwd, filename=filename)
 
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
@@ -327,10 +332,6 @@ for i in range(args.cegis_iterations):
                 args.verify_mesh_tau = np.min(suggested_mesh)
                 print(f'\n- Globally refine mesh size to {args.verify_mesh_tau:.5f}')
                 verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
-
-    if len(counterx) == 0:
-        # If there are no counterexamples left, we're done, so break the main loop
-        break
 
     # Append weights to the counterexamples
     weight_column = counterx_weights.reshape(-1,1)

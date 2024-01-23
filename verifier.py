@@ -199,9 +199,6 @@ class Verifier:
 
         if len(samples) <= batch_size:
             # If the number of samples is below the maximum batch size, then just do one pass
-            print(samples.shape)
-            print(epsilon.shape)
-
             return apply_fn(jax.lax.stop_gradient(params), samples, np.atleast_2d(epsilon).T)
 
         else:
