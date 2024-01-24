@@ -157,7 +157,7 @@ class AnaesthesiaEnv(gym.Env):
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
         u = jnp.clip(u, self.min_torque, self.max_torque)
-        target_mean = (target_space.high + target_space.low) / 2
+        target_mean = (self.target_space.high + self.target_space.low) / 2
         costs = -1 + (state[0]-target_mean[0]) ** 2 + (state[1]-target_mean[1]) ** 2 + (state[2]-target_mean[2]) ** 2
 
         # Propagate dynamics
