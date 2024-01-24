@@ -198,12 +198,6 @@ Policy_state = create_train_state(
     learning_rate=5e-5,
 )
 
-# Create plots for initialized policy
-filename = f"plots/{start_datetime}_policy_traces"
-plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
-filename = f"plots/{start_datetime}_policy_vector_plot"
-vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
-
 # Load parameters from policy network initialized with PPO
 for layer in Policy_state.params['params'].keys():
     Policy_state.params['params'][layer]['kernel'] = ppo_state['params']['actor']['params'][layer]['kernel']
@@ -244,6 +238,13 @@ update_policy_after_iteration = 3
 for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     iteration_init = time.time()
+
+    # Create plots for policy
+    filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
+    plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
+    filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
+    vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
+    vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
 
     # Plot dataset
     if args.plot_intermediate:
