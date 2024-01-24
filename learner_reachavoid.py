@@ -77,7 +77,7 @@ class Learner:
         def loss_fun(certificate_params, policy_params):
 
             # Factor by which to strengthen the loss_init and loss_unsafe with (K * tau)
-            strengthen_eps = 0.5
+            strengthen_eps = 2
 
             # Compute Lipschitz coefficients
             lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
@@ -89,14 +89,12 @@ class Learner:
             # Loss in initial state set
             # TODO: Improve this loss function by also considering the mean?
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
-                                    + lip_certificate * strengthen_eps * verify_mesh_tau - 1) #+ \
-                        # jnp.maximum(0, jnp.mean(V_state.apply_fn(certificate_params, x_init))
-                        #             + lip_certificate * strengthen_eps * verify_mesh_tau - 1)
+                                    + lip_certificate * strengthen_eps * verify_mesh_tau_min_final - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
                                       jnp.min(V_state.apply_fn(certificate_params, x_unsafe))
-                                      + lip_certificate * strengthen_eps * verify_mesh_tau)
+                                      + lip_certificate * strengthen_eps * verify_mesh_tau_min_final)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -104,7 +102,7 @@ class Learner:
             loss_expdecr = self.loss_exp_decrease_vmap(verify_mesh_tau * K, V_state, certificate_params,
                                                        x_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_expdecr2 = self.loss_exp_decrease_vmap(verify_mesh_tau_min_final * K,
+            loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
                                                         V_state, certificate_params, x_decrease + perturbation, actions, noise_cond2_keys)
 
             if self.expected_decrease_loss == 0: # Base loss function
