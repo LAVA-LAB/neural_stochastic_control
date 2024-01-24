@@ -48,7 +48,6 @@ class Learner:
                    V_state: TrainState,
                    Policy_state: TrainState,
                    x_decrease,
-                   w_decrease,
                    x_init,
                    x_unsafe,
                    x_target,
@@ -57,6 +56,12 @@ class Learner:
                    mesh_verify_grid_init,
                    probability_bound,
                    ):
+
+        w_decrease = x_decrease[:, -1]
+        x_decrease = x_decrease[:, :-1]
+        x_init = x_init[:, :-1]
+        x_unsafe = x_unsafe[:, :-1]
+        x_target = x_target[:, :-1]
 
         key, noise_key, perturbation_key = jax.random.split(key, 3)
 

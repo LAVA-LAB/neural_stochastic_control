@@ -223,11 +223,9 @@ initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_tra
 initial_train_grid = np.hstack(( initial_train_grid, np.ones((len(initial_train_grid), 1)) )) # Attach weights
 train_buffer.append(initial_train_grid)
 
-# Set counterexample buffer
+# Set counterexample buffer. Use uniform training grid as initial counterexamples
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
 counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, extra_dims = 1)
-
-# Use uniform training grid as initial counterexamples
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
@@ -286,11 +284,6 @@ for i in range(args.cegis_iterations):
             x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k]))
             x_target = np.vstack((X_target[k], CX_target[k]))
             assert len(x_decrease) > 0 and len(x_init) > 0 and len(x_unsafe) > 0 and len(x_target) > 0
-
-            print(x_decrease.shape)
-            print(x_init.shape)
-
-            assert False
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
