@@ -8,13 +8,13 @@ Which runs the linear model for 25 epochs, using an initial verification mesh si
 After each iteration (consisting of several epochs), the counterexample buffer is refreshed for 50% with new counterexamples.
 The batch size `verify_batch_size` indicates that the verifier performs the forward passes over the neural network in batches of 30 thousand (larger batch sizes require too much GPU memory).
 
-Command to verify with probability bound 0.99 and a minimum verify mesh (final) of 0.005, and 100 epochs per iteration:
+Command to verify with probability bound 0.99 and a minimum verify mesh of 0.01, and a minimum final mesh of 0.0001, with local refinements:
 
-``` python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --epochs 100 --counterx_fraction 0.25 --verify_batch_size 30000 --mesh_refine_min 0.001 --expdecrease_loss_type 3 --probability_bound 0.99 --weight_multiplier 100 --plot_intermediate```
+``` python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 4 --probability_bound 0.99 --weight_multiplier 100 --local_refinement --epochs 100 --perturb_counterexamples```
 
-Command to verify with probability bound 0.98 and a minimum verify mesh of 0.01, and a minimum final mesh of 0.0001, with local refinements:
+Pendulum environment:
 
-```python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --mesh_refine_min 0.0001 --expdecrease_loss_type 3 --probability_bound 0.99 --weight_multiplier 100 --local_refinement --epochs 25```
+```python3 run.py --model PendulumEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 4 --probability_bound 0.90 --weight_multiplier 100 --local_refinement --epochs 100 --perturb_counterexamples --ppo_total_timesteps 10000000 --ppo_load_file ckpt/PendulumEnv_seed=1_2024-01-24_13-47-16 --plot_intermediate```
 
 # Installing mujoco
 

@@ -135,8 +135,8 @@ class Learner:
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,
                 '2. loss_unsafe': loss_unsafe,
-                '3. loss_exp_decrease': 0*loss_exp_decrease,
-                '4. loss_lipschitz': loss_lipschitz,
+                '3. loss_exp_decrease': loss_exp_decrease,
+                '4. loss_lipschitz': 0*loss_lipschitz,
                 '5. loss_aux': loss_aux,
             }
 

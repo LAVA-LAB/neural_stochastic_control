@@ -240,11 +240,11 @@ for i in range(args.cegis_iterations):
     iteration_init = time.time()
 
     # Create plots for policy
-    filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
-    plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
-    filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
-    vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
-    vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
+    if args.plot_intermediate:
+        # filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
+        # plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
+        filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
+        vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
 
     # Plot dataset
     if args.plot_intermediate:

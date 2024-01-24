@@ -21,7 +21,6 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         traces[0,i], key, _ = env.reset(key)
 
         for j in range(len_traces):
-
             # Get state and action
             state = traces[j,i]
             action = Policy_state.apply_fn(Policy_state.params, state)
