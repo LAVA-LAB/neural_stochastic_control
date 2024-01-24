@@ -53,9 +53,8 @@ class Learner:
                    x_unsafe,
                    x_target,
                    max_grid_perturb,
-                   train_mesh_tau,
-                   verify_mesh_tau,
-                   verify_mesh_tau_min_final,
+                   mesh_loss,
+                   mesh_verify_grid_init,
                    probability_bound,
                    ):
 
@@ -76,9 +75,6 @@ class Learner:
 
         def loss_fun(certificate_params, policy_params):
 
-            # Factor by which to strengthen the loss_init and loss_unsafe with (K * tau)
-            strengthen_eps = 10
-
             # Compute Lipschitz coefficients
             lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
             lip_policy, _ = lipschitz_coeff_l1(policy_params)
@@ -89,20 +85,20 @@ class Learner:
             # Loss in initial state set
             # TODO: Improve this loss function by also considering the mean?
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
-                                    + lip_certificate * strengthen_eps * verify_mesh_tau_min_final - 1)
+                                    + lip_certificate * mesh_loss - 1)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
                                       jnp.min(V_state.apply_fn(certificate_params, x_unsafe))
-                                      + lip_certificate * strengthen_eps * verify_mesh_tau_min_final)
+                                      + lip_certificate * mesh_loss)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
-            loss_expdecr = self.loss_exp_decrease_vmap(verify_mesh_tau * K, V_state, certificate_params,
+            loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,
                                                        x_decrease + perturbation, actions, noise_cond2_keys)
 
-            loss_expdecr2 = self.loss_exp_decrease_vmap(strengthen_eps * verify_mesh_tau_min_final * K,
+            loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K,
                                                         V_state, certificate_params, x_decrease + perturbation, actions, noise_cond2_keys)
 
             if self.expected_decrease_loss == 0: # Base loss function
@@ -120,7 +116,6 @@ class Learner:
             elif self.expected_decrease_loss == 4: # Weighted average implementation 2
                 loss_exp_decrease = jnp.mean(loss_expdecr2) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / len(w_decrease)
 
-
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
@@ -135,7 +130,7 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_aux)
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_lipschitz + loss_aux)
             infos = {
                 '0. loss_total': loss_total,
                 '1. loss_init': loss_init,

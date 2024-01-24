@@ -43,6 +43,18 @@ parser.add_argument('--ppo_num_steps', type=int, default=2048,
 parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
 
+### MESH SIZES
+parser.add_argument('--mesh_train_grid', type=float, default=0.01,
+                    help="Mesh size for training grid. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
+parser.add_argument('--mesh_loss', type=float, default=0.001,
+                    help="Mesh size used in the loss function.")
+parser.add_argument('--mesh_verify_grid_init', type=float, default=0.01,
+                    help="Initial mesh size for verifying grid. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
+parser.add_argument('--mesh_verify_grid_min', type=float, default=0.01,
+                    help="Minimum mesh size for verifying grid.")
+parser.add_argument('--mesh_refine_min', type=float, default=0.0001,
+                    help="Lowest allowed verification grid mesh size in the final verification")
+
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
                     help="Number of CEGIS iteration to run")
@@ -54,8 +66,6 @@ parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
 parser.add_argument('--probability_bound', type=float, default=0.9,
                     help="Bound on the reach-avoid probability to verify")
-parser.add_argument('--train_mesh_tau', type=float, default=0.01,
-                    help="Training grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--weight_multiplier', type=float, default=1,
                     help="Multiply the weight on counterexamples by this value.")
 
@@ -64,12 +74,6 @@ parser.add_argument('--verify_batch_size', type=int, default=10000,
                     help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
 parser.add_argument('--noise_partition_cells', type=int, default=12,
                     help="Number of cells to partition the noise space in per dimension (to numerically integrate stochastic noise)")
-parser.add_argument('--verify_mesh_tau', type=float, default=0.01,
-                    help="Initial verification grid mesh size. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
-parser.add_argument('--verify_mesh_tau_min', type=float, default=0.01,
-                    help="Lowest allowed verification grid mesh size in the training loop")
-parser.add_argument('--verify_mesh_tau_min_final', type=float, default=0.0001,
-                    help="Lowest allowed verification grid mesh size in the final verification")
 parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
@@ -165,7 +169,7 @@ ppo_state = raw_restored['model']
 env = LinearEnv()
 
 # TODO: This applies to L1-norm grid only
-args.train_mesh_cell_width = L1_mesh2cell_width(args.train_mesh_tau, env.state_dim)
+args.train_mesh_cell_width = L1_mesh2cell_width(args.mesh_train_grid, env.state_dim)
 
 # Initialize certificate network
 certificate_model = MLP(neurons_per_layer, V_act_funcs)
@@ -201,8 +205,8 @@ verify.partition_noise(env, args)
 num_per_dimension_train = np.array(
     np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 train_buffer = Buffer(dim = env.observation_space.shape[0])
-initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.train_mesh_tau,
-                                  env.observation_space.high - 0.5 * args.train_mesh_tau, size=num_per_dimension_train)
+initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_train_grid,
+                                  env.observation_space.high - 0.5 * args.mesh_train_grid, size=num_per_dimension_train)
 train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
@@ -214,7 +218,7 @@ initial_train_grid = np.hstack(( initial_train_grid, np.zeros((len(initial_train
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
-verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
+verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
 
 # %%
 
@@ -271,9 +275,8 @@ for i in range(args.cegis_iterations):
                 x_unsafe = np.vstack((X_unsafe[k][:,:d1], CX_unsafe[k][:,:d2])),
                 x_target = np.vstack((X_target[k][:,:d1], CX_target[k][:,:d2])),
                 max_grid_perturb = args.train_mesh_cell_width,
-                train_mesh_tau = args.train_mesh_tau,
-                verify_mesh_tau = args.verify_mesh_tau,
-                verify_mesh_tau_min_final = args.verify_mesh_tau_min_final,
+                mesh_loss = args.mesh_loss,
+                mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,
             )
 
@@ -296,7 +299,7 @@ for i in range(args.cegis_iterations):
 
     verify_done = False
     refine_nr = 0
-    current_mesh = args.verify_mesh_tau
+    current_mesh = args.mesh_verify_grid_init
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
@@ -315,11 +318,11 @@ for i in range(args.cegis_iterations):
         if len(counterx_hard) != 0:
             print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
-        elif np.min(suggested_mesh) < args.verify_mesh_tau_min_final:
-            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
+        elif np.min(suggested_mesh) < args.mesh_refine_min:
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.mesh_refine_min:.5f})')
             verify_done = True
         elif np.min(suggested_mesh) >= current_mesh:
-            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.mesh_verify_grid_init:.5f})')
             verify_done = True
         else:
             current_mesh = np.min(suggested_mesh)
@@ -331,9 +334,9 @@ for i in range(args.cegis_iterations):
 
             else:
                 # If global refinement is used, then use the lowest of all suggested mesh values
-                args.verify_mesh_tau = np.min(suggested_mesh)
-                print(f'\n- Globally refine mesh size to {args.verify_mesh_tau:.5f}')
-                verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
+                args.mesh_verify_grid_init = np.min(suggested_mesh)
+                print(f'\n- Globally refine mesh size to {args.mesh_verify_grid_init:.5f}')
+                verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
 
         refine_nr += 1
 
@@ -357,8 +360,8 @@ for i in range(args.cegis_iterations):
     counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights)
 
     # Refine mesh and discretization
-    args.verify_mesh_tau = np.maximum(0.75 * args.verify_mesh_tau, args.verify_mesh_tau_min)
-    verify.set_uniform_grid(env=env, mesh_size=args.verify_mesh_tau)
+    args.mesh_verify_grid_init = np.maximum(0.75 * args.mesh_verify_grid_init, args.mesh_verify_grid_min)
+    verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
 
     plt.close('all')
     print('\n================\n')
