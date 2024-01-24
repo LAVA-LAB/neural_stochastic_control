@@ -299,10 +299,11 @@ class Verifier:
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
 
         # Compute suggested mesh
-        V_counterx_init = V[V > 0]
+        suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=mesh_min)
+
+        # V_counterx_init = V[V > 0]
         # suggested_mesh_init = np.maximum(1.01 * args.mesh_refine_min,
         #                                  counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
-        suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=mesh_min)
         # if len(counterx_init) > 0:
         #     print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
@@ -335,10 +336,11 @@ class Verifier:
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
 
         # Compute suggested mesh
+        suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=mesh_min)
+
         # V_counterx_unsafe = V[V < 0]
         # suggested_mesh_unsafe = np.maximum(1.01 * args.mesh_refine_min,
         #                                    counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
-        suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=mesh_min)
         # if len(counterx_unsafe) > 0:
         #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
