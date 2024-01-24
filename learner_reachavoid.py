@@ -75,12 +75,7 @@ class Learner:
         noise_cond2_keys = jax.random.split(noise_key, (len(x_decrease), self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
-        if self.perturb_samples:
-            perturbation = jax.random.uniform(perturbation_key, x_decrease.shape,
-                                              minval=-0.5*max_grid_perturb,
-                                              maxval=0.5*max_grid_perturb)
-        else:
-            perturbation = 0
+        perturbation = 0
 
         # w_decrease = jax.lax.stop_gradient(w_decrease)
 
