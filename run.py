@@ -287,11 +287,6 @@ for i in range(args.cegis_iterations):
             x_target = np.vstack((X_target[k], CX_target[k]))
             assert len(x_decrease) > 0 and len(x_init) > 0 and len(x_unsafe) > 0 and len(x_target) > 0
 
-            if j == 0 and k == 0:
-                print(x_decrease)
-                print(x_init)
-                print(x_unsafe)
-
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,

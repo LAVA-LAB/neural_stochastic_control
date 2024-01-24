@@ -271,7 +271,7 @@ class Verifier:
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
 
-        weights_expDecr = args.weight_multiplier * np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
+        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
