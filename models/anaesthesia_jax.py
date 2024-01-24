@@ -17,7 +17,7 @@ from jax_utils import vsplit
 from commons import RectangularSet, MultiRectangularSet
 from scipy.stats import triang
 
-class LinearEnv(gym.Env):
+class AnaesthesiaEnv(gym.Env):
 
     metadata = {
         "render_modes": [],

@@ -4,6 +4,7 @@ import flax.linen as nn
 from ppo_jax import PPO, PPOargs
 from models.linearsystem_jax import LinearEnv
 from models.pendulum_jax import PendulumEnv
+from models.anaesthesia_jax import AnaesthesiaEnv
 from datetime import datetime
 import os
 from pathlib import Path
@@ -106,6 +107,8 @@ if args.model == 'LinearEnv':
     envfun = LinearEnv
 elif args.model == 'PendulumEnv':
     envfun = PendulumEnv
+elif args.model == 'Anaesthesia':
+    envfun = AnaesthesiaEnv
 else:
     assert False
 
