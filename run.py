@@ -164,6 +164,8 @@ else:
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
 
+print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
+
 # %%
 
 cegis_start_time = time.time()
