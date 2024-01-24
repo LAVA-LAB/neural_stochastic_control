@@ -293,6 +293,8 @@ class Verifier:
 
         suggested_mesh_init = np.maximum(0, counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
 
+        print(suggested_mesh_init)
+
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
