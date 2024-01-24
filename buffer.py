@@ -71,9 +71,10 @@ class Buffer:
             print(new_samples.shape)
 
             # Generate perturbation
-            shape = new_samples[:, :self.dim].shape
             perturbations = np.random.uniform(low=-0.5 * new_widths, high=0.5 * new_widths,
-                                              size=shape.T).T
+                                              size=new_samples[:, :self.dim].T.shape).T
+
+            print('perturb shape:', perturbations.shape)
 
             # Add perturbation (but exclude the additional dimensions)
             new_samples[:, :self.dim] += perturbations
