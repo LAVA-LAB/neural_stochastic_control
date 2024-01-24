@@ -269,6 +269,7 @@ class Verifier:
         idxs = (Vdiff >= -tau * K)
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
+
         weights_expDecr = np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
@@ -277,6 +278,10 @@ class Verifier:
                   f"mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
+
+            mesh_min = np.maximum(np.min(suggested_mesh_expDecr), args.verify_mesh_tau_min_final)
+        else:
+            mesh_min = args.verify_mesh_tau_min_final
 
         #####
 
@@ -297,8 +302,7 @@ class Verifier:
         V_counterx_init = V[V > 0]
         # suggested_mesh_init = np.maximum(1.01 * args.verify_mesh_tau_min_final,
         #                                  counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
-        suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=np.maximum(np.min(suggested_mesh_expDecr),
-                                                                args.verify_mesh_tau_min_final))
+        suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=mesh_min)
         # if len(counterx_init) > 0:
         #     print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
@@ -334,8 +338,7 @@ class Verifier:
         # V_counterx_unsafe = V[V < 0]
         # suggested_mesh_unsafe = np.maximum(1.01 * args.verify_mesh_tau_min_final,
         #                                    counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
-        suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=np.maximum(np.min(suggested_mesh_expDecr),
-                                                                                        args.verify_mesh_tau_min_final))
+        suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=mesh_min)
         # if len(counterx_unsafe) > 0:
         #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
