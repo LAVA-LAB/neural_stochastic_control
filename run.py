@@ -287,7 +287,7 @@ for i in range(args.cegis_iterations):
             x_target = np.vstack((X_target[k], CX_target[k]))
             assert len(x_decrease) > 0 and len(x_init) > 0 and len(x_unsafe) > 0 and len(x_target) > 0
 
-            if k == 0:
+            if j == 0 and k == 0:
                 print(x_decrease)
                 print(x_init)
                 print(x_unsafe)
