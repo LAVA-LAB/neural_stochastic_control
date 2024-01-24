@@ -709,7 +709,7 @@ def PPO(environment_function,
         X = obs_plot[:, i, 0]
         Y = obs_plot[:, i, 1]
 
-        plt.plot(X, Y, '-', color="blue", linewidth=1);
+        plt.plot(X, Y, '-', color="blue", linewidth=1)
 
     # Goal x-y limits
     low = env.observation_space.low

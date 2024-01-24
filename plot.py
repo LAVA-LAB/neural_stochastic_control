@@ -8,31 +8,36 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
 
-def plot_traces(env, Policy_state, num_traces=10, len_traces=256, folder=False, filename=False):
+def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
 
     fig, ax = plt.subplots()
 
     # Simulate traces
-    traces = np.zeros((len_traces+1, num_traces, len(env.observation_space.low)))
+    next_obs, env_key, steps_since_reset = env.vreset(key)
+    next_obs = np.array(next_obs)
+    next_done = np.zeros(num_traces)
 
-    # Initialize traces
-    for i in range(num_traces):
-        observation, _ = env.reset()
-        traces[0,i,:] = env.get_obs()
+    traces = np.zeros((len_traces, num_traces) + env.observation_space.shape)
 
-    # Sample up-front to save time
-    noise = env.sample_noise(size=[len_traces+1, num_traces, len(env.observation_space.low)])
+    for step in range(0, len_traces):
+        traces[step] = next_obs
 
-    # Vectorized simulator
-    for step in range(len_traces):
         # Get action
-        action = Policy_state.actor_fn(Policy_state.params['actor'], traces[step])
+        action = Policy_state.actor_fn(Policy_state.params['actor'], next_obs)
 
-        # Make step
-        traces[step + 1] = env.step_vectorized(traces[step], action, noise[step])
+        next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos \
+            = env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
+        next_done = np.logical_or(terminated, truncated)
+
+        next_obs, next_done = np.array(next_obs), np.array(next_done)
+
+    fig, ax = plt.subplots()
 
     for i in range(num_traces):
-        plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
+        X = traces[:, i, 0]
+        Y = traces[:, i, 1]
+
+        plt.plot(X, Y, '-', color="blue", linewidth=1)
 
     # Goal x-y limits
     low = env.observation_space.low
