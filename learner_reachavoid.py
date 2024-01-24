@@ -118,20 +118,7 @@ class Learner:
             loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         x_decrease + perturbation, actions, noise_cond2_keys)
 
-            if self.expected_decrease_loss == 0: # Base loss function
-                loss_exp_decrease = jnp.mean(loss_expdecr)
-
-            elif self.expected_decrease_loss == 1: # Loss function Thom (Note: there is actually a mistake in this function, but somehow it does work well...)
-                loss_exp_decrease = jnp.mean(loss_expdecr) + 0.01 * jnp.sum(jnp.multiply(w_decrease, loss_expdecr)) / jnp.sum(w_decrease)
-
-            elif self.expected_decrease_loss == 2: # Loss function Wietze
-                loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
-
-            elif self.expected_decrease_loss == 3: # Weighted average implementation 1
-                loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr))) / len(w_decrease)
-
-            elif self.expected_decrease_loss == 4: # Weighted average implementation 2
-                loss_exp_decrease = jnp.mean(loss_expdecr2) + 100 * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
+            loss_exp_decrease = jnp.mean(loss_expdecr2) + 100 * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
