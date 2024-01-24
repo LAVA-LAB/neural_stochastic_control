@@ -290,6 +290,10 @@ class Verifier:
 
         # Compute suggested mesh
         V_counterx_init = V[(V > 0).flatten()]
+
+        print('shape1:', V_counterx_init.shape)
+        print('shape2:', counterx_init[:, -1].shape)
+
         suggested_mesh_init = np.maximum(0, counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
