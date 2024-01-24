@@ -30,24 +30,25 @@ class LinearEnv(gym.Env):
 
         self.variable_names = ['position', 'velocity']
 
-        self.max_torque = 1
+        self.min_torque = -10
+        self.max_torque = 40
 
         self.screen_dim = 500
         self.screen = None
         self.clock = None
         self.isopen = True
 
-        self.state_dim = 2
+        self.state_dim = 3
 
         self.A = np.array([
-            [1, 0.045],
-            [0, 0.9]
+            [0.8192, 0.03412, 0.01265],
+            [0.01646, 0.9822, 0.0001],
+            [0.0009, 0.00002, 0.9989]
         ])
-        self.B = np.array([
-            [0.45],
-            [0.5]
-        ])
-        self.W = np.diag([0.01, 0.005])
+        self.B = np.array([[0.01883],
+                           [0.005],
+                           [0.003]])
+        self.W = np.diag([0.0001, 0.0001, 0.0001])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
@@ -56,29 +57,28 @@ class LinearEnv(gym.Env):
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
+            low=self.min_torque, high=self.max_torque, shape=(1,), dtype=np.float32
         )
 
         # Set observation / state space
-        high = np.array([1.5, 1.5], dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        low = np.array([1, 0, 0], dtype=np.float32)
+        high = np.array([6, 10, 10], dtype=np.float32)
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
-        high = np.array([1, 1], dtype=np.float32)
+        high = np.array([1, 1, 1], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-        self.noise_dim = 2
+        self.noise_dim = 3
 
         # Set target set
-        self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
+        self.target_space = RectangularSet(low=np.array([4, 8, 8]), high=np.array([6, 10, 10]), dtype=np.float32)
 
         self.init_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-0.25, -0.1]), high=np.array([-0.2, 0.1]), dtype=np.float32),
-            RectangularSet(low=np.array([0.2, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
+            RectangularSet(low=np.array([2.5, 3, 3]), high=np.array([3, 4, 4]), dtype=np.float32),
         ])
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
-            RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
+            RectangularSet(low=np.array([1, 0, 0]), high=np.array([2, 2, 2]), dtype=np.float32),
         ])
 
         self.num_steps_until_reset = 1000
@@ -100,7 +100,7 @@ class LinearEnv(gym.Env):
     def step_noise_set(self, state, u, w_lb, w_ub):
         ''' Make step with dynamics for a set of noise values '''
 
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
+        u = jnp.clip(u, self.min_torque, self.max_torque)
 
         # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
         state_lb = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_lb)
@@ -141,7 +141,7 @@ class LinearEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
+        u = jnp.clip(u, self.min_torque, self.max_torque)
 
         state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
 
@@ -156,8 +156,8 @@ class LinearEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
-        costs = -1 + state[0] ** 2 + state[1] ** 2
+        u = jnp.clip(u, self.min_torque, self.max_torque)
+        costs = -1 + state[0] ** 2 + state[1] ** 2 + state[2] ** 2
 
         # Propagate dynamics
         state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
@@ -177,12 +177,12 @@ class LinearEnv(gym.Env):
 
     def _reset(self, key):
 
-        high = np.array([1, 1])
-        low = -high  # We enforce symmetric limits.
+        low = np.array([1, 0, 0])
+        high = np.array([6, 10, 10])
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,
-                                   maxval=high, shape=(2,))
+                                   maxval=high, shape=(self.state_dim,))
 
         steps_since_reset = 0
 
