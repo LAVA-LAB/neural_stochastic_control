@@ -36,7 +36,7 @@ class Buffer:
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
-    def append_and_remove(self, refresh_fraction, samples):
+    def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
@@ -62,6 +62,17 @@ class Buffer:
 
         old_samples = self.data[old_idxs]
         new_samples = samples[new_idxs]
+
+        if perturb:
+            # Perturb samples within the given cell width
+            new_widths = cell_width[new_idxs]
+
+            perturbations = np.random.uniform(low=-0.5 * new_widths, high=0.5 * new_widths,
+                                              size=new_samples.shape)
+
+            new_samples += perturbations
+
+
         self.data = np.vstack((old_samples, new_samples), dtype=np.float32)
 
 

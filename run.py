@@ -111,7 +111,7 @@ neurons_per_layer = [128, 128, 1]
 V_act_funcs = [nn.relu, nn.relu, nn.softplus]
 Policy_act_funcs = [nn.relu, nn.relu, None]
 
-print('Run using arguments:')
+print('\nRun using arguments:')
 for key,val in vars(args).items():
     print(' - `'+str(key)+'`: '+str(val))
 print('\n================\n')
@@ -362,7 +362,8 @@ for i in range(args.cegis_iterations):
 
     # Add counterexamples to the counterexample buffer
     print(f'\nRefresh fraction {refresh_fraction} of the counterexample buffer')
-    counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights)
+    counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights,
+                                      perturb=True, cell_width=counterx[:, -1])
 
     # Refine mesh and discretization
     args.mesh_verify_grid_init = np.maximum(0.75 * args.mesh_verify_grid_init, args.mesh_verify_grid_min)
