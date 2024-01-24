@@ -217,11 +217,10 @@ verify.partition_noise(env, args)
 num_per_dimension_train = np.array(
     np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 
-print(num_per_dimension_train)
-
-train_buffer = Buffer(dim = env.observation_space.shape[0])
+train_buffer = Buffer(dim = env.observation_space.shape[0], extra_dims = 1)
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_train_grid,
                                   env.observation_space.high - 0.5 * args.mesh_train_grid, size=num_per_dimension_train)
+initial_train_grid = np.hstack(( initial_train_grid, np.ones((len(initial_train_grid), 1)) )) # Attach weights
 train_buffer.append(initial_train_grid)
 
 # Set counterexample buffer
@@ -229,7 +228,7 @@ args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (
 counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, extra_dims = 1)
 
 # Attach weights to the counterexamples (as extra column)
-initial_train_grid = np.hstack(( initial_train_grid, np.zeros((len(initial_train_grid), 1)) ))
+initial_train_grid = np.hstack(( initial_train_grid, np.ones((len(initial_train_grid), 1)) ))
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
@@ -283,19 +282,26 @@ for i in range(args.cegis_iterations):
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
-            d1 = train_buffer.dim
-            d2 = counterx_buffer.dim
+            x_decrease = np.vstack((X_decrease[k], CX_decrease[k]))
+            x_init = np.vstack((X_init[k], CX_init[k]))
+            x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k]))
+            x_target = np.vstack((X_target[k], CX_target[k]))
+            assert len(x_decrease) > 0 and len(x_init) > 0 and len(x_unsafe) > 0 and len(x_target) > 0
+
+            print(x_decrease.shape)
+            print(x_init.shape)
+
+            assert False
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
-                x_decrease = np.vstack((X_decrease[k][:,:d1], CX_decrease[k][:,:d2])),
-                w_decrease = np.concatenate((np.zeros(len(X_decrease[k])), args.weight_multiplier * CX_decrease[k][:,-1])),
-                x_init = np.vstack((X_init[k][:,:d1], CX_init[k][:,:d2])),
-                x_unsafe = np.vstack((X_unsafe[k][:,:d1], CX_unsafe[k][:,:d2])),
-                x_target = np.vstack((X_target[k][:,:d1], CX_target[k][:,:d2])),
+                x_decrease = x_decrease,
+                x_init = x_init,
+                x_unsafe = x_unsafe,
+                x_target = x_target,
                 max_grid_perturb = args.train_mesh_cell_width,
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,

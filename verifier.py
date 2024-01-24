@@ -215,7 +215,8 @@ class Verifier:
             return output_lb, output_ub
 
 
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key, debug_noise_integration = False):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, hard_violation_weight = 10,
+                         debug_noise_integration = False):
         ''' If IBP is True, then interval bound propagation is used. '''
 
         lip_policy, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
@@ -270,7 +271,7 @@ class Verifier:
         counterx_expDecr = check_expDecr_at[idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
 
-        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
+        weights_expDecr = 1 + args.weight_multiplier * np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
@@ -312,6 +313,10 @@ class Verifier:
         V_mean = (V_init - 1).flatten()
         counterx_init_hard = counterx_init[V_mean > 0]
 
+        # Set weights: hard violations get a stronger weight
+        weights_init = np.ones(len(counterx_init))
+        weights_init[V_mean > 0] = hard_violation_weight
+
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
         out_of = self.env.init_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
@@ -350,6 +355,10 @@ class Verifier:
         V_mean = (V_unsafe - 1 / (1 - args.probability_bound)).flatten()
         counterx_unsafe_hard = counterx_unsafe[V_mean < 0]
 
+        # Set weights: hard violations get a stronger weight
+        weights_unsafe = np.ones(len(counterx_unsafe))
+        weights_unsafe[V_mean < 0] = hard_violation_weight
+
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_unsafe_hard = self.env.unsafe_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
         out_of = self.env.unsafe_space.contains(counterx_unsafe, dim=self.buffer.dim, delta=0)
@@ -363,7 +372,11 @@ class Verifier:
         counterx = np.vstack([counterx_expDecr, counterx_init, counterx_unsafe])
         counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe_hard])
 
-        counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
+        counterx_weights = np.concatenate([
+            weights_expDecr,
+            weights_init,
+            weights_unsafe
+        ])
 
         suggested_mesh = np.concatenate([
             suggested_mesh_expDecr,
