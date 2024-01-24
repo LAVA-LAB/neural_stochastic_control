@@ -307,6 +307,10 @@ class Verifier:
         V_mean = (V_init - 1).flatten()
         counterx_init_hard = counterx_init[V_mean > 0]
 
+        # Compute suggested mesh
+        suggested_mesh_init = np.maximum(0, -(V_mean) / lip_certificate)
+        print(suggested_mesh_init)
+
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
         out_of = self.env.init_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
