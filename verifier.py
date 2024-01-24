@@ -288,6 +288,10 @@ class Verifier:
         # Set counterexamples (for initial states)
         counterx_init = self.check_init[(V > 0).flatten()]
 
+        # Compute suggested mesh
+        V_counterx_init = V[(V > 0).flatten()]
+        suggested_mesh_init = np.maximum(0, counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
+
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
@@ -300,8 +304,8 @@ class Verifier:
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
-
-        print(f'-- {len(counterx_init_hard)} hard violations (out of {len(counterx_init)})')
+        out_of = self.env.target_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
+        print(f'-- {len(counterx_init_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_init_hard) > 0:
             print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.3f}; "
                   f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
@@ -316,6 +320,10 @@ class Verifier:
         # Set counterexamples (for unsafe states)
         counterx_unsafe = self.check_unsafe[(V < 0).flatten()]
 
+        # Compute suggested mesh
+        V_counterx_unsafe = V[(V < 0).flatten()]
+        suggested_mesh_unsafe = np.maximum(0, counterx_init[:, -1] + V_counterx_unsafe / lip_certificate)
+
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; "
@@ -329,8 +337,8 @@ class Verifier:
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_unsafe_hard = self.env.target_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
-
-        print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(counterx_unsafe)})')
+        out_of = self.env.target_space.contains(counterx_unsafe, dim=self.buffer.dim, delta=0)
+        print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_unsafe_hard) > 0:
             print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.3f}; "
                   f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
@@ -342,13 +350,19 @@ class Verifier:
 
         counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
 
-        if len(suggested_mesh_expDecr) > 0:
-            min_mesh = np.min(suggested_mesh_expDecr)
-        else:
-            min_mesh = 0
+        # if len(suggested_mesh_expDecr) > 0:
+        #     min_mesh = np.min(suggested_mesh_expDecr)
+        # else:
+        #     min_mesh = 0
+        #
+        # suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
+        #                                                                  fill_value=min_mesh)])
 
-        suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
-                                                                         fill_value=min_mesh)])
+        suggested_mesh = np.concatenate([
+            suggested_mesh_expDecr,
+            suggested_mesh_init,
+            suggested_mesh_unsafe
+        ])
 
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
