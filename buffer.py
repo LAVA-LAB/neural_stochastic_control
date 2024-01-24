@@ -67,14 +67,9 @@ class Buffer:
             # Perturb samples within the given cell width
             new_widths = cell_width[new_idxs]
 
-            print(new_widths.shape)
-            print(new_samples.shape)
-
             # Generate perturbation
             perturbations = np.random.uniform(low=-0.5 * new_widths, high=0.5 * new_widths,
                                               size=new_samples[:, :self.dim].T.shape).T
-
-            print('perturb shape:', perturbations.shape)
 
             # Add perturbation (but exclude the additional dimensions)
             new_samples[:, :self.dim] += perturbations

@@ -78,6 +78,8 @@ parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
                     help="Fraction of counter examples, compared to the total train data set.")
+parser.add_argument('--perturb_counterexamples', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, counterexamples are perturbed before being added to the counterexample buffer")
 parser.add_argument('--local_refinement', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, local grid refinements are performed")
 
@@ -363,7 +365,7 @@ for i in range(args.cegis_iterations):
     # Add counterexamples to the counterexample buffer
     print(f'\nRefresh fraction {refresh_fraction} of the counterexample buffer')
     counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights,
-                                      perturb=True, cell_width=counterx[:, -1])
+                                      perturb=args.perturb_counterexamples, cell_width=counterx[:, -1])
 
     # Refine mesh and discretization
     args.mesh_verify_grid_init = np.maximum(0.75 * args.mesh_verify_grid_init, args.mesh_verify_grid_min)
