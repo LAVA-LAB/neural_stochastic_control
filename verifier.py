@@ -288,17 +288,19 @@ class Verifier:
         # Set counterexamples (for initial states)
         counterx_init = self.check_init[V > 0]
 
-        # Compute suggested mesh
-        V_counterx_init = V[V > 0]
-        suggested_mesh_init = np.maximum(1.01 * args.verify_mesh_tau_min_final,
-                                         counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
-
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        if len(counterx_init) > 0:
-            print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
+
+        # Compute suggested mesh
+        V_counterx_init = V[V > 0]
+        # suggested_mesh_init = np.maximum(1.01 * args.verify_mesh_tau_min_final,
+        #                                  counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
+        suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=np.maximum(np.min(suggested_mesh_expDecr),
+                                                                args.verify_mesh_tau_min_final))
+        # if len(counterx_init) > 0:
+        #     print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
@@ -323,17 +325,19 @@ class Verifier:
         # Set counterexamples (for unsafe states)
         counterx_unsafe = self.check_unsafe[V < 0]
 
-        # Compute suggested mesh
-        V_counterx_unsafe = V[V < 0]
-        suggested_mesh_unsafe = np.maximum(1.01 * args.verify_mesh_tau_min_final,
-                                           counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
-
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; "
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
-        if len(counterx_unsafe) > 0:
-            print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
+
+        # Compute suggested mesh
+        # V_counterx_unsafe = V[V < 0]
+        # suggested_mesh_unsafe = np.maximum(1.01 * args.verify_mesh_tau_min_final,
+        #                                    counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
+        suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=np.maximum(np.min(suggested_mesh_expDecr),
+                                                                                        args.verify_mesh_tau_min_final))
+        # if len(counterx_unsafe) > 0:
+        #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
@@ -355,14 +359,6 @@ class Verifier:
         counterx_hard = np.vstack([counterx_init_hard, counterx_unsafe_hard])
 
         counterx_weights = np.concatenate([weights_expDecr, np.ones(len(counterx_init) + len(counterx_unsafe))])
-
-        # if len(suggested_mesh_expDecr) > 0:
-        #     min_mesh = np.min(suggested_mesh_expDecr)
-        # else:
-        #     min_mesh = 0
-        #
-        # suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
-        #                                                                  fill_value=min_mesh)])
 
         suggested_mesh = np.concatenate([
             suggested_mesh_expDecr,
