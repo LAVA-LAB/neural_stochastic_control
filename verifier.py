@@ -290,10 +290,8 @@ class Verifier:
 
         # Compute suggested mesh
         V_counterx_init = V[V > 0]
-        suggested_mesh_init = np.maximum(np.min(suggested_mesh_expDecr),
+        suggested_mesh_init = np.maximum(args.verify_mesh_tau_min_final,
                                          counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
-
-        print(suggested_mesh_init)
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
@@ -306,10 +304,6 @@ class Verifier:
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
         V_mean = (V_init - 1).flatten()
         counterx_init_hard = counterx_init[V_mean > 0]
-
-        # Compute suggested mesh
-        # suggested_mesh_init = np.maximum(0, -(V_mean) / lip_certificate)
-        # print(suggested_mesh_init)
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
@@ -331,7 +325,7 @@ class Verifier:
 
         # Compute suggested mesh
         V_counterx_unsafe = V[V < 0]
-        suggested_mesh_unsafe = np.maximum(np.min(suggested_mesh_expDecr),
+        suggested_mesh_unsafe = np.maximum(args.verify_mesh_tau_min_final,
                                            counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
@@ -369,10 +363,6 @@ class Verifier:
         #
         # suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
         #                                                                  fill_value=min_mesh)])
-
-        print(suggested_mesh_expDecr.shape)
-        print(suggested_mesh_init.shape)
-        print(suggested_mesh_unsafe.shape)
 
         suggested_mesh = np.concatenate([
             suggested_mesh_expDecr,
