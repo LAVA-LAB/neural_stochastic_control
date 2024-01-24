@@ -77,7 +77,7 @@ class Learner:
         def loss_fun(certificate_params, policy_params):
 
             # Factor by which to strengthen the loss_init and loss_unsafe with (K * tau)
-            strengthen_eps = 2
+            strengthen_eps = 5
 
             # Compute Lipschitz coefficients
             lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
