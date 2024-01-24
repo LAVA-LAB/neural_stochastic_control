@@ -13,7 +13,8 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
     fig, ax = plt.subplots()
 
     # Simulate traces
-    next_obs, env_key, steps_since_reset = env.vreset(key)
+    env_key = jax.random.split(key, num_traces)
+    next_obs, env_key, steps_since_reset = env.vreset(env_key)
     next_obs = np.array(next_obs)
     next_done = np.zeros(num_traces)
 
