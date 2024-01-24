@@ -18,7 +18,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
     # Initialize traces
     for i in range(num_traces):
         # Reset environment
-        traces[0,i], _ = env.reset()
+        traces[0,i], key, _ = env.reset(key)
 
         for j in range(len_traces):
 
