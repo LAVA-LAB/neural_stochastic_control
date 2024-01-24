@@ -296,6 +296,7 @@ for i in range(args.cegis_iterations):
 
     verify_done = False
     refine_nr = 0
+    current_mesh = args.verify_mesh_tau
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
@@ -317,10 +318,11 @@ for i in range(args.cegis_iterations):
         elif np.min(suggested_mesh) < args.verify_mesh_tau_min_final:
             print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.verify_mesh_tau_min_final:.5f})')
             verify_done = True
-        # elif np.max(suggested_mesh) >= args.verify_mesh_tau:
-        #     print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
-        #     verify_done = True
+        elif np.min(suggested_mesh) >= current_mesh:
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.verify_mesh_tau:.5f})')
+            verify_done = True
         else:
+            current_mesh = np.min(suggested_mesh)
 
             if args.local_refinement:
                 print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
