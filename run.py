@@ -227,8 +227,7 @@ train_buffer.append(initial_train_grid)
 args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
 counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, extra_dims = 1)
 
-# Attach weights to the counterexamples (as extra column)
-initial_train_grid = np.hstack(( initial_train_grid, np.ones((len(initial_train_grid), 1)) ))
+# Use uniform training grid as initial counterexamples
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_train_grid)
 
 # Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
