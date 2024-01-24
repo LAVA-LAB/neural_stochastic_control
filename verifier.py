@@ -308,7 +308,7 @@ class Verifier:
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
-        out_of = self.env.target_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
+        out_of = self.env.init_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_init_hard) > 0:
             print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.3f}; "
@@ -340,8 +340,8 @@ class Verifier:
         counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 0).flatten()]
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
-        counterx_unsafe_hard = self.env.target_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
-        out_of = self.env.target_space.contains(counterx_unsafe, dim=self.buffer.dim, delta=0)
+        counterx_unsafe_hard = self.env.unsafe_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
+        out_of = self.env.unsafe_space.contains(counterx_unsafe, dim=self.buffer.dim, delta=0)
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_unsafe_hard) > 0:
             print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.3f}; "
