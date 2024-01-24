@@ -82,7 +82,7 @@ class Learner:
         else:
             perturbation = 0
 
-        w_decrease = jax.lax.stop_gradient(w_decrease)
+        # w_decrease = jax.lax.stop_gradient(w_decrease)
 
         def loss_fun(certificate_params, policy_params):
 
@@ -98,7 +98,7 @@ class Learner:
             #                         + lip_certificate * mesh_loss - 1)
 
             losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * mesh_loss - 1)
-            loss_init = jnp.max(losses_init) + jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / sum(w_init)
+            loss_init = jnp.max(losses_init) + jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
 
             # Loss in unsafe state set
             # loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
@@ -107,7 +107,7 @@ class Learner:
 
             losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
                                             + lip_certificate * mesh_loss)
-            loss_unsafe = jnp.max(losses_unsafe) + jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / sum(w_unsafe)
+            loss_unsafe = jnp.max(losses_unsafe) + jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -131,7 +131,7 @@ class Learner:
                 loss_exp_decrease = jnp.mean(loss_expdecr) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr))) / len(w_decrease)
 
             elif self.expected_decrease_loss == 4: # Weighted average implementation 2
-                loss_exp_decrease = jnp.mean(loss_expdecr2) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / sum(w_decrease)
+                loss_exp_decrease = jnp.mean(loss_expdecr2) + jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
