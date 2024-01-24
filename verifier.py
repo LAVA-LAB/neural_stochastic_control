@@ -358,6 +358,10 @@ class Verifier:
         # suggested_mesh = np.concatenate([suggested_mesh_expDecr, np.full(shape=len(counterx_init) + len(counterx_unsafe),
         #                                                                  fill_value=min_mesh)])
 
+        print(suggested_mesh_expDecr.shape)
+        print(suggested_mesh_init.shape)
+        print(suggested_mesh_unsafe.shape)
+
         suggested_mesh = np.concatenate([
             suggested_mesh_expDecr,
             suggested_mesh_init,
