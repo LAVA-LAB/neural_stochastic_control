@@ -283,13 +283,13 @@ class Verifier:
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
                                       0.5 * self.check_init[:, [-1]])
-        V = V_init_ub - 1
+        V = (V_init_ub - 1).flatten()
 
         # Set counterexamples (for initial states)
-        counterx_init = self.check_init[(V > 0).flatten()]
+        counterx_init = self.check_init[V > 0]
 
         # Compute suggested mesh
-        V_counterx_init = V[(V > 0).flatten()]
+        V_counterx_init = V[V > 0]
 
         print('shape1:', V_counterx_init.shape)
         print('shape2:', counterx_init[:, -1].shape)
@@ -303,8 +303,8 @@ class Verifier:
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
-        V_mean = V_init - 1
-        counterx_init_hard = counterx_init[(V_mean > 0).flatten()]
+        V_mean = (V_init - 1).flatten()
+        counterx_init_hard = counterx_init[V_mean > 0]
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_init_hard = self.env.init_space.contains(counterx_init_hard, dim=self.buffer.dim, delta=0)
@@ -319,13 +319,13 @@ class Verifier:
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
         V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
                                          0.5 * self.check_unsafe[:, [-1]])
-        V = V_unsafe_lb - 1 / (1 - args.probability_bound)
+        V = (V_unsafe_lb - 1 / (1 - args.probability_bound)).flatten()
 
         # Set counterexamples (for unsafe states)
-        counterx_unsafe = self.check_unsafe[(V < 0).flatten()]
+        counterx_unsafe = self.check_unsafe[V < 0]
 
         # Compute suggested mesh
-        V_counterx_unsafe = V[(V < 0).flatten()]
+        V_counterx_unsafe = V[V < 0]
         suggested_mesh_unsafe = np.maximum(0, counterx_init[:, -1] + V_counterx_unsafe / lip_certificate)
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
@@ -336,8 +336,8 @@ class Verifier:
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                          counterx_unsafe[:, :self.buffer.dim])
-        V_mean =  V_unsafe - 1 / (1 - args.probability_bound)
-        counterx_unsafe_hard = counterx_unsafe[(V_unsafe < 0).flatten()]
+        V_mean = (V_unsafe - 1 / (1 - args.probability_bound)).flatten()
+        counterx_unsafe_hard = counterx_unsafe[V_unsafe < 0]
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_unsafe_hard = self.env.unsafe_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
