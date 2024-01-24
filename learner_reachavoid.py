@@ -98,7 +98,7 @@ class Learner:
             #                         + lip_certificate * mesh_loss - 1)
 
             losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * mesh_loss - 1)
-            loss_init = jnp.max(losses_init) + jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / len(w_init)
+            loss_init = jnp.max(losses_init) + jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / sum(w_init)
 
             # Loss in unsafe state set
             # loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
@@ -107,7 +107,7 @@ class Learner:
 
             losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
                                             + lip_certificate * mesh_loss)
-            loss_unsafe = jnp.max(losses_unsafe) + jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / len(w_unsafe)
+            loss_unsafe = jnp.max(losses_unsafe) + jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / sum(w_unsafe)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
