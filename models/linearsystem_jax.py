@@ -168,18 +168,6 @@ class LinearEnv(gym.Env):
 
         steps_since_reset += 1
 
-        # # Check if environment should be reset
-        # if jnp.linalg.norm(state, 2) < 1e-3:
-        #     terminated = True
-        #     costs = -10
-        #     print(' > Goal reached (reset)')
-        # elif jnp.any(jnp.abs(state) > self.observation_space.high):
-        #     terminated = True
-        #     costs = 100
-        #     print(' > Too far away from goal (reset)')
-        # else:
-        #     terminated = False
-
         # TODO: Make this work
         terminated = False
         truncated = (steps_since_reset >= self.num_steps_until_reset)

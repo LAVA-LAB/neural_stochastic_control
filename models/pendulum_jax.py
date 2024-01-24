@@ -14,8 +14,8 @@ from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 from functools import partial
 from jax_utils import vsplit
-
 from commons import RectangularSet, MultiRectangularSet
+from scipy.stats import triang
 
 class PendulumEnv(gym.Env):
 
@@ -113,6 +113,28 @@ class PendulumEnv(gym.Env):
         epsilon = (state_ub - state_lb) / 2
 
         return state_mean, epsilon
+
+    def integrate_noise(self, w_lb, w_ub):
+        ''' Integrate noise distribution in the box [w_lb, w_ub]. '''
+
+        # For triangular distribution, integration is simple, because we can integrate each dimension individually and
+        # multiply the resulting probabilities
+        probs = np.ones(len(w_lb))
+
+        # Triangular cdf increases from loc to (loc + c*scale), and decreases from (loc+c*scale) to (loc + scale)
+        # So, 0 <= c <= 1.
+        loc = self.noise_space.low
+        c = 0.5  # Noise distribution is zero-centered, so c=0.5 by default
+        scale = self.noise_space.high - self.noise_space.low
+
+        for d in range(self.noise_space.shape[0]):
+            probs *= triang.cdf(w_ub[:,d], c, loc=loc[d], scale=scale[d]) - triang.cdf(w_lb[:,d], c, loc=loc[d], scale=scale[d])
+
+        # In this case, the noise integration is exact, but we still return an upper and lower bound
+        prob_ub = probs
+        prob_lb = probs
+
+        return prob_lb, prob_ub
 
     @partial(jit, static_argnums=(0,))
     def step(self, state, key, u):
