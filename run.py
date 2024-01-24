@@ -111,6 +111,11 @@ neurons_per_layer = [128, 128, 1]
 V_act_funcs = [nn.relu, nn.relu, nn.softplus]
 Policy_act_funcs = [nn.relu, nn.relu, None]
 
+print('Run using arguments:')
+for key,val in vars(args).items():
+    print(' - `'+str(key)+'`: '+str(val))
+print('\n================\n')
+
 # %% ### PPO policy initialization ###
 
 if args.ppo_load_file == '':
