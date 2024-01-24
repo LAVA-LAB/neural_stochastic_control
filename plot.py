@@ -13,32 +13,25 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
     fig, ax = plt.subplots()
 
     # Simulate traces
-    env_key = jax.random.split(key, num_traces)
-    next_obs, env_key, steps_since_reset = env.vreset(env_key)
-    next_obs = np.array(next_obs)
-    next_done = np.zeros(num_traces)
+    traces = np.zeros((len_traces+1, num_traces, len(env.observation_space.low)))
 
-    traces = np.zeros((len_traces, num_traces) + env.observation_space.shape)
-
-    for step in range(0, len_traces):
-        traces[step] = next_obs
-
-        # Get action
-        action = Policy_state.apply_fn(Policy_state.params, next_obs)
-
-        next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos \
-            = env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
-        next_done = np.logical_or(terminated, truncated)
-
-        next_obs, next_done = np.array(next_obs), np.array(next_done)
-
-    fig, ax = plt.subplots()
-
+    # Initialize traces
     for i in range(num_traces):
-        X = traces[:, i, 0]
-        Y = traces[:, i, 1]
+        # Reset environment
+        traces[0,i], _ = env.reset()
 
-        plt.plot(X, Y, '-', color="blue", linewidth=1)
+        for j in range(len_traces):
+
+            # Get state and action
+            state = traces[j,i]
+            action = Policy_state.apply_fn(Policy_state.params, state)
+
+            # Make step in environment
+            traces[j+1,i], key = env.step(state, key, action)
+
+    # Plot traces
+    for i in range(num_traces):
+        plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
 
     # Goal x-y limits
     low = env.observation_space.low
