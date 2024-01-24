@@ -52,26 +52,6 @@ class LinearEnv(gym.Env):
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
 
-        # Max step size (big Delta) under one step transition
-        # TODO: Make big Delta adaptive (it may change based on the policy)
-        state_space_vertices = np.array([
-            [1.5, 1.5],
-            [-1.5, 1.5],
-            [-1.5, -1.5],
-            [1.5, -1.5]
-        ])
-        input_vertices = np.array([[-self.max_torque], [self.max_torque]])
-        noise_vertices = np.array([
-            [1, 1],
-            [-1, 1],
-            [-1, -1],
-            [1, -1]
-        ])
-        self.max_step_Delta = np.max([
-            np.sum(np.abs(x - (self.A @ x + self.B @ u + self.W @ w)))
-            for x in state_space_vertices for u in input_vertices for w in noise_vertices
-        ])
-
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
@@ -162,13 +142,6 @@ class LinearEnv(gym.Env):
         noise = self.sample_noise(subkey, size=(2,))
 
         u = jnp.clip(u, -self.max_torque, self.max_torque)
-
-        # Propagate dynamics
-        # new_x = self.A[0, 0] * state[0] + self.A[0, 1] * state[1] + self.B[0, 0] * u[0] + \
-        #         self.W[0, 0] * noise[0] + self.W[0, 1] * noise[1]
-        # new_y = self.A[1, 0] * state[0] + self.A[1, 1] * state[1] + self.B[1, 0] * u[0] + \
-        #         self.W[1, 0] * noise[0] + self.W[1, 1] * noise[1]
-        # state = jnp.array([new_x, new_y])
 
         state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
 

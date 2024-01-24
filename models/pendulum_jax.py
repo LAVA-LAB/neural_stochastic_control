@@ -47,7 +47,6 @@ class PendulumEnv(gym.Env):
 
         self.state_dim = 2
 
-        # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f = float(1.78)
 
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
@@ -84,11 +83,36 @@ class PendulumEnv(gym.Env):
 
         # Vectorized step, but only with different noise values
         self.vstep_noise_batch = jax.vmap(self.step, in_axes=(None, 0, None), out_axes=0)
+        self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
         return jax.random.triangular(key, self.noise_space.low * jnp.ones(2), jnp.array([0, 0]),
                                      self.noise_space.high * jnp.ones(2))
+
+    @partial(jit, static_argnums=(0,))
+    def step_noise_set(self, state, u, w_lb, w_ub):
+        ''' Make step with dynamics for a set of noise values '''
+
+        u = jnp.clip(u, -self.max_torque, self.max_torque)
+
+        # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
+        x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
+             3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_lb[0]
+        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+        x0 = state[0] + self.delta * x1 + 0.01 * w_lb[1]
+        state_lb = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
+
+        x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
+             3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_lb[0]
+        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+        x0 = state[0] + self.delta * x1 + 0.01 * w_lb[1]
+        state_ub = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
+
+        state_mean = (state_ub + state_lb) / 2
+        epsilon = (state_ub - state_lb) / 2
+
+        return state_mean, epsilon
 
     @partial(jit, static_argnums=(0,))
     def step(self, state, key, u):
