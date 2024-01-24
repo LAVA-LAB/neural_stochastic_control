@@ -337,7 +337,7 @@ class Verifier:
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                          counterx_unsafe[:, :self.buffer.dim])
         V_mean = (V_unsafe - 1 / (1 - args.probability_bound)).flatten()
-        counterx_unsafe_hard = counterx_unsafe[V_unsafe < 0]
+        counterx_unsafe_hard = counterx_unsafe[V_mean < 0]
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
         counterx_unsafe_hard = self.env.unsafe_space.contains(counterx_unsafe_hard, dim=self.buffer.dim, delta=0)
