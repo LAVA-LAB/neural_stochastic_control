@@ -291,15 +291,14 @@ class Verifier:
         # Compute suggested mesh
         V_counterx_init = V[V > 0]
 
-        print('shape1:', V_counterx_init.shape)
-        print('shape2:', counterx_init[:, -1].shape)
-
         suggested_mesh_init = np.maximum(0, counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        if len(counterx_init) > 0:
+            print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
@@ -332,6 +331,8 @@ class Verifier:
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; "
                   f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+        if len(counterx_unsafe) > 0:
+            print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
