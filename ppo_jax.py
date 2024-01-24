@@ -675,7 +675,8 @@ def PPO(environment_function,
         speed = steps_per_iteration / (time.time() - start_iter_time)
         print(f' - Speed of total iteration: {speed:.2f} steps per second')
 
-    '''
+    # %%
+
     import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()
@@ -745,6 +746,5 @@ def PPO(environment_function,
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
     plt.show()
-    '''
 
     return agent_state

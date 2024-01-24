@@ -162,12 +162,12 @@ if args.ppo_load_file == '':
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
     orbax_checkpointer.save(checkpoint_path, ckpt, save_args=save_args)
+
+    print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
 else:
     # Load existing pretrained policy
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
-
-print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
 
 # %%
 
@@ -189,7 +189,7 @@ V_state = create_train_state(
     model=certificate_model,
     act_funcs=V_act_funcs,
     rng=jax.random.PRNGKey(1),
-    in_dim=2,
+    in_dim=env.state_dim,
     learning_rate=5e-4,
 )
 
@@ -199,7 +199,7 @@ Policy_state = create_train_state(
     model=policy_model,
     act_funcs=Policy_act_funcs,
     rng=jax.random.PRNGKey(1),
-    in_dim=2,
+    in_dim=env.state_dim,
     learning_rate=5e-5,
 )
 
