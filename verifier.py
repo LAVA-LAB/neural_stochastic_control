@@ -326,7 +326,7 @@ class Verifier:
 
         # Compute suggested mesh
         V_counterx_unsafe = V[V < 0]
-        suggested_mesh_unsafe = np.maximum(0, counterx_init[:, -1] + V_counterx_unsafe / lip_certificate)
+        suggested_mesh_unsafe = np.maximum(0, counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
