@@ -300,6 +300,7 @@ for i in range(args.cegis_iterations):
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,
+                weight_multiplier = args.weight_multiplier
             )
 
             # Update parameters
