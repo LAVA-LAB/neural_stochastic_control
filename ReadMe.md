@@ -12,6 +12,9 @@ Command to verify with probability bound 0.99 and a minimum verify mesh (final) 
 
 ``` python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --epochs 100 --counterx_fraction 0.25 --verify_batch_size 30000 --verify_mesh_tau_min_final 0.001 --expdecrease_loss_type 3 --probability_bound 0.99 --weight_multiplier 100 --plot_intermediate```
 
+Command to verify with probability bound 0.98 and a minimum verify mesh of 0.01, and a minimum final mesh of 0.0001, with local refinements:
+
+```python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --verify_mesh_tau_min_final 0.0001 --expdecrease_loss_type 3 --probability_bound 0.99 --weight_multiplier 100 --local_refinement --epochs 25```
 
 # Installing mujoco
 
