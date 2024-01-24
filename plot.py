@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
 
-def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
+def plot_traces(env, Policy_state, num_traces=10, len_traces=256, folder=False, filename=False):
 
     fig, ax = plt.subplots()
 
@@ -44,6 +44,12 @@ def plot_traces(env, Policy_state, num_traces=10, len_traces=256):
     if hasattr(env, 'variable_names)'):
         plt.xlabel(env.variable_names[0])
         plt.xlabel(env.variable_names[1])
+
+    if folder and filename:
+        # Save figure
+        for form in ['png']: #['pdf', 'png']:
+            filepath = Path(folder, filename).with_suffix('.'+str(form))
+            plt.savefig(filepath, format=form, bbox_inches='tight')
 
     plt.show()
 
@@ -97,7 +103,7 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
 
     return
 
-def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1):
+def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, filename=False):
 
     fig, ax = plt.subplots()
 
@@ -122,6 +128,12 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1):
     if hasattr(env, 'variable_names)'):
         plt.xlabel(env.variable_names[0])
         plt.xlabel(env.variable_names[1])
+
+    if folder and filename:
+        # Save figure
+        for form in ['png']: #['pdf', 'png']:
+            filepath = Path(folder, filename).with_suffix('.'+str(form))
+            plt.savefig(filepath, format=form, bbox_inches='tight')
 
     plt.show()
 

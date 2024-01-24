@@ -19,7 +19,7 @@ from learner_reachavoid import MLP, Learner, format_training_data, batch_trainin
 from buffer import Buffer, define_grid, L1_mesh2cell_width
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
-from plot import plot_certificate_2D, plot_dataset
+from plot import plot_certificate_2D, plot_dataset, plot_traces, vector_plot
 
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -103,9 +103,9 @@ args.cwd = os.getcwd()
 # args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-27_16-20-37'
 
 if args.model == 'LinearEnv':
-    fun = LinearEnv
+    envfun = LinearEnv
 elif args.model == 'PendulumEnv':
-    fun = PendulumEnv
+    envfun = PendulumEnv
 else:
     assert False
 
@@ -145,7 +145,7 @@ if args.ppo_load_file == '':
                        minibatch_size=minibatch_size,
                        num_iterations=num_iterations)
 
-    ppo_state = PPO(fun,
+    ppo_state = PPO(envfun,
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                     neurons_per_layer=neurons_per_layer[:-1],
@@ -173,7 +173,7 @@ raw_restored = orbax_checkpointer.restore(checkpoint_path)
 ppo_state = raw_restored['model']
 
 # Create gym environment (jax/flax version)
-env = LinearEnv()
+env = envfun()
 
 # TODO: This applies to L1-norm grid only
 args.train_mesh_cell_width = L1_mesh2cell_width(args.mesh_train_grid, env.state_dim)
@@ -197,6 +197,12 @@ Policy_state = create_train_state(
     in_dim=2,
     learning_rate=5e-5,
 )
+
+# Create plots for initialized policy
+filename = f"plots/{start_datetime}_policy_traces"
+plot_traces(env, Policy_state, folder=args.cwd, filename=filename)
+filename = f"plots/{start_datetime}_policy_vector_plot"
+vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
 
 # Load parameters from policy network initialized with PPO
 for layer in Policy_state.params['params'].keys():
