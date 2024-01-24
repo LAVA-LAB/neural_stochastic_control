@@ -24,7 +24,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         traces[step] = next_obs
 
         # Get action
-        action = Policy_state.actor_fn(Policy_state.params['actor'], next_obs)
+        action = Policy_state.apply_fn(Policy_state.params['actor'], next_obs)
 
         next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos \
             = env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
