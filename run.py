@@ -200,7 +200,7 @@ Policy_state = create_train_state(
 
 # Create plots for initialized policy
 filename = f"plots/{start_datetime}_policy_traces"
-plot_traces(env, Policy_state, key=jax.random.PRNGKey(1), folder=args.cwd, filename=filename)
+plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
 filename = f"plots/{start_datetime}_policy_vector_plot"
 vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
 

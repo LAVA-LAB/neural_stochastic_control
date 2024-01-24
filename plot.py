@@ -50,8 +50,6 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
             filepath = Path(folder, filename).with_suffix('.'+str(form))
             plt.savefig(filepath, format=form, bbox_inches='tight')
 
-    plt.show()
-
     return traces
 
 def plot_dataset(env, train_data=None, additional_data=None, folder=False, filename=False):
