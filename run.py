@@ -227,7 +227,7 @@ initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_tra
 
 train_buffer = Buffer(dim = env.observation_space.shape[0],
                       extra_dims = 1)
-initial_train_grid_plus = np.hstack(( initial_train_grid, np.zeros((len(initial_train_grid), 1)) )) # Attach weights
+initial_train_grid_plus = np.hstack(( initial_train_grid, 1e-5 * np.ones((len(initial_train_grid), 1)) )) # Attach weights
 train_buffer.append(initial_train_grid_plus)
 
 # Set counterexample buffer. Use uniform training grid as initial counterexamples
@@ -284,21 +284,15 @@ for i in range(args.cegis_iterations):
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
-            x_decrease = np.vstack((X_decrease[k], CX_decrease[k]))
-            x_init = np.vstack((X_init[k], CX_init[k]))
-            x_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k]))
-            x_target = np.vstack((X_target[k], CX_target[k]))
-            assert len(x_decrease) > 0 and len(x_init) > 0 and len(x_unsafe) > 0 and len(x_target) > 0
-
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
-                samples_decrease = x_decrease,
-                samples_init = x_init,
-                samples_unsafe = x_unsafe,
-                samples_target = x_target,
+                samples_decrease = np.vstack((X_decrease[k], CX_decrease[k])),
+                samples_init = np.vstack((X_init[k], CX_init[k])),
+                samples_unsafe = np.vstack((X_unsafe[k], CX_unsafe[k])),
+                samples_target = np.vstack((X_target[k], CX_target[k])),
                 max_grid_perturb = args.train_mesh_cell_width,
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
