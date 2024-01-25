@@ -36,7 +36,8 @@ class Buffer:
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
-    def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False, verbose=False):
+    def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False, verbose=False,
+                          weighted_sampling = True):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
@@ -59,8 +60,13 @@ class Buffer:
         else:
             replace = True
 
-        probabilities = samples[:,-1] / sum(samples[:,-1])
-        new_idxs = np.random.choice(len(samples), nr_new, replace=replace, p=probabilities)
+        if weighted_sampling:
+            # Weighted samplling over new counterexamples (proportional to the weights returned by the verifier)
+            probabilities = samples[:,-1] / sum(samples[:,-1])
+            new_idxs = np.random.choice(len(samples), nr_new, replace=replace, p=probabilities)
+        else:
+            # Uniform sampling over new counterexamples
+            new_idxs = np.random.choice(len(samples), nr_new, replace=replace)
 
         old_samples = self.data[old_idxs]
         new_samples = samples[new_idxs]
