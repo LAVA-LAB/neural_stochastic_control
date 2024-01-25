@@ -383,7 +383,7 @@ for i in range(args.cegis_iterations):
     counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
 
     # Add counterexamples to the counterexample buffer
-    print(f'\nRefresh {(args.counterx_refresh_fraction*100):.3f}% of the counterexample buffer')
+    print(f'\nRefresh {(args.counterx_refresh_fraction*100):.1f}% of the counterexample buffer')
     counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
                                       samples=counterx_plus_weights,
                                       perturb=args.perturb_counterexamples,

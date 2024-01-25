@@ -36,7 +36,7 @@ class Buffer:
             append_samples = np.array(samples, dtype=np.float32)
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
-    def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False):
+    def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False, verbose=False):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
@@ -58,7 +58,7 @@ class Buffer:
             replace = False
         else:
             replace = True
-        new_idxs = np.random.choice(len(samples), nr_new, replace=replace)
+        new_idxs = np.random.choice(len(samples), nr_new, replace=replace, p=samples[:,-1])
 
         old_samples = self.data[old_idxs]
         new_samples = samples[new_idxs]
@@ -71,8 +71,9 @@ class Buffer:
             perturbations = np.random.uniform(low=-0.5 * new_widths, high=0.5 * new_widths,
                                               size=new_samples[:, :self.dim].T.shape).T
 
-            print('Perturbation:')
-            print(perturbations)
+            if verbose:
+                print('Perturbation:')
+                print(perturbations)
 
             # Add perturbation (but exclude the additional dimensions)
             new_samples[:, :self.dim] += perturbations
