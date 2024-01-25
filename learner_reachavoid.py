@@ -19,9 +19,9 @@ class Learner:
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
 
-        print(f'- Setting: Expected decrease loss type is: {self.expected_decrease_loss}')
+        print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
-            print('- Setting: Training samples are slightly perturbed')
+            print('- Learner setting: Training samples are slightly perturbed')
 
         self.env = env
 
@@ -39,6 +39,32 @@ class Learner:
         self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, 0, 0, 0), out_axes=0)
 
         return
+
+
+
+    def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
+        '''
+        Compute loss related to martingale condition 2 (expected decrease).
+        :param V_state:
+        :param V_params:
+        :param x:
+        :param u:
+        :param noise:
+        :return:
+        '''
+
+        # For each given noise_key, compute the successor state for the pair (x,u)
+        state_new, noise_key = self.env.vstep_noise_batch(x, noise_key, u)
+
+        # Function apply_fn does a forward pass in the certificate network for all successor states in state_new,
+        # which approximates the value of the certificate for the successor state (using different noise values).
+        # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
+        diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
+
+        # Cap at zero
+        loss = jnp.maximum(0, diff + delta)
+
+        return loss
 
     
 
@@ -73,7 +99,7 @@ class Learner:
         key, noise_key, perturbation_key = jax.random.split(key, 3)
 
         # Split RNG keys for process noise in environment stap
-        noise_cond2_keys = jax.random.split(noise_key, (len(x_decrease), self.N_expectation))
+        expDecr_keys = jax.random.split(noise_key, (len(x_decrease), self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
@@ -82,8 +108,6 @@ class Learner:
                                               maxval=0.5*max_grid_perturb)
         else:
             perturbation = 0
-
-        # w_decrease = jax.lax.stop_gradient(w_decrease)
 
         def loss_fun(certificate_params, policy_params):
 
@@ -114,10 +138,10 @@ class Learner:
 
             # Loss for expected decrease condition
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,
-                                                       x_decrease + perturbation, actions, noise_cond2_keys)
+                                                       x_decrease + perturbation, actions, expDecr_keys)
 
             loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
-                                                        x_decrease + perturbation, actions, noise_cond2_keys)
+                                                        x_decrease + perturbation, actions, expDecr_keys)
 
             if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
@@ -129,7 +153,7 @@ class Learner:
                 loss_exp_decrease = jnp.mean(loss_expdecr2) + expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
-            loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
+            loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
@@ -160,12 +184,16 @@ class Learner:
 
         return V_grads, Policy_grads, infos, key, loss_expdecr
 
+
+
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_full_state_space(self, rng, n):
         samples = jax.random.uniform(rng, (n, len(self.env.state)),
                                      minval=self.env.observation_space.low,
                                      maxval=self.env.observation_space.high)
         return samples
+
+
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_stabilize_set(self, rng, n):
@@ -174,11 +202,15 @@ class Learner:
             maxval=self.env.stabilize_space.high)
         return samples
 
+
+
     @partial(jax.jit, static_argnums=(0, 2))
     def sample_nonstabilize_set(self, rng, n):
 
         samples = jnp.vstack([self.sample_nongoal_states() for i in range(n)])
         return samples
+
+
 
     @partial(jax.jit, static_argnums=(0))
     def sample_nongoal_states(self):
@@ -196,30 +228,6 @@ class Learner:
 
         print(f'Error, no state sampled after {iMax} attempts.')
         assert False
-
-    def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
-        '''
-        Compute loss related to martingale condition 2 (expected decrease).
-        :param V_state:
-        :param V_params:
-        :param x:
-        :param u:
-        :param noise:
-        :return:
-        '''
-
-        # For each given noise_key, compute the successor state for the pair (x,u)
-        state_new, noise_key = self.env.vstep_noise_batch(x, noise_key, u)
-
-        # Function apply_fn does a forward pass in the certificate network for all successor states in state_new,
-        # which approximates the value of the certificate for the successor state (using different noise values).
-        # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
-        diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
-
-        # Cap at zero
-        loss = jnp.maximum(0, diff + delta)
-
-        return loss
 
 
 
@@ -243,13 +251,6 @@ class MLP(nn.Module):
         return x
 
 
-def format_training_data(env: object, data: object, dim: object) -> object:
-    # Define other datasets (for init, unsafe, and decrease sets)
-
-
-
-    return data
-
 
 def batch_training_data(env, key, buffer, epochs, batch_size):
 
@@ -265,7 +266,6 @@ def batch_training_data(env, key, buffer, epochs, batch_size):
     }
 
     # Convert train dataset into batches
-    # TODO: Tidy up this stuff..
     key, permutation_key = jax.random.split(key)
     permutation_keys = jax.random.split(permutation_key, 4)
 
@@ -289,11 +289,12 @@ def batch_training_data(env, key, buffer, epochs, batch_size):
 
     num_decrease = int(batch_size - num_init - num_unsafe - num_target)
 
-    print('Number of items in batch per element type:')
-    print('- Decrease:', num_decrease)
-    print('- Init:', num_init)
-    print('- Unsafe:', num_unsafe)
-    print('- Target:', num_target)
+    print('- Exp. decrease samples:', num_decrease)
+    print('- Init. samples:', num_init)
+    print('- Unsafe samples:', num_unsafe)
+    print('- Target samples:', num_target)
+
+    # For each respective element
 
     idxs_decrease = jax.random.choice(permutation_keys[0], len(samples['decrease']),
                                         shape=(epochs, num_decrease),

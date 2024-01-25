@@ -24,10 +24,11 @@ class Verifier:
         self.env = env
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
-        self.V_step_vectorized = jax.vmap(self.V_step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
-        self.V_step_expectation = jax.vmap(self.V_step_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+        self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
+        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
         return
+
 
 
     def partition_noise(self, env, args):
@@ -43,6 +44,7 @@ class Verifier:
 
         # Integrated probabilities for the noise distribution
         self.noise_int_lb, self.noise_int_ub = env.integrate_noise(self.noise_lb, self.noise_ub)
+
 
 
     def set_uniform_grid(self, env, mesh_size, verbose = False):
@@ -82,6 +84,8 @@ class Verifier:
         # Format the verification grid into the relevant regions of the state space
         self.format_verification_grid(verify_mesh_cell_width, verbose)
 
+
+
     def local_grid_refinement(self, env, data, new_mesh_sizes):
         '''
         Refine the given array of points in the state space.
@@ -111,16 +115,7 @@ class Verifier:
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
 
-            # print('\nFrom point:', points[i])
-            # print('lb:', lb, 'ub:', ub)
-            #
-            # print(lb + 0.5 * cell_width)
-            # print(ub - 0.5 * cell_width)
-            # print(num)
-
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
-
-            # print('To grid:', grid)
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
@@ -132,6 +127,7 @@ class Verifier:
 
         # Format the verification grid into the relevant regions of the state space
         self.format_verification_grid(verify_mesh_cell_width=stacked_grid_plus[:,-1])
+
 
 
     def format_verification_grid(self, verify_mesh_cell_width, verbose=False):
@@ -156,6 +152,7 @@ class Verifier:
                                                            delta=0.5 * verify_mesh_cell_width)  # Enlarge unsafe set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_unsafe: {(time.time() - t):.4f}')
+
 
 
     def batched_forward_pass(self, apply_fn, params, samples, out_dim, batch_size=1_000_000):
@@ -184,6 +181,8 @@ class Verifier:
                 output[i:j] = jit(apply_fn)(jax.lax.stop_gradient(params), jax.lax.stop_gradient(samples[i:j]))
 
             return output
+
+
 
     def batched_forward_pass_ibp(self, apply_fn, params, samples, epsilon, out_dim, batch_size=1_000_000):
         '''
@@ -215,6 +214,7 @@ class Verifier:
             return output_lb, output_ub
 
 
+
     def check_conditions(self, env, args, V_state, Policy_state, noise_key, hard_violation_weight = 10,
                          debug_noise_integration = False):
         ''' If IBP is True, then interval bound propagation is used. '''
@@ -229,11 +229,9 @@ class Verifier:
         # Expected decrease condition check on all states outside target set
         V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
                                                 0.5 * self.check_decrease[:, -1], 1)
-        idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
+        check_idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
+        check_expDecr_at = self.check_decrease[check_idxs]
 
-        check_expDecr_at = self.check_decrease[idxs]
-
-        print('-- Done computing set of vertices to check expected decrease for')
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
                                             env.action_space.shape[0])
@@ -247,31 +245,31 @@ class Verifier:
             x = check_expDecr_at[i:j, :self.buffer.dim]
             u = actions[i:j]
 
-            Vdiff[i:j] = self.V_step_expectation(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                                 self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
+            #
+            Vdiff[i:j] = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                                     self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
 
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
                 noise_key, subkey = jax.random.split(noise_key)
                 noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
-                V_old = self.V_step_vectorized(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                                    noise_keys).flatten()
+                V_old = self.vstep_noise_batch(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                               noise_keys).flatten()
 
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
-
 
         # Compute mesh size for every cell that is checked
         tau = L1_cell_width2mesh(check_expDecr_at[:, -1], env.state_dim)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        idxs = (Vdiff >= -tau * K)
-        counterx_expDecr = check_expDecr_at[idxs]
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[idxs] / K)
+        violation_idxs = (Vdiff >= -tau * K)
+        counterx_expDecr = check_expDecr_at[violation_idxs]
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / K)
 
-        weights_expDecr = np.maximum(0, Vdiff[idxs] + tau[idxs] * K)
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K)
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
@@ -387,7 +385,8 @@ class Verifier:
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
-    def V_step_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+    def step_noise_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+        ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
 
         # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
         state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
@@ -403,7 +402,8 @@ class Verifier:
         return V_expected_ub - V_old
 
     @partial(jax.jit, static_argnums=(0,))
-    def V_step_noise_batch(self, V_state, V_params, x, u, noise_key):
+    def step_noise_batch(self, V_state, V_params, x, u, noise_key):
+        ''' Approximate V(x_{k+1}) by taking the average over a set of noise values '''
 
         state_new, noise_key = self.env.vstep_noise_batch(x, noise_key, u)
         V_new = jnp.mean(jit(V_state.apply_fn)(V_params, state_new))

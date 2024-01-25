@@ -16,7 +16,7 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-from learner_reachavoid import MLP, Learner, format_training_data, batch_training_data
+from learner_reachavoid import MLP, Learner, batch_training_data
 from buffer import Buffer, define_grid, L1_mesh2cell_width
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff_l1
@@ -249,20 +249,6 @@ for i in range(args.cegis_iterations):
     print(f'Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)})')
     iteration_init = time.time()
 
-    # Create plots for policy
-    if args.plot_intermediate:
-        # Plot traces
-        # filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
-        # plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
-
-        # Plot vector plot of policy
-        filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
-        vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
-
-        # Plot base training samples + counterexamples
-        filename = f"plots/{start_datetime}_train_samples_iteration={i}"
-        plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
-
     if args.batches == -1:
         # Automatically determine number of batches
         num_batches = int(np.ceil((len(train_buffer.data) + len(counterx_buffer.data)) / args.batch_size))
@@ -274,6 +260,7 @@ for i in range(args.cegis_iterations):
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
+    print('\nCreate training batches from train buffer...')
     key, X_decrease, X_init, X_unsafe, X_target = batch_training_data(
         env=env,
         key=key,
@@ -281,6 +268,7 @@ for i in range(args.cegis_iterations):
         epochs=num_batches,
         batch_size=(1 - fraction_counterx) * args.batch_size)
 
+    print('\nCreate training batches from counterexample buffer...')
     key, CX_decrease, CX_init, CX_unsafe, CX_target = batch_training_data(
         env=env,
         key=key,
@@ -328,7 +316,21 @@ for i in range(args.cegis_iterations):
     print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j in [True, False]])
     print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
 
-    if args.plot_intermediate:
+    # Create plots (only works for 2D model)
+    if args.plot_intermediate and env.state_dim == 2:
+        # Plot traces
+        # filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
+        # plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
+
+        # Plot vector plot of policy
+        filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
+        vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
+
+        # Plot base training samples + counterexamples
+        filename = f"plots/{start_datetime}_train_samples_iteration={i}"
+        plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
+
+        # Plot current certificate
         filename = f"plots/{start_datetime}_certificate_iteration={i}"
         plot_certificate_2D(env, V_state, folder=args.cwd, filename=filename)
 
@@ -361,12 +363,10 @@ for i in range(args.cegis_iterations):
             verify_done = True
         else:
             current_mesh = np.min(suggested_mesh)
-
             if args.local_refinement:
                 print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
                 verify.local_grid_refinement(env, counterx, suggested_mesh)
-
             else:
                 # If global refinement is used, then use the lowest of all suggested mesh values
                 args.mesh_verify_grid_init = np.min(suggested_mesh)
@@ -382,20 +382,14 @@ for i in range(args.cegis_iterations):
     weight_column = counterx_weights.reshape(-1,1)
     counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
 
-    # After first iteration, refresh all the counterexamples
-    # if i > 0:
-    #     refresh_fraction = args.counterx_refresh_fraction
-    # else:
-    #     refresh_fraction = 1
-
-    refresh_fraction = args.counterx_refresh_fraction
-
     # Add counterexamples to the counterexample buffer
-    print(f'\nRefresh fraction {refresh_fraction} of the counterexample buffer')
-    counterx_buffer.append_and_remove(refresh_fraction=refresh_fraction, samples=counterx_plus_weights,
-                                      perturb=args.perturb_counterexamples, cell_width=counterx[:, -1])
+    print(f'\nRefresh {(args.counterx_refresh_fraction*100):.3f}% of the counterexample buffer')
+    counterx_buffer.append_and_remove(refresh_fraction=args.counterx_refresh_fraction,
+                                      samples=counterx_plus_weights,
+                                      perturb=args.perturb_counterexamples,
+                                      cell_width=counterx[:, -1])
 
-    # Refine mesh and discretization
+    # Uniformly refine verification grid to smaller mesh
     args.mesh_verify_grid_init = np.maximum(0.75 * args.mesh_verify_grid_init, args.mesh_verify_grid_min)
     verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
 
