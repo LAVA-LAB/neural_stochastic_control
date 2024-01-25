@@ -185,9 +185,9 @@ class Learner:
                 '1. init': loss_init,
                 '2. init counterx': loss_init_counterx,
                 '3. unsafe': loss_unsafe,
-                '4. unsafe counterx': loss_init_counterx,
+                '4. unsafe counterx': loss_unsafe_counterx,
                 '5. expDecrease': loss_exp_decrease,
-                '6. expDecrease counterx': loss_init_counterx,
+                '6. expDecrease counterx': loss_exp_decrease_counterx,
                 '7. loss_lipschitz': loss_lipschitz,
                 '8. loss_aux': loss_aux,
             }

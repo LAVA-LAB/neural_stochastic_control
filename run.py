@@ -249,7 +249,7 @@ ticDiff()
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
-    print(f'\n ===Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)}) ===\n')
+    print(f'\n=== Start CEGIS iteration {i} (train buffer: {len(train_buffer.data)}; counterexample buffer: {len(counterx_buffer.data)}) ===\n')
     iteration_init = time.time()
 
     if args.batches == -1:
