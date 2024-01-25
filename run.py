@@ -227,7 +227,8 @@ initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_tra
 
 train_buffer = Buffer(dim = env.observation_space.shape[0],
                       extra_dims = 1)
-initial_train_grid_plus = np.hstack(( initial_train_grid, 1e-5 * np.ones((len(initial_train_grid), 1)) )) # Attach weights
+# Set negligible weights for uniform training grid (setting this to zero causes problems if there are no counterexs.)
+initial_train_grid_plus = np.hstack(( initial_train_grid, 1e-5 * np.ones((len(initial_train_grid), 1)) ))
 train_buffer.append(initial_train_grid_plus)
 
 # Set counterexample buffer. Use uniform training grid as initial counterexamples
@@ -356,10 +357,10 @@ for i in range(args.cegis_iterations):
             print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.mesh_refine_min:.5f})')
             verify_done = True
         elif np.min(suggested_mesh) >= current_mesh:
-            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current value ({args.mesh_verify_grid_init:.5f})')
+            print(f'\n- Skip refinement, because min. suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current max. value ({current_mesh:.5f})')
             verify_done = True
         else:
-            current_mesh = np.min(suggested_mesh)
+            current_mesh = np.max(suggested_mesh)
             if args.local_refinement:
                 print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
