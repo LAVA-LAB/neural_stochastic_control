@@ -58,7 +58,9 @@ class Buffer:
             replace = False
         else:
             replace = True
-        new_idxs = np.random.choice(len(samples), nr_new, replace=replace, p=samples[:,-1])
+
+        probabilities = samples[:,-1] / sum(samples[:,-1])
+        new_idxs = np.random.choice(len(samples), nr_new, replace=replace, p=probabilities)
 
         old_samples = self.data[old_idxs]
         new_samples = samples[new_idxs]
