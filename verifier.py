@@ -216,7 +216,7 @@ class Verifier:
 
 
     def check_conditions(self, env, args, V_state, Policy_state, noise_key, hard_violation_weight = 10,
-                         debug_noise_integration = False):
+                         debug_noise_integration = False, batch_size = 1_000_000):
         ''' If IBP is True, then interval bound propagation is used. '''
 
         lip_policy, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
@@ -285,8 +285,14 @@ class Verifier:
         #####
 
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
-        _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
-                                      0.5 * self.check_init[:, [-1]])
+        try:
+            _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
+                                          0.5 * self.check_init[:, [-1]])
+        except:
+            print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
+            _, V_init_ub = batched_ibp(V_state, self.check_init, self.buffer.dim, batch_size,
+                                       description='Forward pass for initial states (IBP)')
+
         V = (V_init_ub - 1).flatten()
 
         # Set counterexamples (for initial states)
@@ -326,8 +332,15 @@ class Verifier:
         #####
 
         # Condition check on unsafe states (i.e., check if V(x) >= 1/(1-p) for all x in X_unsafe)
-        V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_unsafe[:, :self.buffer.dim],
-                                         0.5 * self.check_unsafe[:, [-1]])
+        try:
+            V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params),
+                                            self.check_unsafe[:, :self.buffer.dim],
+                                            0.5 * self.check_unsafe[:, [-1]])
+        except:
+            print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
+            V_unsafe_lb, _ = batched_ibp(V_state, self.check_unsafe, self.buffer.dim, batch_size,
+                                         description='Forward pass for unsafe states (IBP)')
+
         V = (V_unsafe_lb - 1 / (1 - args.probability_bound)).flatten()
 
         # Set counterexamples (for unsafe states)
@@ -410,3 +423,21 @@ class Verifier:
         V_old = jit(V_state.apply_fn)(V_state.params, x)
 
         return V_new-V_old
+
+
+def batched_ibp(V_state, input, dim, batch_size, description="Batched forward pass"):
+    ''' Batched IBP pass in given neural network '''
+
+    out_lb = np.zeros(len(input))
+    out_ub = np.zeros(len(input))
+    num_batches = np.ceil(len(input) / batch_size).astype(int)
+    starts = np.arange(num_batches) * batch_size
+    ends = np.minimum(starts + batch_size, len(input)
+
+    for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc=description):
+
+        out_lb[i:j], out_ub[i:j] = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params),
+                                                  input[i:j, :dim],
+                                                  0.5 * input[i:j, [-1]]).flatten()
+
+    return out_lb, out_ub
