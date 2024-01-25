@@ -37,7 +37,7 @@ class Buffer:
             self.data = np.vstack((self.data, append_samples), dtype=np.float32)
 
     def append_and_remove(self, refresh_fraction, samples, perturb=False, cell_width=False, verbose=False,
-                          weighted_sampling = True):
+                          weighted_sampling = False):
         '''
         Removes a given fraction of the training buffer and appends the given samples
 
