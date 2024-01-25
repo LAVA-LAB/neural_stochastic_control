@@ -67,6 +67,8 @@ parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
 parser.add_argument('--probability_bound', type=float, default=0.9,
                     help="Bound on the reach-avoid probability to verify")
+parser.add_argument('--enable_lipschitz_loss', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, a term for the Lipschitz coefficients is included in the loss function")
 parser.add_argument('--expDecr_multiplier', type=float, default=1,
                     help="Multiply the weight on counterexamples by this value.")
 
@@ -211,7 +213,8 @@ for layer in Policy_state.params['params'].keys():
 # %%
 
 # Define Learner
-learn = Learner(env, expected_decrease_loss=args.expdecrease_loss_type, perturb_samples=args.perturb_train_samples)
+learn = Learner(env, expected_decrease_loss=args.expdecrease_loss_type, perturb_samples=args.perturb_train_samples,
+                enable_lipschitz_loss=args.enable_lipschitz_loss)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 

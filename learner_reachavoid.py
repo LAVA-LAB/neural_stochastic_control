@@ -14,14 +14,18 @@ class Learner:
     def __init__(self,
                  env,
                  expected_decrease_loss = 1,
-                 perturb_samples = True):
+                 perturb_samples = True,
+                 enable_lipschitz_loss = False):
 
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
+        self.enable_lipschitz_loss = enable_lipschitz_loss
 
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
             print('- Learner setting: Training samples are slightly perturbed')
+        if self.enable_lipschitz_loss:
+            print('- Learner setting: Enable Lipschitz loss')
 
         self.env = env
 
@@ -123,7 +127,8 @@ class Learner:
             #                         + lip_certificate * mesh_loss - 1)
 
             losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * mesh_loss - 1)
-            loss_init = jnp.max(losses_init) + jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
+            loss_init = jnp.max(losses_init)
+            loss_init_counterx = jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
 
             # Loss in unsafe state set
             # loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
@@ -132,7 +137,8 @@ class Learner:
 
             losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
                                             + lip_certificate * mesh_loss)
-            loss_unsafe = jnp.max(losses_unsafe) + jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
+            loss_unsafe = jnp.max(losses_unsafe)
+            loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
 
             K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
 
@@ -145,16 +151,22 @@ class Learner:
 
             if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
+                loss_exp_decrease_counterx = 0
 
             elif self.expected_decrease_loss == 1: # Loss function Wietze
-                loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
+                loss_exp_decrease = jnp.mean(loss_expdecr)
+                loss_exp_decrease_counterx = 10 * jnp.mean(loss_expdecr2)
 
             elif self.expected_decrease_loss == 2: # Base + Weighted average over counterexamples
-                loss_exp_decrease = jnp.mean(loss_expdecr2) + expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
+                loss_exp_decrease = jnp.mean(loss_expdecr2)
+                loss_exp_decrease_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
-            loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
-                                                      jnp.maximum(lip_policy - self.max_lip_policy, 0))
+            if self.enable_lipschitz_loss:
+                loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
+                                                          jnp.maximum(lip_policy - self.max_lip_policy, 0))
+            else:
+                loss_lipschitz = 0
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) - self.glob_min)
@@ -166,14 +178,18 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_aux)
+            loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx +
+                          loss_exp_decrease + loss_exp_decrease_counterx + loss_lipschitz + loss_aux)
             infos = {
-                '0. loss_total': loss_total,
-                '1. loss_init': loss_init,
-                '2. loss_unsafe': loss_unsafe,
-                '3. loss_exp_decrease': loss_exp_decrease,
-                # '4. loss_lipschitz': loss_lipschitz,
-                '5. loss_aux': loss_aux,
+                '0. total': loss_total,
+                '1. init': loss_init,
+                '2. init counterx': loss_init_counterx,
+                '3. unsafe': loss_unsafe,
+                '4. unsafe counterx': loss_init_counterx,
+                '5. expDecrease': loss_exp_decrease,
+                '6. expDecrease counterx': loss_init_counterx,
+                '7. loss_lipschitz': loss_lipschitz,
+                '8. loss_aux': loss_aux,
             }
 
             return loss_total, (infos, loss_expdecr)
