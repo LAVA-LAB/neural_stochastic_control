@@ -290,8 +290,10 @@ class Verifier:
                                           0.5 * self.check_init[:, [-1]])
         except:
             print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
-            _, V_init_ub = batched_ibp(V_state, self.check_init, self.buffer.dim, batch_size,
-                                       description='Forward pass for initial states (IBP)')
+            _, V_init_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params,
+                                                         self.check_init[:, :self.buffer.dim],
+                                                         0.5 * self.check_init[:, -1],
+                                                         out_dim=1, batch_size=batch_size)
 
         V = (V_init_ub - 1).flatten()
 
@@ -313,7 +315,15 @@ class Verifier:
         #     print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-        V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
+        try:
+            V_init = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_init[:, :self.buffer.dim])
+        except:
+            print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
+
+            V_init = self.batched_forward_pass(V_state.apply_fn, V_state.params,
+                                               counterx_init[:, :self.buffer.dim],
+                                               out_dim=1, batch_size=batch_size)
+
         V_mean = (V_init - 1).flatten()
         counterx_init_hard = counterx_init[V_mean > 0]
 
@@ -338,8 +348,10 @@ class Verifier:
                                             0.5 * self.check_unsafe[:, [-1]])
         except:
             print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
-            V_unsafe_lb, _ = batched_ibp(V_state, self.check_unsafe, self.buffer.dim, batch_size,
-                                         description='Forward pass for unsafe states (IBP)')
+            V_unsafe_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params,
+                                                           self.check_unsafe[:, :self.buffer.dim],
+                                                           0.5 * self.check_unsafe[:, -1],
+                                                           out_dim=1, batch_size=batch_size)
 
         V = (V_unsafe_lb - 1 / (1 - args.probability_bound)).flatten()
 
@@ -361,8 +373,15 @@ class Verifier:
         #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-        V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
-                                         counterx_unsafe[:, :self.buffer.dim])
+
+        try:
+            V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe[:, :self.buffer.dim])
+        except:
+            print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
+            V_unsafe = self.batched_forward_pass(V_state.apply_fn, V_state.params,
+                                               counterx_unsafe[:, :self.buffer.dim],
+                                               out_dim=1, batch_size=batch_size)
+
         V_mean = (V_unsafe - 1 / (1 - args.probability_bound)).flatten()
         counterx_unsafe_hard = counterx_unsafe[V_mean < 0]
 
@@ -423,21 +442,3 @@ class Verifier:
         V_old = jit(V_state.apply_fn)(V_state.params, x)
 
         return V_new-V_old
-
-
-def batched_ibp(V_state, input, dim, batch_size, description="Batched forward pass"):
-    ''' Batched IBP pass in given neural network '''
-
-    out_lb = np.zeros(len(input))
-    out_ub = np.zeros(len(input))
-    num_batches = np.ceil(len(input) / batch_size).astype(int)
-    starts = np.arange(num_batches) * batch_size
-    ends = np.minimum(starts + batch_size, len(input)
-
-    for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc=description):
-
-        out_lb[i:j], out_ub[i:j] = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params),
-                                                  input[i:j, :dim],
-                                                  0.5 * input[i:j, [-1]]).flatten()
-
-    return out_lb, out_ub
