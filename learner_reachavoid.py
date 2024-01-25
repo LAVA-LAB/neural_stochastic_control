@@ -55,7 +55,7 @@ class Learner:
                    mesh_loss,
                    mesh_verify_grid_init,
                    probability_bound,
-                   weight_multiplier
+                   expDecr_multiplier
                    ):
 
         w_decrease = samples_decrease[:, -1]
@@ -126,7 +126,7 @@ class Learner:
                 loss_exp_decrease = jnp.mean(loss_expdecr) + 10 * jnp.mean(loss_expdecr2)
 
             elif self.expected_decrease_loss == 2: # Base + Weighted average over counterexamples
-                loss_exp_decrease = jnp.mean(loss_expdecr2) + weight_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
+                loss_exp_decrease = jnp.mean(loss_expdecr2) + expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) + \
@@ -243,20 +243,26 @@ class MLP(nn.Module):
         return x
 
 
-def format_training_data(env, data, dim):
+def format_training_data(env: object, data: object, dim: object) -> object:
     # Define other datasets (for init, unsafe, and decrease sets)
 
-    data = {
+
+
+    return data
+
+
+def batch_training_data(env, key, buffer, epochs, batch_size):
+
+    data = buffer.data
+    dim = buffer.dim
+    total_samples = len(buffer.data)
+
+    samples = {
         'init': env.init_space.contains(data, dim=dim),
         'unsafe': env.unsafe_space.contains(data, dim=dim),
         'decrease': env.target_space.not_contains(data, dim=dim),
         'target': env.target_space.contains(data, dim=dim)
     }
-
-    return data
-
-
-def batch_training_data(key, samples, total_samples, epochs, batch_size):
 
     # Convert train dataset into batches
     # TODO: Tidy up this stuff..

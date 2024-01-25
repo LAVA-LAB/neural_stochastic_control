@@ -67,7 +67,7 @@ parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
 parser.add_argument('--probability_bound', type=float, default=0.9,
                     help="Bound on the reach-avoid probability to verify")
-parser.add_argument('--weight_multiplier', type=float, default=1,
+parser.add_argument('--expDecr_multiplier', type=float, default=1,
                     help="Multiply the weight on counterexamples by this value.")
 
 ### VERIFIER ARGUMENTS
@@ -208,29 +208,33 @@ for layer in Policy_state.params['params'].keys():
     Policy_state.params['params'][layer]['kernel'] = ppo_state['params']['actor']['params'][layer]['kernel']
     Policy_state.params['params'][layer]['bias'] = ppo_state['params']['actor']['params'][layer]['bias']
 
+# %%
+
 # Define Learner
 learn = Learner(env, expected_decrease_loss=args.expdecrease_loss_type, perturb_samples=args.perturb_train_samples)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 
 # Set training dataset (by plain grid over the state space)
-num_per_dimension_train = np.array(
-    np.ceil((env.observation_space.high - env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
+num_per_dimension_train = np.array(np.ceil((env.observation_space.high -
+                                            env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 
-train_buffer = Buffer(dim = env.observation_space.shape[0], extra_dims = 1)
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_train_grid,
                                   env.observation_space.high - 0.5 * args.mesh_train_grid, size=num_per_dimension_train)
 
+train_buffer = Buffer(dim = env.observation_space.shape[0],
+                      extra_dims = 1)
 initial_train_grid_plus = np.hstack(( initial_train_grid, np.zeros((len(initial_train_grid), 1)) )) # Attach weights
 train_buffer.append(initial_train_grid_plus)
 
 # Set counterexample buffer. Use uniform training grid as initial counterexamples
-args.counterx_buffer_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction)
-counterx_buffer = Buffer(dim = env.observation_space.shape[0], max_size = args.counterx_buffer_size, extra_dims = 1)
+counterx_buffer = Buffer(dim = env.observation_space.shape[0],
+                         max_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction),
+                         extra_dims = 1)
 initial_counterx_grid_plus = np.hstack(( initial_train_grid, np.ones((len(initial_train_grid), 1)) )) # Attach weights
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_counterx_grid_plus)
 
-# Set verify gridding, which covers the complete state space with the specified `tau` (mesh size)
+# Set uniform verify grid, which covers the complete state space with the specified `tau` (mesh size)
 verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
 
 # %%
@@ -247,13 +251,15 @@ for i in range(args.cegis_iterations):
 
     # Create plots for policy
     if args.plot_intermediate:
+        # Plot traces
         # filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
         # plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
+
+        # Plot vector plot of policy
         filename = f"plots/{start_datetime}_policy_vector_plot_iteration={i}"
         vector_plot(env, Policy_state, folder=args.cwd, filename=filename)
 
-    # Plot dataset
-    if args.plot_intermediate:
+        # Plot base training samples + counterexamples
         filename = f"plots/{start_datetime}_train_samples_iteration={i}"
         plot_dataset(env, train_buffer.data, counterx_buffer.data, folder=args.cwd, filename=filename)
 
@@ -268,13 +274,19 @@ for i in range(args.cegis_iterations):
 
     # Determine datasets for current iteration and put into batches
     # TODO: Currently, each batch consists of N randomly selected samples. Look into better ways to batch the data.
-    C = format_training_data(env, data=train_buffer.data, dim=train_buffer.dim)
-    key, X_decrease, X_init, X_unsafe, X_target = \
-        batch_training_data(key, C, len(train_buffer.data), num_batches, (1 - fraction_counterx) * args.batch_size)
+    key, X_decrease, X_init, X_unsafe, X_target = batch_training_data(
+        env=env,
+        key=key,
+        buffer=train_buffer,
+        epochs=num_batches,
+        batch_size=(1 - fraction_counterx) * args.batch_size)
 
-    CX = format_training_data(env, data=counterx_buffer.data, dim=counterx_buffer.dim)
-    key, CX_decrease, CX_init, CX_unsafe, CX_target = \
-        batch_training_data(key, CX, len(counterx_buffer.data), num_batches, fraction_counterx * args.batch_size)
+    key, CX_decrease, CX_init, CX_unsafe, CX_target = batch_training_data(
+        env=env,
+        key=key,
+        buffer=counterx_buffer,
+        epochs=num_batches,
+        batch_size=fraction_counterx*args.batch_size)
 
     print(f'- Initializing iteration took {time.time()-iteration_init} sec.')
 
@@ -300,7 +312,7 @@ for i in range(args.cegis_iterations):
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,
-                weight_multiplier = args.weight_multiplier
+                expDecr_multiplier = args.expDecr_multiplier
             )
 
             # Update parameters
