@@ -40,7 +40,7 @@ class Learner:
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
             print('- Learner setting: Training samples are slightly perturbed')
-        if self.lambda_lipschitz  0:
+        if self.lambda_lipschitz > 0:
             print('- Learner setting: Enable Lipschitz loss')
             print(f'--- For certificate up to: {self.max_lip_certificate:.3f}')
             print(f'--- For policy up to: {self.max_lip_policy:.3f}')
