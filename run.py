@@ -365,11 +365,6 @@ for i in range(args.cegis_iterations):
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
-        # Clip the suggested mesh at the lowest allowed value
-        counterx_current_mesh = counterx[:, -1]
-        min_allowed_mesh = counterx_current_mesh / args.max_refine_factor
-        suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
-
         if args.plot_intermediate:
             filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
             plot_dataset(env, verify.buffer.data, folder=args.cwd, filename=filename)
@@ -390,6 +385,11 @@ for i in range(args.cegis_iterations):
             print(f'\n- Skip refinement, because min. suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current max. value ({current_mesh:.5f})')
             verify_done = True
         else:
+            # Clip the suggested mesh at the lowest allowed value
+            counterx_current_mesh = counterx[:, -1]
+            min_allowed_mesh = counterx_current_mesh / args.max_refine_factor
+            suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
+
             current_mesh = np.max(suggested_mesh)
             if args.local_refinement:
                 print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
