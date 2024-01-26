@@ -237,7 +237,7 @@ class Verifier:
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f} ({norm})')
-        print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
+        print(f'-- Lipschitz coefficient of certificate: {lip_certificate:.3f} ({norm})')
         print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
 
         # Expected decrease condition check on all states outside target set
