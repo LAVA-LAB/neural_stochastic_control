@@ -220,8 +220,13 @@ for layer in Policy_state.params['params'].keys():
 # %%
 
 # Define Learner
-learn = Learner(env, expected_decrease_loss=args.expdecrease_loss_type, perturb_samples=args.perturb_train_samples,
-                enable_lipschitz_loss=args.enable_lipschitz_loss)
+learn = Learner(env,
+                expected_decrease_loss=args.expdecrease_loss_type,
+                perturb_samples=args.perturb_train_samples,
+                enable_lipschitz_loss=args.enable_lipschitz_loss,
+                linfty=args.linfty,
+                weighted=args.weighted,
+                cplip=args.cplip)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 

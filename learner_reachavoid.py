@@ -13,13 +13,20 @@ class Learner:
 
     def __init__(self,
                  env,
-                 expected_decrease_loss = 1,
-                 perturb_samples = True,
-                 enable_lipschitz_loss = False):
+                 expected_decrease_loss,
+                 perturb_samples,
+                 enable_lipschitz_loss ,
+                 linfty,
+                 weighted,
+                 cplip):
 
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
         self.enable_lipschitz_loss = enable_lipschitz_loss
+
+        self.linfty = linfty
+        self.weighted = weighted
+        self.cplip = cplip
 
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
@@ -115,9 +122,9 @@ class Learner:
 
         def loss_fun(certificate_params, policy_params):
 
-            # Compute Lipschitz coefficients. TODO: use the right inputs from the options here
-            lip_certificate, _ = lipschitz_coeff(certificate_params, True, True, True)
-            lip_policy, _ = lipschitz_coeff(policy_params, True, True, True)
+            # Compute Lipschitz coefficients.
+            lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
+            lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
             # Determine actions for every point in subgrid
             actions = Policy_state.apply_fn(policy_params, x_decrease + perturbation)
@@ -140,10 +147,10 @@ class Learner:
             loss_unsafe = jnp.max(losses_unsafe)
             loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
             
-            
-            # TODO: add if/else
-            K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
-            K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+            if self.linfty:
+                K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+            else:
+                K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,

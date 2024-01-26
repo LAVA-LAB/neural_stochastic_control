@@ -64,7 +64,7 @@ def create_train_state(model, act_funcs, rng, in_dim, learning_rate=0.01, ema=0,
                              ibp_fn=jax.jit(partial(apply_ibp_rectangular, act_funcs)))
 
 @partial(jax.jit, static_argnums=(1,2,3,))
-def lipschitz_coeff(params, weighted=True, CPLip=True, Linfty=False):
+def lipschitz_coeff(params, weighted, CPLip, Linfty):
     if Linfty: axis = 0
     else: axis = 1
     
