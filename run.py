@@ -363,7 +363,7 @@ for i in range(args.cegis_iterations):
         # Clip the suggested mesh at the lowest allowed value
         counterx_current_mesh = counterx[:, -1]
         min_allowed_mesh = counterx_current_mesh / 10
-        suggested_mesh = np.max(min_allowed_mesh, suggested_mesh)
+        suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
 
         if args.plot_intermediate:
             filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
