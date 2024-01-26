@@ -221,11 +221,13 @@ class Verifier:
 
         lip_policy, _ = lipschitz_coeff(jax.lax.stop_gradient(Policy_state.params), args.weighted, args.cplip, args.linfty)
         lip_certificate, _ = lipschitz_coeff(jax.lax.stop_gradient(V_state.params), args.weighted, args.cplip, args.linfty)
-        if args.linfty: K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1) 
+        if args.linfty: K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
         else: K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
+        print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
+        print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
 
         # Expected decrease condition check on all states outside target set
         V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
