@@ -4,14 +4,14 @@ from functools import partial
 from jax import jit
 import numpy as np
 import time
-from jax_utils import lipschitz_coeff_l1
+from jax_utils import lipschitz_coeff
 import os
 from tqdm import tqdm
-from buffer import Buffer, define_grid, define_grid_jax, L1_mesh2cell_width, L1_cell_width2mesh
+from buffer import Buffer, define_grid, define_grid_jax, mesh2cell_width, cell_width2mesh
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
-# Fix CUDNN non-determinisim; https://github.com/google/jax/issues/4823#issuecomment-952835771
+# Fix CUDNN non-determinism; https://github.com/google/jax/issues/4823#issuecomment-952835771
 os.environ["TF_XLA_FLAGS"] = "--xla_gpu_autotune_level=2 --xla_gpu_deterministic_reductions"
 os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
@@ -47,18 +47,18 @@ class Verifier:
 
 
 
-    def set_uniform_grid(self, env, mesh_size, verbose = False):
+    def set_uniform_grid(self, env, mesh_size, Linfty, verbose = False):
         '''
         Defines a rectangular gridding of the state space, used by the verifier
         :param env: Gym environment object
-        :param mesh_size: This is the L1 mesh size used to define the grid
+        :param mesh_size: This is the mesh size used to define the grid
         :return: 
         '''
 
         t = time.time()
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
-        verify_mesh_cell_width = L1_mesh2cell_width(mesh_size, env.state_dim)
+        verify_mesh_cell_width = mesh2cell_width(mesh_size, env.state_dim, Linfty)
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
@@ -86,7 +86,7 @@ class Verifier:
 
 
 
-    def local_grid_refinement(self, env, data, new_mesh_sizes):
+    def local_grid_refinement(self, env, data, new_mesh_sizes, Linfty):
         '''
         Refine the given array of points in the state space.
         '''
@@ -100,7 +100,7 @@ class Verifier:
         cell_widths = data[:,-1]
 
         # Width of each cell in the partition. The grid points are the centers of the cells.
-        new_cell_widths = L1_mesh2cell_width(new_mesh_sizes, env.state_dim)
+        new_cell_widths = mesh2cell_width(new_mesh_sizes, env.state_dim, Linfty)
 
         # Retrieve bounding box of cell in old grid
         points_lb = (points.T - 0.5 * cell_widths).T
@@ -219,9 +219,10 @@ class Verifier:
                          debug_noise_integration = False, batch_size = 1_000_000):
         ''' If IBP is True, then interval bound propagation is used. '''
 
-        lip_policy, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(Policy_state.params))
-        lip_certificate, _ = lipschitz_coeff_l1(jax.lax.stop_gradient(V_state.params))
-        K = lip_certificate * (env.lipschitz_f * (lip_policy + 1) + 1)
+        lip_policy, _ = lipschitz_coeff(jax.lax.stop_gradient(Policy_state.params), args.weighted, args.cplip, args.linfty)
+        lip_certificate, _ = lipschitz_coeff(jax.lax.stop_gradient(V_state.params), args.weighted, args.cplip, args.linfty)
+        if args.linfty: K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1) 
+        else: K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')
@@ -261,7 +262,7 @@ class Verifier:
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
         # Compute mesh size for every cell that is checked
-        tau = L1_cell_width2mesh(check_expDecr_at[:, -1], env.state_dim)
+        tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)

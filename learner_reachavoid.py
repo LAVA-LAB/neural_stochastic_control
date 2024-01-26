@@ -6,7 +6,7 @@ import optax
 from jax import random, numpy as jnp
 from flax.training.train_state import TrainState
 import flax.linen as nn
-from jax_utils import lipschitz_coeff_l1
+from jax_utils import lipschitz_coeff
 import time
 
 class Learner:
@@ -115,9 +115,9 @@ class Learner:
 
         def loss_fun(certificate_params, policy_params):
 
-            # Compute Lipschitz coefficients
-            lip_certificate, _ = lipschitz_coeff_l1(certificate_params)
-            lip_policy, _ = lipschitz_coeff_l1(policy_params)
+            # Compute Lipschitz coefficients. TODO: use the right inputs from the options here
+            lip_certificate, _ = lipschitz_coeff(certificate_params, True, True, True)
+            lip_policy, _ = lipschitz_coeff(policy_params, True, True, True)
 
             # Determine actions for every point in subgrid
             actions = Policy_state.apply_fn(policy_params, x_decrease + perturbation)
@@ -139,8 +139,11 @@ class Learner:
                                             + lip_certificate * mesh_loss)
             loss_unsafe = jnp.max(losses_unsafe)
             loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
-
-            K = lip_certificate * (self.env.lipschitz_f * (lip_policy + 1) + 1)
+            
+            
+            # TODO: add if/else
+            K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+            K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1) + 1)
 
             # Loss for expected decrease condition
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,

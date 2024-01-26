@@ -63,15 +63,18 @@ def create_train_state(model, act_funcs, rng, in_dim, learning_rate=0.01, ema=0,
     return AgentState.create(apply_fn=jax.jit(model.apply), params=params, tx=tx,
                              ibp_fn=jax.jit(partial(apply_ibp_rectangular, act_funcs)))
 
-@partial(jax.jit, static_argnums=(1,2,))
-def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
+@partial(jax.jit, static_argnums=(1,2,3,))
+def lipschitz_coeff(params, weighted=True, CPLip=True, Linfty=False):
+    if Linfty: axis = 0
+    else: axis = 1
+    
     if (not weighted and not CPLip):
         L = jnp.float32(1)
         # Compute Lipschitz coefficient by iterating through layers
         for layer in params["params"].values():
             # Involve only the 'kernel' dictionaries of each layer in the network
             if "kernel" in layer:
-                L *= jnp.max(jnp.sum(jnp.abs(layer["kernel"]), axis=1))
+                L *= jnp.max(jnp.sum(jnp.abs(layer["kernel"]), axis=axis))
 
     elif (not weighted and CPLip):
         L = jnp.float32(0)
@@ -83,7 +86,7 @@ def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
 
         nmatrices = len(matrices)
         products = [matrices]
-        prodnorms = [[jnp.max(jnp.sum(jnp.abs(mat), axis=1)) for mat in matrices]]
+        prodnorms = [[jnp.max(jnp.sum(jnp.abs(mat), axis=axis)) for mat in matrices]]
         for nprods in range(1, nmatrices):
             prod_list = []
             for idx in range(nmatrices - nprods):
@@ -105,7 +108,7 @@ def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
             L += Lloc / ncombs
 
 
-    elif (weighted and not CPLip):
+    elif (weighted and not CPLip and not Linfty):
         L = jnp.float32(1)
         matrices = []
         for layer in params["params"].values():
@@ -120,9 +123,23 @@ def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
             lip = jnp.max(colsums)
             weights.append(colsums / lip)
             L *= lip
+            
+    elif (weighted and not CPLip and Linfty):
+        L = jnp.float32(1)
+        matrices = []
+        for layer in params["params"].values():
+            # Involve only the 'kernel' dictionaries of each layer in the network
+            if "kernel" in layer:
+                matrices.append(layer["kernel"])
 
+        weights = [jnp.ones(jnp.shape(matrices[0])[0])]
+        for mat in matrices:
+            rowsums = jnp.sum(jnp.multiply(jnp.abs(mat), jnp.float32(1) / weights[-1][:, jnp.newaxis]), axis=0)
+            lip = jnp.max(rowsums)
+            weights.append(lip / rowsums)
+            L *= lip
 
-    elif (weighted and CPLip):
+    elif (weighted and CPLip and not Linfty):
         L = jnp.float32(0)
         matrices = []
         for layer in params["params"].values():
@@ -153,6 +170,51 @@ def lipschitz_coeff_l1(params, weighted=True, CPLip=True):
             prodnorms.append([jnp.max(jnp.multiply(jnp.sum(jnp.multiply(jnp.abs(prod_list[idx]),
                                                                         weights[-(idx + nprods + 2)][jnp.newaxis, :]), axis=1),
                                                    jnp.float32(1) / weights[-(idx + 1)]))
+                              for idx in range(nmatrices - nprods)])
+
+        ncombs = 1 << (nmatrices - 1)
+        for idx in range(ncombs):
+            # interpret idx as binary number of length nmatrices - 1,
+            # where the jth bit determines whether to put a norm or a product between layers j and j+1
+            jprev = 0
+            Lloc = jnp.float32(1)
+            for jcur in range(nmatrices):
+                if idx & (1 << jcur) == 0:  # last one always true
+                    Lloc *= prodnorms[jcur - jprev][jprev]
+                    jprev = jcur + 1
+
+            L += Lloc / ncombs
+            
+    elif (weighted and CPLip and Linfty):
+        L = jnp.float32(0)
+        matrices = []
+        for layer in params["params"].values():
+            # Involve only the 'kernel' dictionaries of each layer in the network
+            if "kernel" in layer:
+                matrices.append(layer["kernel"])
+
+        weights = [jnp.ones(jnp.shape(matrices[0])[0])]
+        for mat in matrices:
+            rowsums = jnp.sum(jnp.multiply(jnp.abs(mat), jnp.float32(1) / weights[-1][:, jnp.newaxis]), axis=0)
+            lip = jnp.max(rowsums)
+            weights.append(lip / rowsums)
+        weights.reverse()
+            
+        nmatrices = len(matrices)
+        products = [matrices]
+        extra0 = []
+        prodnorms = [[jnp.max(jnp.multiply(jnp.sum(jnp.multiply(jnp.abs(matrices[idx]),
+                                                                jnp.float32(1) / weights[-(idx + 1)][:, jnp.newaxis]), axis=0),
+                                           weights[-(idx + 2)]))
+                      for idx in range(nmatrices)]]
+        for nprods in range(1, nmatrices):
+            prod_list = []
+            for idx in range(nmatrices - nprods):
+                prod_list.append(jnp.matmul(products[nprods - 1][idx], matrices[idx + nprods]))
+            products.append(prod_list)
+            prodnorms.append([jnp.max(jnp.multiply(jnp.sum(jnp.multiply(jnp.abs(prod_list[idx]),
+                                                                        jnp.float32(1) /  weights[-(idx + 1)][:, jnp.newaxis]), axis=0),
+                                                   weights[-(idx + nprods + 2)]))
                               for idx in range(nmatrices - nprods)])
 
         ncombs = 1 << (nmatrices - 1)

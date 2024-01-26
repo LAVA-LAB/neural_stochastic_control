@@ -142,10 +142,11 @@ def define_grid_jax(low, high, size):
 
     return grid
 
-def L1_mesh2cell_width(mesh, dim):
+def mesh2cell_width(mesh, dim, Linfty):
     ''' Convert mesh size in L1 norm to cell width in a rectangular gridding '''
-    return mesh * (2 / dim)
+    return mesh * 2 if Linfty else mesh * (2 / dim)
 
-def L1_cell_width2mesh(cell_width, dim):
+def cell_width2mesh(cell_width, dim, Linfty):
     ''' Convert mesh size in L1 norm to cell width in a rectangular gridding '''
-    return cell_width * (dim / 2)
+    return cell_width / 2 if Linfty else cell_width * (dim / 2)
+    
