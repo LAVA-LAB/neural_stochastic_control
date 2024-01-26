@@ -53,6 +53,11 @@ class LinearEnv(gym.Env):
         self.lipschitz_f_l1 = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
         self.lipschitz_f_linfty = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=1)))
 
+        self.lipschitz_f_l1_A = float(np.max(np.sum(self.A, axis=0)))
+        self.lipschitz_f_linfty_A = float(np.max(np.sum(self.A, axis=1)))
+        self.lipschitz_f_l1_B = float(np.max(np.sum(self.B, axis=0)))
+        self.lipschitz_f_linfty_B = float(np.max(np.sum(self.B, axis=1)))
+
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api

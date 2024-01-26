@@ -18,7 +18,8 @@ class Learner:
                  enable_lipschitz_loss ,
                  linfty,
                  weighted,
-                 cplip):
+                 cplip,
+                 split_lip):
 
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
@@ -27,6 +28,7 @@ class Learner:
         self.linfty = linfty
         self.weighted = weighted
         self.cplip = cplip
+        self.split_lip = split_lip
 
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
@@ -147,7 +149,11 @@ class Learner:
             loss_unsafe = jnp.max(losses_unsafe)
             loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
             
-            if self.linfty:
+            if self.linfty and self.split_lip:
+                K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy + 1)
+            elif self.split_lip:
+                K = lip_certificate * (self.env.lipschitz_f_l1_A + self.env.lipschitz_f_l1_B * lip_policy + 1)
+            elif self.linfty:
                 K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1) + 1)
             else:
                 K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)

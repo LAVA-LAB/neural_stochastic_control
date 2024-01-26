@@ -221,8 +221,15 @@ class Verifier:
 
         lip_policy, _ = lipschitz_coeff(jax.lax.stop_gradient(Policy_state.params), args.weighted, args.cplip, args.linfty)
         lip_certificate, _ = lipschitz_coeff(jax.lax.stop_gradient(V_state.params), args.weighted, args.cplip, args.linfty)
-        if args.linfty: K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1) 
-        else: K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+        
+        if args.linfty and args.split_lip:
+            K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy + 1)
+        elif args.split_lip:
+            K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy + 1)
+        elif args.linfty:
+            K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+        else:
+            K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f}')

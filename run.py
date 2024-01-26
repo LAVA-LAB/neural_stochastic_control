@@ -106,6 +106,8 @@ parser.add_argument('--weighted', action=argparse.BooleanOptionalAction, default
                     help="If True, use weighted norms to compute Lipschitz constants")
 parser.add_argument('--cplip', action=argparse.BooleanOptionalAction, default=True,
                     help="If True, use CPLip method to compute Lipschitz constants")
+parser.add_argument('--split_lip', action=argparse.BooleanOptionalAction, default=True,
+                    help="If True, use L_f split over the system state space and control action space")
 
 args = parser.parse_args()
 args.cwd = os.getcwd()
@@ -226,7 +228,8 @@ learn = Learner(env,
                 enable_lipschitz_loss=args.enable_lipschitz_loss,
                 linfty=args.linfty,
                 weighted=args.weighted,
-                cplip=args.cplip)
+                cplip=args.cplip,
+                split_lip=args.split_lip)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 
