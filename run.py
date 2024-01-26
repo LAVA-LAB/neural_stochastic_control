@@ -30,6 +30,7 @@ parser.add_argument('--model', type=str, default="LinearEnv",
                     help="Gymnasium environment ID")
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
+
 ###
 parser.add_argument('--ppo_load_file', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
@@ -67,8 +68,12 @@ parser.add_argument('--batch_size', type=int, default=4096,
                     help="Batch size used by the learner in each epoch")
 parser.add_argument('--probability_bound', type=float, default=0.9,
                     help="Bound on the reach-avoid probability to verify")
-parser.add_argument('--enable_lipschitz_loss', action=argparse.BooleanOptionalAction, default=False,
-                    help="If True, a term for the Lipschitz coefficients is included in the loss function")
+parser.add_argument('--loss_lipschitz_lambda', type=float, default=0,
+                    help="Factor to multiply the Lipschitz loss component with")
+parser.add_argument('--loss_lipschitz_certificate', type=float, default=15,
+                    help="When the certificate Lipschitz coefficient is below this value, then the loss is zero")
+parser.add_argument('--loss_lipschitz_policy', type=float, default=4,
+                    help="When the policy Lipschitz coefficient is below this value, then the loss is zero")
 parser.add_argument('--expDecr_multiplier', type=float, default=1,
                     help="Multiply the weight on counterexamples by this value.")
 
@@ -77,7 +82,7 @@ parser.add_argument('--verify_batch_size', type=int, default=10000,
                     help="Number of states for which the verifier checks exp. decrease condition in the same batch.")
 parser.add_argument('--noise_partition_cells', type=int, default=12,
                     help="Number of cells to partition the noise space in per dimension (to numerically integrate stochastic noise)")
-parser.add_argument('--counterx_refresh_fraction', type=float, default=0.25,
+parser.add_argument('--counterx_refresh_fraction', type=float, default=0.50,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
                     help="Fraction of counter examples, compared to the total train data set.")
@@ -100,6 +105,7 @@ parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAc
 parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")
 
+## Lipschitz coefficient arguments
 parser.add_argument('--linfty', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, use the L_infty norm rather than the L_1 norm")
 parser.add_argument('--weighted', action=argparse.BooleanOptionalAction, default=True,
@@ -225,7 +231,9 @@ for layer in Policy_state.params['params'].keys():
 learn = Learner(env,
                 expected_decrease_loss=args.expdecrease_loss_type,
                 perturb_samples=args.perturb_train_samples,
-                enable_lipschitz_loss=args.enable_lipschitz_loss,
+                loss_lipschitz_lambda=args.loss_lipschitz_lambda,
+                loss_lipschitz_certificate=args.loss_lipschitz_certificate,
+                loss_lipschitz_policy=args.loss_lipschitz_policy,
                 linfty=args.linfty,
                 weighted=args.weighted,
                 cplip=args.cplip,
@@ -354,6 +362,11 @@ for i in range(args.cegis_iterations):
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
+
+        # Clip the suggested mesh at the lowest allowed value
+        counterx_current_mesh = counterx[:, -1]
+        min_allowed_mesh = counterx_current_mesh / 10
+        suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
 
         if args.plot_intermediate:
             filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
