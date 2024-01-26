@@ -15,15 +15,24 @@ class Learner:
                  env,
                  expected_decrease_loss,
                  perturb_samples,
-                 enable_lipschitz_loss ,
+                 loss_lipschitz_lambda,
+                 loss_lipschitz_certificate,
+                 loss_lipschitz_policy,
                  linfty,
                  weighted,
                  cplip):
 
         self.expected_decrease_loss = expected_decrease_loss
         self.perturb_samples = perturb_samples
-        self.enable_lipschitz_loss = enable_lipschitz_loss
 
+        # Lipschitz factor
+        self.lambda_lipschitz = loss_lipschitz_lambda
+
+        # Maximum value for lipschitz coefficients (above this, incur loss)
+        self.max_lip_certificate = loss_lipschitz_certificate
+        self.max_lip_policy = loss_lipschitz_policy
+
+        # Lipschitz coefficient settings
         self.linfty = linfty
         self.weighted = weighted
         self.cplip = cplip
@@ -31,17 +40,12 @@ class Learner:
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
             print('- Learner setting: Training samples are slightly perturbed')
-        if self.enable_lipschitz_loss:
+        if self.lambda_lipschitz  0:
             print('- Learner setting: Enable Lipschitz loss')
+            print(f'--- For certificate up to: {self.max_lip_certificate:.3f}')
+            print(f'--- For policy up to: {self.max_lip_policy:.3f}')
 
         self.env = env
-
-        # Lipschitz factor
-        self.lambda_lipschitz = 0.001
-
-        # Maximum value for lipschitz coefficients (above this, incur loss)
-        self.max_lip_policy = 4
-        self.max_lip_certificate = 15
 
         self.glob_min = 0.3
         self.N_expectation = 16
@@ -172,11 +176,8 @@ class Learner:
                 loss_exp_decrease_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
-            if self.enable_lipschitz_loss:
-                loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
-                                                          jnp.maximum(lip_policy - self.max_lip_policy, 0))
-            else:
-                loss_lipschitz = 0
+            loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
+                                                      jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
             loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) - self.glob_min)
