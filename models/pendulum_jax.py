@@ -47,7 +47,8 @@ class PendulumEnv(gym.Env):
 
         self.state_dim = 2
 
-        self.lipschitz_f = float(1.78)
+        self.lipschitz_f_l1 = float(1.78)
+        #TODO: compute self.lipschitz_f_linfty
 
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old

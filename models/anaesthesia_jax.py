@@ -51,7 +51,8 @@ class AnaesthesiaEnv(gym.Env):
         self.W = np.diag([0.0001, 0.0001, 0.0001])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
-        self.lipschitz_f = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
+        self.lipschitz_f_l1 = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
+        self.lipschitz_f_linfty = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=1)))
 
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old

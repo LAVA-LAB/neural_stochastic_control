@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from learner_reachavoid import MLP, Learner, batch_training_data
-from buffer import Buffer, define_grid, L1_mesh2cell_width
+from buffer import Buffer, define_grid, mesh2cell_width
 from verifier import Verifier
-from jax_utils import create_train_state, lipschitz_coeff_l1
+from jax_utils import create_train_state, lipschitz_coeff
 from plot import plot_certificate_2D, plot_dataset, plot_traces, vector_plot
 
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -100,10 +100,15 @@ parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAc
 parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")
 
+parser.add_argument('--linfty', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, use the L_infty norm rather than the L_1 norm")
+parser.add_argument('--weighted', action=argparse.BooleanOptionalAction, default=True,
+                    help="If True, use weighted norms to compute Lipschitz constants")
+parser.add_argument('--cplip', action=argparse.BooleanOptionalAction, default=True,
+                    help="If True, use CPLip method to compute Lipschitz constants")
+
 args = parser.parse_args()
 args.cwd = os.getcwd()
-
-# args.ppo_load_file = 'ckpt/LinearEnv_seed=1_2023-12-27_16-20-37'
 
 if args.model == 'LinearEnv':
     envfun = LinearEnv
@@ -146,6 +151,9 @@ if args.ppo_load_file == '':
                        ent_coef=0.0,
                        vf_coef=0.5,
                        max_grad_norm=0.5,
+                       weighted = args.weighted, 
+                       cplip = args.cplip, 
+                       linfty = args.linfty,
                        batch_size=batch_size,
                        minibatch_size=minibatch_size,
                        num_iterations=num_iterations)
@@ -182,8 +190,7 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = envfun()
 
-# TODO: This applies to L1-norm grid only
-args.train_mesh_cell_width = L1_mesh2cell_width(args.mesh_train_grid, env.state_dim)
+args.train_mesh_cell_width = mesh2cell_width(args.mesh_train_grid, env.state_dim, args.linfty)
 
 # Initialize certificate network
 certificate_model = MLP(neurons_per_layer, V_act_funcs)
@@ -239,7 +246,7 @@ initial_counterx_grid_plus = np.hstack(( initial_train_grid, np.ones((len(initia
 counterx_buffer.append_and_remove(refresh_fraction=0.0, samples=initial_counterx_grid_plus)
 
 # Set uniform verify grid, which covers the complete state space with the specified `tau` (mesh size)
-verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
+verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=args.linfty)
 
 # %%
 
@@ -311,8 +318,8 @@ for i in range(args.cegis_iterations):
     print(f'\nLoss components in last train step:')
     for ky, info in infos.items():
         print(f' - {ky}:', info) # {info:.8f}')
-    print('\nLipschitz policy (all methods):', [lipschitz_coeff_l1(Policy_state.params, i, j) for i in [True, False] for j in [True, False]])
-    print('Lipschitz certificate (all methods)', [lipschitz_coeff_l1(V_state.params, i, j) for i in [True, False] for j in [True, False]])
+    print('\nLipschitz policy (all methods):', [lipschitz_coeff(Policy_state.params, i1, i2, i3) for i1 in [True, False] for i2 in [True, False] for i3 in [True, False]])
+    print('Lipschitz certificate (all methods)', [lipschitz_coeff(V_state.params, i1, i2, i3) for i1 in [True, False] for i2 in [True, False] for i3 in [True, False]])
 
     # Create plots (only works for 2D model)
     if args.plot_intermediate and env.state_dim == 2:
@@ -364,12 +371,12 @@ for i in range(args.cegis_iterations):
             if args.local_refinement:
                 print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
-                verify.local_grid_refinement(env, counterx, suggested_mesh)
+                verify.local_grid_refinement(env, counterx, suggested_mesh, args.linfty)
             else:
                 # If global refinement is used, then use the lowest of all suggested mesh values
                 args.mesh_verify_grid_init = np.min(suggested_mesh)
                 print(f'\n- Globally refine mesh size to {args.mesh_verify_grid_init:.5f}')
-                verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
+                verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=args.linfty)
 
         refine_nr += 1
 
@@ -389,7 +396,7 @@ for i in range(args.cegis_iterations):
 
     # Uniformly refine verification grid to smaller mesh
     args.mesh_verify_grid_init = np.maximum(0.75 * args.mesh_verify_grid_init, args.mesh_verify_grid_min)
-    verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init)
+    verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=args.linfty)
 
     plt.close('all')
     print('\n================\n')

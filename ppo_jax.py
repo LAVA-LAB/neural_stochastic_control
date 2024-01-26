@@ -19,11 +19,11 @@ from typing import Callable
 from flax import struct
 
 from functools import partial
-from jax_utils import lipschitz_coeff_l1
+from jax_utils import lipschitz_coeff
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
-# Fix CUDNN non-determinisim; https://github.com/google/jax/issues/4823#issuecomment-952835771
+# Fix CUDNN non-determinism; https://github.com/google/jax/issues/4823#issuecomment-952835771
 os.environ["TF_XLA_FLAGS"] = "--xla_gpu_autotune_level=2 --xla_gpu_deterministic_reductions"
 os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
@@ -58,6 +58,10 @@ class PPOargs:
     """coefficient of the value function"""
     max_grad_norm: float
     """the maximum norm for the gradient clipping"""
+    weighted: bool
+    cplip: bool
+    linfty: bool
+    """settings for the Lipschitz constant"""
     # to be filled in runtime
     batch_size: int
     minibatch_size: int
@@ -369,7 +373,7 @@ def update_ppo_jit(
         entropy_loss = entropy.mean()
 
         # Loss for lipschitz coefficient
-        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor'])[0] - max_policy_lipschitz, 0)
+        lipschitz_loss = jnp.maximum(lipschitz_coeff(params['actor'], args.weighted, args.cplip, args.linfty)[0] - max_policy_lipschitz, 0)
 
         # main loss as sum of each part loss
         loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
@@ -523,7 +527,7 @@ def update_ppo(
         entropy_loss = entropy.mean()
 
         # Loss for lipschitz coefficient
-        lipschitz_loss = jnp.maximum(lipschitz_coeff_l1(params['actor'])[0] - max_policy_lipschitz, 0)
+        lipschitz_loss = jnp.maximum(lipschitz_coeff(params['actor'], args.weighted, args.cplip, args.linfty)[0] - max_policy_lipschitz, 0)
 
         # main loss as sum of each part loss
         loss = pg_loss - args.ent_coef * entropy_loss + v_loss * args.vf_coef + lipschitz_loss
@@ -663,7 +667,7 @@ def PPO(environment_function,
         for key,info in losses.items():
             print(f'--- {key}: {info:.4f}')
 
-        lip_policy = lipschitz_coeff_l1(agent_state.params['actor'])[0]
+        lip_policy = lipschitz_coeff(agent_state.params['actor'], args.weighted, args.cplip, args.linfty)[0]
 
         print(f'- Lipschitz coefficient (L1-norm) of policy network: {lip_policy:.3f}')
 

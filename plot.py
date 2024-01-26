@@ -131,8 +131,6 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
             filepath = Path(folder, filename).with_suffix('.'+str(form))
             plt.savefig(filepath, format=form, bbox_inches='tight')
 
-    plt.show()
-
     return
 
 def plot_certificate_2D(env, cert_state, folder=False, filename=False):
