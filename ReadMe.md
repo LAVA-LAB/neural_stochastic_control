@@ -1,5 +1,13 @@
 # Running
 
+Probability bound of 99.9% with L1 norm:
+
+```python3 run.py --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 2 --probability_bound 0.999 --expDecr_multiplier 100 --local_refinement --epochs 25 --perturb_counterexamples --mesh_refine_min 0.00001 --mesh_loss 0.0001 --mesh_train_grid 0.01 --mesh_loss 0.001 --mesh_verify_grid_init 0.01 --mesh_verify_grid_min 0.01 --plot_intermediate```
+
+```python3 run.py --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 2 --probability_bound 0.999 --expDecr_multiplier 100 --local_refinement --epochs 25 --perturb_counterexamples --mesh_refine_min 0.00001 --mesh_loss 0.00005 --mesh_train_grid 0.005 --mesh_loss 0.0005 --mesh_verify_grid_init 0.005 --mesh_verify_grid_min 0.005 --plot_intermediate --linfty```
+
+
+
 The main file to run is `run.py`. Command to verify with probability bound 0.99 and a minimum verify mesh of 0.01, and a minimum final mesh of 0.0001, with local refinements:
 
 ```python3 run.py --ppo_load_file ckpt/LinearEnv_seed=1_2024-01-05_17-29-25 --model LinearEnv --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 2 --probability_bound 0.99 --expDecr_multiplier 100 --local_refinement --epochs 25 --perturb_counterexamples```

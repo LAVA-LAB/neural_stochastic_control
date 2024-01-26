@@ -10,7 +10,6 @@ import os
 from pathlib import Path
 import orbax.checkpoint
 from flax.training import orbax_utils
-from commons import ticDiff, tocDiff
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -54,8 +53,12 @@ parser.add_argument('--mesh_verify_grid_init', type=float, default=0.01,
                     help="Initial mesh size for verifying grid. Mesh is defined such that |x-y|_1 <= tau for any x \in X and discretized point y.")
 parser.add_argument('--mesh_verify_grid_min', type=float, default=0.01,
                     help="Minimum mesh size for verifying grid.")
+
+### REFINE ARGUMENTS
 parser.add_argument('--mesh_refine_min', type=float, default=0.0001,
                     help="Lowest allowed verification grid mesh size in the final verification")
+parser.add_argument('--max_refine_factor', type=float, default=100,
+                    help="Maximum value to split each grid point into, during the (local) refinement")
 
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
@@ -265,7 +268,6 @@ verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=ar
 
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
-ticDiff()
 
 update_policy_after_iteration = 3
 
@@ -362,7 +364,7 @@ for i in range(args.cegis_iterations):
 
         # Clip the suggested mesh at the lowest allowed value
         counterx_current_mesh = counterx[:, -1]
-        min_allowed_mesh = counterx_current_mesh / 10
+        min_allowed_mesh = counterx_current_mesh / args.max_refine_factor
         suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
 
         if args.plot_intermediate:
