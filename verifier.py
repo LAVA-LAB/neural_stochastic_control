@@ -151,6 +151,8 @@ class Verifier:
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- New local refinement took:', time.time() - t)
 
+        print(grid_cache)
+
         #####
 
         t = time.time()
