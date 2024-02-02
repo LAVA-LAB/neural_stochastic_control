@@ -287,10 +287,10 @@ class Verifier:
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
-            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.3f}; "
-                  f"mean={np.mean(Vdiff):.3f}; max={np.max(Vdiff):.3f}")
+            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.5f}; "
+                  f"mean={np.mean(Vdiff):.5f}; max={np.max(Vdiff):.5f}")
         if len(counterx_expDecr) > 0:
-            print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.5f}')
+            print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
             mesh_min = np.maximum(np.min(suggested_mesh_expDecr), args.mesh_refine_min)
         else:
@@ -316,8 +316,8 @@ class Verifier:
 
         print(f'\n- {len(counterx_init)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
-            print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.3f}; "
-                  f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+            print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.5f}; "
+                  f"mean={np.mean(V):.5f}; max={np.max(V):.5f}")
 
         # Compute suggested mesh
         suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=mesh_min)
@@ -350,8 +350,8 @@ class Verifier:
         out_of = self.env.init_space.contains(counterx_init, dim=self.buffer.dim, delta=0)
         print(f'-- {len(counterx_init_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_init_hard) > 0:
-            print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.3f}; "
-                  f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
+            print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.5f}; "
+                  f"mean={np.mean(V_mean):.5f}; max={np.max(V_mean):.5f}")
 
         #####
 
@@ -374,8 +374,8 @@ class Verifier:
 
         print(f'\n- {len(counterx_unsafe)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
-            print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.3f}; "
-                  f"mean={np.mean(V):.3f}; max={np.max(V):.3f}")
+            print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.5f}; "
+                  f"mean={np.mean(V):.5f}; max={np.max(V):.5f}")
 
         # Compute suggested mesh
         suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=mesh_min)
@@ -408,8 +408,8 @@ class Verifier:
         out_of = self.env.unsafe_space.contains(counterx_unsafe, dim=self.buffer.dim, delta=0)
         print(f'-- {len(counterx_unsafe_hard)} hard violations (out of {len(out_of)})')
         if len(counterx_unsafe_hard) > 0:
-            print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.3f}; "
-                  f"mean={np.mean(V_mean):.3f}; max={np.max(V_mean):.3f}")
+            print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.5f}; "
+                  f"mean={np.mean(V_mean):.5f}; max={np.max(V_mean):.5f}")
 
         #####
 
