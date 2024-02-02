@@ -110,12 +110,51 @@ class Verifier:
         num_per_dimension = np.array(
             np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
+        #####
+
+        t = time.time()
+
         grid_plus = [[]]*len(new_mesh_sizes)
 
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension)
         print('- Unique number of grids to compute:', unique_num)
-        # for
+        grid_cache = {}
+
+        # Set box from -1 to 1
+        unit_lb = -np.ones(self.buffer.dim)
+        unit_ub = np.ones(self.buffer.dim)
+
+        for num in unique_num:
+            # Width of unit cube is 2 by definition
+            cell_width = 2 / num
+
+            # Define grid over the unit cube, for the given number of points per dimension
+            grid_cache[num] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
+
+        print(grid_cache)
+
+        # For each given point, compute the subgrid
+        for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
+            # Determine by what factor the grid over the unit cube should be multiplied
+            multiply_factor = cell_width / 2
+
+            print('multiply_factor:', multiply_factor)
+
+            # Get grid from cache and multiply
+            grid = grid_cache[num] * multiply_factor
+
+            cell_width_column = np.full((len(grid), 1), fill_value=cell_width)
+            grid_plus[i] = np.hstack((grid, cell_width_column))
+
+        stacked_grid_plus_new = np.vstack(grid_plus)
+        print('- New local refinement took:', time.time() - t)
+
+        #####
+
+        t = time.time()
+
+        grid_plus = [[]] * len(new_mesh_sizes)
 
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
@@ -125,9 +164,13 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
+        stacked_grid_plus = np.vstack(grid_plus)
+        print('- New local refinement took:', time.time() - t)
+
+        assert np.all(stacked_grid_plus == stacked_grid_plus_new)
+
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
-        stacked_grid_plus = np.vstack(grid_plus)
         self.buffer.append(stacked_grid_plus)
 
         # Format the verification grid into the relevant regions of the state space
