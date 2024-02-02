@@ -105,9 +105,9 @@ class PendulumEnv(gym.Env):
         state_lb = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
 
         x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
-             3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_lb[0]
+             3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_ub[0]
         x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-        x0 = state[0] + self.delta * x1 + 0.01 * w_lb[1]
+        x0 = state[0] + self.delta * x1 + 0.01 * w_ub[1]
         state_ub = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
 
         state_mean = (state_ub + state_lb) / 2
