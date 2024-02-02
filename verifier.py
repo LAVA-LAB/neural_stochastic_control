@@ -120,6 +120,7 @@ class Verifier:
         unique_num = np.unique(num_per_dimension, axis=0)
         print('- Number onique number of grids to compute:', len(unique_num))
         grid_cache = {}
+        grid_length_cache = {}
 
         # Set box from -1 to 1
         unit_lb = -np.ones(self.buffer.dim)
@@ -136,6 +137,7 @@ class Verifier:
 
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
+            grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
 
         print('- New local refinement took part 1:', time.time() - t)
         t = time.time()
@@ -189,8 +191,15 @@ class Verifier:
 
             return grid_plus
 
+        max_length = np.max([len(grid) for grid in grid_cache.values()])
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-            grid_plus[i] = jit_fn(grid_cache[tuple(num)], lb, ub, num)
+
+            ln = grid_length_cache[tuple(num)]
+
+            grid_plus_zeros = np.zeros((max_length, self.buffer.dim))
+            grid_plus_zeros[:ln] = grid_cache[tuple(num)]
+
+            grid_plus[i] = jit_fn(grid_plus_zeros, lb, ub, num)[:ln]
 
         print('- New v2 part 2a took:', time.time() - t)
         t = time.time()
