@@ -138,7 +138,7 @@ class Verifier:
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
-            multiply_factor = (cell_width * num) / 2
+            multiply_factor = (ub - lb) / 2
 
             mean = (lb + ub) / 2
 
