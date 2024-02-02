@@ -134,6 +134,9 @@ class Verifier:
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
+        print('- New local refinement took part 1:', time.time() - t)
+        t = time.time()
+
         print('Length of loop 2:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
@@ -158,7 +161,7 @@ class Verifier:
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
         stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- New local refinement took:', time.time() - t)
+        print('- New local refinement took part 2:', time.time() - t)
 
         #####
 
