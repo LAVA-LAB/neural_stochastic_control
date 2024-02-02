@@ -136,9 +136,11 @@ class Verifier:
 
         print('Length of loop 2:', len(num_per_dimension))
         # For each given point, compute the subgrid
-        for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
+        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
             multiply_factor = (ub - lb) / 2
+
+            cell_width = (ub - lb) / num
 
             mean = (lb + ub) / 2
 
@@ -149,7 +151,6 @@ class Verifier:
                 print('mean:', mean)
                 print('lb:', lb)
                 print('ub:', ub)
-                print('cell_width:', cell_width)
                 print('multiply_factor:', multiply_factor)
                 print(grid)
 
@@ -159,8 +160,6 @@ class Verifier:
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- New local refinement took:', time.time() - t)
 
-        print(grid_cache)
-
         #####
 
         t = time.time()
@@ -169,8 +168,9 @@ class Verifier:
 
         print('Length of loop 1:', len(num_per_dimension))
         # For each given point, compute the subgrid
-        for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
+        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
 
+            cell_width = (ub - lb) / num_per_dimension
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
