@@ -125,6 +125,9 @@ class Verifier:
         unit_lb = -np.ones(self.buffer.dim)
         unit_ub = np.ones(self.buffer.dim)
 
+        print('- New local refinement took part 0:', time.time() - t)
+        t = time.time()
+
         print('Length of loop 1:', len(unique_num))
         # First create a cache with all the refined grids that will be needed
         for num in unique_num:
@@ -151,8 +154,11 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
+        print('- New local refinement took part 2a:', time.time() - t)
+        t = time.time()
+
         stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- New local refinement took part 2:', time.time() - t)
+        print('- New local refinement took part 2b:', time.time() - t)
 
         #####
 
@@ -170,8 +176,11 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
+        print('- Old local refinement took part 2a:', time.time() - t)
+        t = time.time()
+
         stacked_grid_plus = np.vstack(grid_plus)
-        print('- Old local refinement took:', time.time() - t)
+        print('- Old local refinement took part 2b:', time.time() - t)
 
         print( np.abs(stacked_grid_plus - stacked_grid_plus_new) )
 
