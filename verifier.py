@@ -115,16 +115,7 @@ class Verifier:
         t = time.time()
 
         grid_plus = [[]]*len(new_mesh_sizes)
-
-        print('-----')
-
-        print(points_ub[0] + 0.5 * new_cell_widths[0])
-        print(num_per_dimension[0])
-
-        print('-----')
-
-        print(num_per_dimension)
-
+        
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension, axis=0)
         print('- Unique number of grids to compute:', unique_num)
@@ -139,27 +130,13 @@ class Verifier:
             # Width of unit cube is 2 by definition
             cell_width = 2 / num
 
-            print(cell_width)
-
-            print(unit_lb)
-            print(unit_ub)
-
-            print(unit_lb + 0.5 * cell_width)
-            print(unit_ub - 0.5 * cell_width)
-
-            print('num:', num)
-
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
-
-        print(grid_cache)
 
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
             multiply_factor = cell_width / 2
-
-            print('multiply_factor:', multiply_factor)
 
             # Get grid from cache and multiply
             grid = grid_cache[tuple(num)] * multiply_factor
