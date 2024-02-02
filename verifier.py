@@ -298,8 +298,27 @@ class Verifier:
             print('The 10 monst violating points are:')
             assert len(Vdiff[violation_idxs]) == len(counterx_expDecr)
             ii = np.argsort(Vdiff[violation_idxs])[::-1][:10]
-            print('Violations:', ii)
+            print('Violations:', Vdiff[ii])
             print('Points:', counterx_expDecr[ii])
+
+            x = counterx_expDecr[ii]
+
+            Vcurr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(x[:, :self.buffer.dim]))
+
+            print('Vcurr:\n', Vcurr)
+
+            a = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
+                                            env.action_space.shape[0])
+
+            noise_key = jax.random.split(noise_key, (len(x), self.N_expectation))
+            print('Noise keys generated:', noise_key.shape)
+
+            xnew, _ = np.array([self.env.vstep_noise_batch(x[i], noise_key[i], a[i]) for i in range(len(x))])
+
+            Vnext = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(xnew[:, :self.buffer.dim]))
+
+            print('Vnext:\n', Vnext)
+
 
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.8f}')

@@ -192,7 +192,7 @@ class PendulumEnv(gym.Env):
 
     def _reset(self, key):
 
-        high = np.array([1, 1])
+        high = np.array([0.7, 0.7])
         low = -high  # We enforce symmetric limits.
 
         key, subkey = jax.random.split(key)
