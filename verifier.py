@@ -118,7 +118,7 @@ class Verifier:
 
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension, axis=0)
-        print('- Unique number of grids to compute:', unique_num)
+        print('- Number onique number of grids to compute:', len(unique_num))
         grid_cache = {}
 
         # Set box from -1 to 1
@@ -166,6 +166,8 @@ class Verifier:
 
         stacked_grid_plus = np.vstack(grid_plus)
         print('- Old local refinement took:', time.time() - t)
+
+        print( np.abs(stacked_grid_plus - stacked_grid_plus_new) )
 
         assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
 
