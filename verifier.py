@@ -138,12 +138,20 @@ class Verifier:
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
-            multiply_factor = cell_width * num
+            multiply_factor = (cell_width * num) / 2
 
             mean = (lb + ub) / 2
 
             # Get grid from cache and multiply
             grid = grid_cache[tuple(num)] * multiply_factor + mean
+
+            if np.all(num == 5):
+                print('mean:', mean)
+                print('lb:', lb)
+                print('ub:', ub)
+                print('cell_width:', cell_width)
+                print('multiply_factor:', multiply_factor)
+                print(grid)
 
             cell_width_column = np.full((len(grid), 1), fill_value=cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
