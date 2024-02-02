@@ -171,6 +171,11 @@ class Verifier:
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
 
             cell_width = (ub - lb) / num_per_dimension
+
+            print(cell_width.shape)
+            print(lb.shape)
+            print(num.shape)
+
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
