@@ -315,6 +315,8 @@ class Verifier:
 
             xnew = np.array([self.env.vstep_noise_batch(x[i], noise_key[i], a[i])[0] for i in range(len(x))])
 
+            print('xnew:\n', xnew)
+
             Vnext = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(xnew[:, :self.buffer.dim]))
 
             print('Vnext:\n', Vnext)
