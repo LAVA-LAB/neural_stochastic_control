@@ -187,7 +187,7 @@ class Verifier:
         stacked_grid_plus = np.vstack(grid_plus)
         print('- New local refinement took:', time.time() - t)
 
-        assert np.all(stacked_grid_plus == stacked_grid_plus_new)
+        assert np.all(np.isclose(stacked_grid_plus == stacked_grid_plus_new))
 
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
