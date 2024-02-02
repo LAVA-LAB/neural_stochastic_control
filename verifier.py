@@ -116,6 +116,13 @@ class Verifier:
 
         grid_plus = [[]]*len(new_mesh_sizes)
 
+        print('-----')
+
+        print(points_ub[0] + 0.5 * new_cell_widths[0])
+        print(number_per_dimension[0])
+
+        print('-----')
+
         print(num_per_dimension)
 
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
@@ -139,6 +146,8 @@ class Verifier:
 
             print(unit_lb + 0.5 * cell_width)
             print(unit_ub - 0.5 * cell_width)
+
+            print('num:', num)
 
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[num] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
