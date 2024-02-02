@@ -26,7 +26,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
             action = Policy_state.apply_fn(Policy_state.params, state)
 
             # Make step in environment
-            traces[j+1,i], key = env.step(state, key, action)
+            traces[j+1,i], key = env.step_noise_batch(state, key, action)
 
     # Plot traces
     for i in range(num_traces):

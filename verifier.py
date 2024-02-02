@@ -113,7 +113,7 @@ class Verifier:
         grid_plus = [[]]*len(new_mesh_sizes)
 
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
-        # unique_num = np.unique(num_per_dimension)
+        unique_num = np.unique(num_per_dimension)
         print('- Unique number of grids to compute:', unique_num)
         # for
 

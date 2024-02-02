@@ -94,7 +94,7 @@ class AnaesthesiaEnv(gym.Env):
         self.vstep = jax.vmap(self.step_train, in_axes=0, out_axes=0)
 
         # Vectorized step, but only with different noise values
-        self.vstep_noise_batch = jax.vmap(self.step, in_axes=(None, 0, None), out_axes=0)
+        self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, 0, None), out_axes=0)
         self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
     @partial(jit, static_argnums=(0,))
@@ -140,7 +140,7 @@ class AnaesthesiaEnv(gym.Env):
         return prob_lb, prob_ub
 
     @partial(jit, static_argnums=(0,))
-    def step(self, state, key, u):
+    def step_noise_batch(self, state, key, u):
         # Split RNG key
         key, subkey = jax.random.split(key)
 
