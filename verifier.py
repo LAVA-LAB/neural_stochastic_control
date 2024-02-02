@@ -125,6 +125,7 @@ class Verifier:
         unit_lb = -np.ones(self.buffer.dim)
         unit_ub = np.ones(self.buffer.dim)
 
+        print('Length of loop 1:', len(unique_num))
         # First create a cache with all the refined grids that will be needed
         for num in unique_num:
             # Width of unit cube is 2 by definition
@@ -133,6 +134,7 @@ class Verifier:
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
+        print('Length of loop 1:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
@@ -153,6 +155,7 @@ class Verifier:
 
         grid_plus = [[]] * len(new_mesh_sizes)
 
+        print('Length of loop 1:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
 
@@ -162,9 +165,9 @@ class Verifier:
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
         stacked_grid_plus = np.vstack(grid_plus)
-        print('- New local refinement took:', time.time() - t)
+        print('- Old local refinement took:', time.time() - t)
 
-        assert np.all(np.isclose(stacked_grid_plus, stacked_grid_plus_new))
+        assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
 
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
