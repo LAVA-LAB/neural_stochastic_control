@@ -184,10 +184,10 @@ class Verifier:
             cell_width = (ub - lb) / num
             mean = (lb + ub) / 2
 
-            grid * multiply_factor + mean
+            grid_shift = grid * multiply_factor + mean
 
-            cell_width_column = jnp.full((len(grid), 1), fill_value=cell_width[0])
-            grid_plus = jnp.hstack((grid, cell_width_column))
+            cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
+            grid_plus = jnp.hstack((grid_shift, cell_width_column))
 
             return grid_plus
 
