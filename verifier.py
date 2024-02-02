@@ -294,6 +294,13 @@ class Verifier:
         if len(Vdiff) > 0:
             print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.5f}; "
                   f"mean={np.mean(Vdiff):.5f}; max={np.max(Vdiff):.5f}")
+
+            print('The 10 monst violating points are:')
+            assert len(Vdiff[violation_idxs]) == len(counterx_expDecr)
+            ii = np.argsort(Vdiff[violation_idxs])[::-1][:10]
+            print('Violations:', ii)
+            print('Points:', counterx_expDecr[ii])
+
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
