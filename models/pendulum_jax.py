@@ -83,7 +83,7 @@ class PendulumEnv(gym.Env):
         self.vstep = jax.vmap(self.step_train, in_axes=0, out_axes=0)
 
         # Vectorized step, but only with different noise values
-        self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, 0, None), out_axes=0)
+        self.vstep_noise_batch = jax.vmap(self.step_noise_key, in_axes=(None, 0, None), out_axes=0)
         self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
     @partial(jit, static_argnums=(0,))
@@ -92,55 +92,39 @@ class PendulumEnv(gym.Env):
                                      self.noise_space.high * jnp.ones(2))
 
     @partial(jit, static_argnums=(0,))
+    def step_base(self, state, u, w):
+        '''
+        Make a step through the dynamics. Note: if desired, the control (u) should already be clipped!
+        When defining a new environment, this is the dynamics function that should be modified.
+        '''
+
+        x1 = (1 - self.b) * state[1] + (
+                -1.5 * self.G * jnp.sin(state[0] + jnp.pi) / (2 * self.l) +
+                3.0 / (self.m * self.l ** 2) * u[0]
+        ) * self.delta + 0.02 * w[0]
+        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+
+        # New angular position
+        x0 = state[0] + self.delta * x1 + 0.01 * w[1]
+
+        # Lower bound state
+        state = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
+
+        return state
+
+    @partial(jit, static_argnums=(0,))
     def step_noise_set(self, state, u, w_lb, w_ub):
         ''' Make step with dynamics for a set of noise values.
         Propagate state under lower/upper bound of the noise (note: this works because the noise is additive) '''
 
         u = 2 * jnp.clip(u, -self.max_torque, self.max_torque)
 
-        # Propagate dynamics (lower bound)
-        # New angular velocity
-        x1 = (1 - self.b) * state[1] + (
-                -1.5 * self.G * jnp.sin(state[0] + jnp.pi) / (2 * self.l) +
-                3.0 / (self.m * self.l ** 2) * u[0]
-        ) * self.delta + 0.02 * w_lb[0]
-        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
+        # Propogate dynamics for both the lower bound and upper bound of the noise
+        # (note: this works because the noise is additive)
+        state_lb = self.step_base(state, u, w_lb)
+        state_ub = self.step_base(state, u, w_ub)
 
-        # New angular position
-        x0 = state[0] + self.delta * x1 + 0.01 * w_lb[1]
-
-        # Lower bound state
-        state_lb = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
-
-        ###
-
-        # Propagate dynamics (upper bound)
-        # New angular velocity
-        x1 = (1 - self.b) * state[1] + (
-                -1.5 * self.G * jnp.sin(state[0] + jnp.pi) / (2 * self.l) +
-                3.0 / (self.m * self.l ** 2) * u[0]
-        ) * self.delta + 0.02 * w_ub[0]
-        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-
-        # New angular position
-        x0 = state[0] + self.delta * x1 + 0.01 * w_ub[1]
-
-        # Upper bound state
-        state_ub = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
-
-        # # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
-        # x1 = (1-self.b) * state[1] + self.delta * (-1.5*self.G*jnp.sin(state[0] + jnp.pi)) / (2*self.l) + \
-        #      self.delta * 3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_lb[0]
-        # x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-        # x0 = state[0] + self.delta * x1 + 0.01 * w_lb[1]
-        # state_lb = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
-        #
-        # x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
-        #      self.delta * 3 / (self.m * self.l ** 2) * 2 * u[0] + 0.02 * w_ub[0]
-        # x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-        # x0 = state[0] + self.delta * x1 + 0.01 * w_ub[1]
-        # state_ub = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
-
+        # Compute the mean and the epsilon (difference between mean and ub/lb)
         state_mean = (state_ub + state_lb) / 2
         epsilon = (state_ub - state_lb) / 2
 
@@ -169,7 +153,7 @@ class PendulumEnv(gym.Env):
         return prob_lb, prob_ub
 
     @partial(jit, static_argnums=(0,))
-    def step_noise_batch(self, state, key, u):
+    def step_noise_key(self, state, key, u):
         # Split RNG key
         key, subkey = jax.random.split(key)
 
@@ -179,23 +163,7 @@ class PendulumEnv(gym.Env):
         u = 2 * jnp.clip(u, -self.max_torque, self.max_torque)
 
         # Propagate dynamics
-        # New angular velocity
-        x1 = (1-self.b)*state[1] + (
-            -1.5 * self.G * jnp.sin(state[0] + jnp.pi) / (2*self.l) +
-            3.0 / (self.m * self.l ** 2) * u[0]
-        ) * self.delta + 0.02 * noise[0]
-        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-
-        # New angular position
-        x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
-
-        # x1 = (1-self.b) * state[1] + self.delta * (-1.5*self.G*jnp.sin(state[0] + jnp.pi)) / (2*self.l) + \
-        #         self.delta * 3/(self.m*self.l**2) * u[0] + 0.02 * noise[0]
-        # x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-        # x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
-
-        # Clip to observation space
-        state = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
+        state = self.step_base(state, u, noise)
 
         return state, key
 
@@ -212,23 +180,7 @@ class PendulumEnv(gym.Env):
         costs = -1 + state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
-        # New angular velocity
-        x1 = (1 - self.b) * state[1] + (
-                -1.5 * self.G * jnp.sin(state[0] + jnp.pi) / (2 * self.l) +
-                3.0 / (self.m * self.l ** 2) * u[0]
-        ) * self.delta + 0.02 * noise[0]
-        x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-
-        # New angular position
-        x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
-
-        # Propagate dynamics
-        # x1 = (1 - self.b) * state[1] + self.delta * (-1.5 * self.G * jnp.sin(state[0] + jnp.pi)) / (2 * self.l) + \
-        #      self.delta * 3/(self.m*self.l**2) * u[0] + 0.02 * noise[0]
-        # x1 = jnp.clip(x1, -self.max_speed, self.max_speed)
-        # x0 = state[0] + self.delta * x1 + 0.01 * noise[1]
-
-        state = jnp.clip(jnp.array([x0, x1]), self.observation_space.low, self.observation_space.high)
+        state = self.step_base(state, u, noise)
 
         steps_since_reset += 1
 

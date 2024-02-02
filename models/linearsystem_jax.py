@@ -94,7 +94,7 @@ class LinearEnv(gym.Env):
         self.vstep = jax.vmap(self.step_train, in_axes=0, out_axes=0)
 
         # Vectorized step, but only with different noise values
-        self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, 0, None), out_axes=0)
+        self.vstep_noise_batch = jax.vmap(self.step_noise_key, in_axes=(None, 0, None), out_axes=0)
         self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
     @partial(jit, static_argnums=(0,))
@@ -103,15 +103,27 @@ class LinearEnv(gym.Env):
                                      self.noise_space.high * jnp.ones(self.noise_dim))
 
     @partial(jit, static_argnums=(0,))
+    def step_base(self, state, u, w):
+        '''
+        Make a step through the dynamics. Note: if desired, the control (u) should already be clipped!
+        When defining a new environment, this is the dynamics function that should be modified.
+        '''
+        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w)
+
+        return state
+
+    @partial(jit, static_argnums=(0,))
     def step_noise_set(self, state, u, w_lb, w_ub):
         ''' Make step with dynamics for a set of noise values '''
 
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
-        # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
-        state_lb = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_lb)
-        state_ub = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_ub)
+        # Propogate dynamics for both the lower bound and upper bound of the noise
+        # (note: this works because the noise is additive)
+        state_lb = self.step_base(state, u, w_lb)
+        state_ub = self.step_base(state, u, w_ub)
 
+        # Compute the mean and the epsilon (difference between mean and ub/lb)
         state_mean = (state_ub + state_lb) / 2
         epsilon = (state_ub - state_lb) / 2
 
@@ -140,7 +152,7 @@ class LinearEnv(gym.Env):
         return prob_lb, prob_ub
 
     @partial(jit, static_argnums=(0,))
-    def step_noise_batch(self, state, key, u):
+    def step_noise_key(self, state, key, u):
         # Split RNG key
         key, subkey = jax.random.split(key)
 
@@ -149,7 +161,7 @@ class LinearEnv(gym.Env):
 
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
+        state = self.step_base(state, u, noise)
 
         return state, key
 
@@ -166,7 +178,7 @@ class LinearEnv(gym.Env):
         costs = -1 + state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
+        state = self.step_base(state, u, noise)
 
         steps_since_reset += 1
 
