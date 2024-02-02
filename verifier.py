@@ -154,7 +154,7 @@ class Verifier:
                 print('multiply_factor:', multiply_factor)
                 print(grid)
 
-            cell_width_column = np.full((len(grid), 1), fill_value=cell_width)
+            cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
         stacked_grid_plus_new = np.vstack(grid_plus)
@@ -173,7 +173,7 @@ class Verifier:
             cell_width = (ub - lb) / num_per_dimension
             grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
 
-            cell_width_column = np.full((len(grid), 1), fill_value = cell_width)
+            cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
         stacked_grid_plus = np.vstack(grid_plus)
