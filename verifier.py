@@ -145,7 +145,7 @@ class Verifier:
         print('Length of loop 2:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-            t = time.time()
+            # t = time.time()
 
             # Determine by what factor the grid over the unit cube should be multiplied
             multiply_factor = (ub - lb) / 2
@@ -153,19 +153,19 @@ class Verifier:
             mean = (lb + ub) / 2
 
             # print('a:', time.time()-t)
-            t = time.time()
+            # t = time.time()
 
             # Get grid from cache and multiply
             grid = grid_cache[tuple(num)] * multiply_factor + mean
 
             # print('b:', time.time() - t)
-            t = time.time()
+            # t = time.time()
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
             # print('c:', time.time() - t)
-            t = time.time()
+            # t = time.time()
 
         print('- New local refinement took part 2a:', time.time() - t)
         t = time.time()
@@ -202,6 +202,8 @@ class Verifier:
             grid_plus[i] = jit_fn(grid_plus_zeros, lb, ub, num)[:ln]
 
         print('- New v2 part 2a took:', time.time() - t)
+        print(f'Number of times function was compiled: {jit_fn._cache_size()}')
+
         t = time.time()
 
         stacked_grid_plus_new = np.vstack(grid_plus)
