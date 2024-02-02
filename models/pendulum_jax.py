@@ -17,6 +17,9 @@ from jax_utils import vsplit
 from commons import RectangularSet, MultiRectangularSet
 from scipy.stats import triang
 
+def angle_normalize(x):
+    return ((x + np.pi) % (2 * np.pi)) - np.pi
+
 class PendulumEnv(gym.Env):
 
     metadata = {
@@ -173,7 +176,8 @@ class PendulumEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(2,))
 
-        costs = -1 + state[0] ** 2 + state[1] ** 2
+        costs = angle_normalize(state[0]) ** 2 + 0.1 * state[1] ** 2
+        # costs = -1 + state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)

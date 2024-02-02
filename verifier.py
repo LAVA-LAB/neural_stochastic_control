@@ -129,6 +129,14 @@ class Verifier:
             # Width of unit cube is 2 by definition
             cell_width = 2 / num
 
+            print(cell_width)
+
+            print(unit_lb)
+            print(unit_ub)
+
+            print(unit_lb + 0.5 * cell_width)
+            print(unit_ub - 0.5 * cell_width)
+
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[num] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
