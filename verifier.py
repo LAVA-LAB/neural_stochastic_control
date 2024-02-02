@@ -295,31 +295,31 @@ class Verifier:
             print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.5f}; "
                   f"mean={np.mean(Vdiff):.5f}; max={np.max(Vdiff):.5f}")
 
-            print('The 10 monst violating points are:')
-            assert len(Vdiff[violation_idxs]) == len(counterx_expDecr)
-            ii = np.argsort(Vdiff[violation_idxs])[::-1][:10]
-            print('Violations:', Vdiff[ii])
-            print('Points:', counterx_expDecr[ii])
-
-            x = counterx_expDecr[ii]
-
-            Vcurr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(x[:, :self.buffer.dim]))
-
-            print('Vcurr:\n', Vcurr)
-
-            a = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
-                                            env.action_space.shape[0])
-
-            key = jax.random.split(noise_key, (len(x), 16))
-            print('Noise keys generated:', key.shape)
-
-            xnew = np.array([self.env.vstep_noise_batch(x[i], key[i], a[i])[0] for i in range(len(x))])
-
-            print('xnew:\n', xnew)
-
-            Vnext = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(xnew))
-
-            print('Vnext:\n', Vnext)
+            # print('The 10 monst violating points are:')
+            # assert len(Vdiff[violation_idxs]) == len(counterx_expDecr)
+            # ii = np.argsort(Vdiff[violation_idxs])[::-1][:10]
+            # print('Violations:', Vdiff[ii])
+            # print('Points:', counterx_expDecr[ii])
+            #
+            # x = counterx_expDecr[ii]
+            #
+            # Vcurr = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(x[:, :self.buffer.dim]))
+            #
+            # print('Vcurr:\n', Vcurr)
+            #
+            # a = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
+            #                                 env.action_space.shape[0])
+            #
+            # key = jax.random.split(noise_key, (len(x), 16))
+            # print('Noise keys generated:', key.shape)
+            #
+            # xnew = np.array([self.env.vstep_noise_batch(x[i], key[i], a[i])[0] for i in range(len(x))])
+            #
+            # print('xnew:\n', xnew)
+            #
+            # Vnext = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(xnew))
+            #
+            # print('Vnext:\n', Vnext)
 
 
         if len(counterx_expDecr) > 0:
