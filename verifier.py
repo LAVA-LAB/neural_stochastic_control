@@ -134,14 +134,16 @@ class Verifier:
             # Define grid over the unit cube, for the given number of points per dimension
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
-        print('Length of loop 1:', len(num_per_dimension))
+        print('Length of loop 2:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, cell_width, num) in enumerate(zip(points_lb, points_ub, new_cell_widths, num_per_dimension)):
             # Determine by what factor the grid over the unit cube should be multiplied
             multiply_factor = cell_width / 2
 
+            mean = (lb + ub) / 2
+
             # Get grid from cache and multiply
-            grid = grid_cache[tuple(num)] * multiply_factor
+            grid = grid_cache[tuple(num)] * multiply_factor + mean
 
             cell_width_column = np.full((len(grid), 1), fill_value=cell_width)
             grid_plus[i] = np.hstack((grid, cell_width_column))
