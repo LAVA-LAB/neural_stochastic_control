@@ -150,19 +150,19 @@ class Verifier:
             cell_width = (ub - lb) / num
             mean = (lb + ub) / 2
 
-            print('a:', time.time()-t)
+            # print('a:', time.time()-t)
             t = time.time()
 
             # Get grid from cache and multiply
             grid = grid_cache[tuple(num)] * multiply_factor + mean
 
-            print('b:', time.time() - t)
+            # print('b:', time.time() - t)
             t = time.time()
 
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
-            print('c:', time.time() - t)
+            # print('c:', time.time() - t)
             t = time.time()
 
         print('- New local refinement took part 2a:', time.time() - t)
@@ -170,6 +170,33 @@ class Verifier:
 
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- New local refinement took part 2b:', time.time() - t)
+
+        #####
+
+        t = time.time()
+
+        @jax.jit
+        def jit_fn(grid, lb, ub, num):
+
+            multiply_factor = (ub - lb) / 2
+            cell_width = (ub - lb) / num
+            mean = (lb + ub) / 2
+
+            grid * multiply_factor + mean
+
+            cell_width_column = jnp.full((len(grid), 1), fill_value=cell_width[0])
+            grid_plus = jnp.hstack((grid, cell_width_column))
+
+            return grid_plus
+
+        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
+            grid_plus[i] = jit_fn(grid_cache[tuple(num)], lb, ub, num)
+
+        print('- New v2 part 2a took:', time.time() - t)
+        t = time.time()
+
+        stacked_grid_plus_new = np.vstack(grid_plus)
+        print('- New v2 part 2b took:', time.time() - t)
 
         #####
 
