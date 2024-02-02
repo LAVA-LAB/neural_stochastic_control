@@ -103,15 +103,26 @@ class AnaesthesiaEnv(gym.Env):
                                      self.noise_space.high * jnp.ones(self.noise_dim))
 
     @partial(jit, static_argnums=(0,))
+    def step_base(self, state, u, w):
+        '''
+        Make a step in the dynamics. When defining a new environment, this the function that should be modified.
+        '''
+
+        u = jnp.clip(u, self.min_torque, self.max_torque)
+        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w)
+
+        return state
+
+    @partial(jit, static_argnums=(0,))
     def step_noise_set(self, state, u, w_lb, w_ub):
         ''' Make step with dynamics for a set of noise values '''
 
-        u = jnp.clip(u, self.min_torque, self.max_torque)
+        # Propogate dynamics for both the lower bound and upper bound of the noise
+        # (note: this works because the noise is additive)
+        state_lb = self.step_base(state, u, w_lb)
+        state_ub = self.step_base(state, u, w_ub)
 
-        # Propagate state under lower/upper bound of the noise (note: this works because the noise is additive)
-        state_lb = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_lb)
-        state_ub = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w_ub)
-
+        # Compute the mean and the epsilon (difference between mean and ub/lb)
         state_mean = (state_ub + state_lb) / 2
         epsilon = (state_ub - state_lb) / 2
 
@@ -147,9 +158,8 @@ class AnaesthesiaEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, self.min_torque, self.max_torque)
-
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
+        # Propagate dynamics
+        state = self.step_base(state, u, noise)
 
         return state, key
 
@@ -162,12 +172,11 @@ class AnaesthesiaEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, self.min_torque, self.max_torque)
         target_mean = (self.target_space.high + self.target_space.low) / 2
         costs = -1 + (state[0]-target_mean[0]) ** 2 + (state[1]-target_mean[1]) ** 2 + (state[2]-target_mean[2]) ** 2
 
         # Propagate dynamics
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, noise)
+        state = self.step_base(state, u, noise)
 
         steps_since_reset += 1
 

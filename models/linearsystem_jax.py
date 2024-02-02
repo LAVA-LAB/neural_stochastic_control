@@ -105,9 +105,10 @@ class LinearEnv(gym.Env):
     @partial(jit, static_argnums=(0,))
     def step_base(self, state, u, w):
         '''
-        Make a step through the dynamics. Note: if desired, the control (u) should already be clipped!
-        When defining a new environment, this is the dynamics function that should be modified.
+        Make a step in the dynamics. When defining a new environment, this the function that should be modified.
         '''
+
+        u = jnp.clip(u, -self.max_torque, self.max_torque)
         state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w)
 
         return state
@@ -115,8 +116,6 @@ class LinearEnv(gym.Env):
     @partial(jit, static_argnums=(0,))
     def step_noise_set(self, state, u, w_lb, w_ub):
         ''' Make step with dynamics for a set of noise values '''
-
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
 
         # Propogate dynamics for both the lower bound and upper bound of the noise
         # (note: this works because the noise is additive)
@@ -159,8 +158,7 @@ class LinearEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
-
+        # Propagate dynamics
         state = self.step_base(state, u, noise)
 
         return state, key
@@ -174,7 +172,6 @@ class LinearEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        u = jnp.clip(u, -self.max_torque, self.max_torque)
         costs = -1 + state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
