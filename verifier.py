@@ -119,7 +119,7 @@ class Verifier:
         print('-----')
 
         print(points_ub[0] + 0.5 * new_cell_widths[0])
-        print(number_per_dimension[0])
+        print(num_per_dimension[0])
 
         print('-----')
 
