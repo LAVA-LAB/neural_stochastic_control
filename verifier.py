@@ -310,10 +310,10 @@ class Verifier:
             a = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
                                             env.action_space.shape[0])
 
-            noise_key = jax.random.split(noise_key, (len(x), self.N_expectation))
+            noise_key = jax.random.split(noise_key, (len(x), 16))
             print('Noise keys generated:', noise_key.shape)
 
-            xnew, _ = np.array([self.env.vstep_noise_batch(x[i], noise_key[i], a[i]) for i in range(len(x))])
+            xnew = np.array([self.env.vstep_noise_batch(x[i], noise_key[i], a[i])[0] for i in range(len(x))])
 
             Vnext = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), jax.lax.stop_gradient(xnew[:, :self.buffer.dim]))
 
