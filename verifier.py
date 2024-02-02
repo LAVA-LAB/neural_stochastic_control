@@ -116,6 +116,8 @@ class Verifier:
 
         grid_plus = [[]]*len(new_mesh_sizes)
 
+        print(num_per_dimension)
+
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension)
         print('- Unique number of grids to compute:', unique_num)
@@ -125,6 +127,7 @@ class Verifier:
         unit_lb = -np.ones(self.buffer.dim)
         unit_ub = np.ones(self.buffer.dim)
 
+        # First create a cache with all the refined grids that will be needed
         for num in unique_num:
             # Width of unit cube is 2 by definition
             cell_width = 2 / num
