@@ -139,16 +139,9 @@ class Verifier:
         max_length = int(np.max(unique_num) ** self.buffer.dim)
         print('# unique numbers:', len(unique_num))
 
-        THRESHOLD = 10_000
+        THRESHOLD = 1000
 
         ########
-
-
-
-
-        ########
-
-
 
         for i,num in enumerate(unique_num):
 
