@@ -204,6 +204,9 @@ class Verifier:
 
             grid3d = vmap_jit_fn(grid, lb, ub, num)
 
+            print(grid3d.shape)
+            print('---')
+
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[1])
 
         #####
@@ -213,7 +216,6 @@ class Verifier:
 
         t = time.time()
 
-        print(grid_plus_b)
         print(grid_plus_b[0].shape)
         print(grid_plus_b[1].shape)
 
