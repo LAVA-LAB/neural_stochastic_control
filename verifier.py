@@ -186,7 +186,7 @@ class Verifier:
                 grid_fixed_length[:len(grid)] = grid
 
                 for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
-                    grid_plus_sub[j] = grid_multiply_shift(grid_fixed_length, lb, ub, num)[:, :len(grid), :]
+                    grid_plus_sub[j] = grid_multiply_shift(grid_fixed_length, lb, ub, num)[:len(grid), :]
 
                 grid_shift[i] = np.vstack(grid_plus_sub)
 
