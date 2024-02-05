@@ -158,10 +158,10 @@ class Verifier:
 
             idxs = np.all((num_per_dimension == num), axis=1)
 
-            if num not in self.refine_cache:
-                self.refine_cache[num] = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            if tuple(num) not in self.refine_cache:
+                self.refine_cache[tuple(num)] = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
-            grid3d = self.refine_cache[num](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            grid3d = self.refine_cache[tuple(num)](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
             # grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
