@@ -43,7 +43,7 @@ class Verifier:
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vmap_grid_multiply_shift = jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0)
+        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
 
         return
@@ -177,6 +177,8 @@ class Verifier:
 
             grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
             grid3d = grid3d[:, :len(grid), :]
+
+            print('Output size:', grid3d)
 
             print('- Grid shifted in: ', time.time()-t)
             t = time.time()
