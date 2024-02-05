@@ -26,8 +26,8 @@ def grid_multiply_shift(grid, lb, ub, num):
 
     grid_shift = grid * multiply_factor + mean
 
-    # cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
-    # grid_plus = jnp.hstack((grid_shift, cell_width_column))
+    cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
+    grid_plus = jnp.hstack((grid_shift, cell_width_column))
     grid_plus = grid_shift
 
     return grid_plus
@@ -159,13 +159,24 @@ class Verifier:
 
             idxs = np.all((num_per_dimension == num), axis=1)
 
+            print('num shape:', num.shape)
+
             # from copy import deepcopy
             # assert len(grid) == int(num[0] * num[1])
             # if tuple(num) not in self.refine_cache:
             #     self.refine_cache[tuple(num)] = deepcopy(self.vmap_grid_multiply_shift)
             # grid3d = self.refine_cache[tuple(num)](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
-            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            grid_zeros = np.zeros((max_length, grid.shape[1]))
+            grid_zeros[:len(grid)] = grid
+
+            print('grid shape:',grid_zeros.shape)
+            print('num shape:', num.shape)
+            print('lb shape:', points_lb[idxs].shape)
+            print('ub shape:', points_ub[idxs].shape)
+
+            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            grid3d = grid3d[:, :len(grid), :]
 
             print('- Grid shifted in: ', t-time.time())
             t = time.time()
