@@ -162,13 +162,7 @@ class Verifier:
 
             print(grid_zeros.shape)
 
-            lb = np.zeros((max_length, grid.shape[1]))
-            lb[:len(grid)] = points_lb[idxs]
-
-            ub = np.zeros((max_length, grid.shape[1]))
-            ub[:len(grid)] = points_ub[idxs]
-
-            grid3d = self.vmap_grid_multiply_shift(grid_zeros, lb, ub, jnp.array(num))
+            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
             print(grid3d.shape)
 
