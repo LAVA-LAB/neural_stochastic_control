@@ -17,7 +17,7 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 cpu_device = jax.devices('cpu')[0]
 
-@partial(jax.jit, static_argnames=['grid', 'num'])
+@jax.jit
 def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
@@ -31,6 +31,8 @@ def grid_multiply_shift(grid, lb, ub, num):
 
     return grid_plus
 
+
+
 class Verifier:
 
     def __init__(self, env):
@@ -41,7 +43,8 @@ class Verifier:
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
+        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0),
+                                                static_argnums=(0,3))
 
         return
 
