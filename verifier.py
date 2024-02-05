@@ -28,7 +28,7 @@ def grid_multiply_shift(grid, lb, ub, num):
 
     cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
     grid_plus = jnp.hstack((grid_shift, cell_width_column))
-    
+
     return grid_plus
 
 
@@ -154,7 +154,7 @@ class Verifier:
 
             grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
-            print('- Grid defined in :', t-time.time())
+            print('- Grid defined in :', time.time()-t)
             t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
@@ -178,18 +178,18 @@ class Verifier:
             grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
             grid3d = grid3d[:, :len(grid), :]
 
-            print('- Grid shifted in: ', t-time.time())
+            print('- Grid shifted in: ', time.time()-t)
             t = time.time()
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
-            print('- Grid stacked in :', t - time.time())
+            print('- Grid stacked in :', time.time()-t)
 
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - t)
-        print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
+        print(f'--- Number of times function was compiled: {grid_multiply_shift._cache_size()}')
 
         # for num in unique_num:
         #     if tuple(num) in self.refine_cache:
