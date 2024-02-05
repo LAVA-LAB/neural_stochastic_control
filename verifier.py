@@ -139,7 +139,7 @@ class Verifier:
         max_length = int(np.max(unique_num) ** self.buffer.dim)
         print('# unique numbers:', len(unique_num))
 
-        THRESHOLD = 1_000_000_000
+        THRESHOLD = 10_000
 
         ########
 
@@ -204,60 +204,6 @@ class Verifier:
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - tt)
-
-
-        for i,num in enumerate(unique_num):
-
-            # t = time.time()
-
-            # Set box from -1 to 1
-            unit_lb = -np.ones(self.buffer.dim)
-            unit_ub = np.ones(self.buffer.dim)
-
-            # Width of unit cube is 2 by definition
-            cell_width = 2 / num
-            grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
-
-            # print('- Grid defined in :', time.time()-t)
-            # t = time.time()
-
-            idxs = np.all((num_per_dimension == num), axis=1)
-            lb_idxs = points_lb[idxs]
-            ub_idxs = points_ub[idxs]
-            sum_idxs = np.sum(idxs)
-
-            # If the number of idxs is above the threshold, than use vmap
-            if sum_idxs > THRESHOLD:
-                # print('Use vmap')
-
-                # Make sure that the grid length is always the same (to reduce the total number of compilations)
-                grid_fixed_length = np.zeros((max_length, grid.shape[1]))
-                grid_fixed_length[:len(grid)] = grid
-                grid_shift_batch = self.vmap_grid_multiply_shift(grid_fixed_length, lb_idxs, ub_idxs, jnp.array(num))
-                grid_shift_batch = grid_shift_batch[:, :len(grid), :]
-
-                # Concatenate
-                grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
-
-                # print(f'- Iteration {num} mode "vmap" took: {time.time() - t}')
-
-            else:
-                # print('Use for loop')
-                # If number of idxs is not above threshold, than do naive for loop
-
-                grid_plus_sub = [[]]*sum_idxs
-
-                for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
-                    grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num)
-
-                grid_shift[i] = np.vstack(grid_plus_sub)
-
-                # print(f'- Iteration {num} mode "for loop" took: {time.time()-t}')
-
-        #####
-
-        print('- Cache+vmap - computing grid B took:', time.time() - tt)
-
 
         print(f'--- Number of times vmap function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
         print(f'--- Number of times normal function was compiled: {grid_multiply_shift._cache_size()}')
