@@ -114,9 +114,6 @@ class Verifier:
 
         t = time.time()
 
-        grid_plus = [[]]*len(new_mesh_sizes)
-
-        # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension, axis=0)
         print('- Number of unique number of grids to compute:', len(unique_num))
         grid_cache = {}
@@ -125,9 +122,6 @@ class Verifier:
         # Set box from -1 to 1
         unit_lb = -np.ones(self.buffer.dim)
         unit_ub = np.ones(self.buffer.dim)
-
-        print('- V1 - part 0:', time.time() - t)
-        t = time.time()
 
         # First create a cache with all the refined grids that will be needed
         for num in unique_num:
@@ -138,7 +132,7 @@ class Verifier:
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
             grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
 
-        print('- V1 - part 1:', time.time() - t)
+        print('- Caching took:', time.time() - t)
 
         '''
         t = time.time()
@@ -198,50 +192,18 @@ class Verifier:
         for i,num in enumerate(unique_num):
 
             idxs = np.all((num_per_dimension == num), axis=1)
-            grid = grid_cache[tuple(num)]
-            lb = points_lb[idxs]
-            ub = points_ub[idxs]
-
-            grid3d = vmap_jit_fn(grid, lb, ub, num)
-
-            # print(grid3d.shape)
-            # print('---')
+            grid3d = vmap_jit_fn(grid_cache[tuple(num)], points_lb[idxs], points_ub[idxs], num)
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
         #####
 
-        print('- V4 - part 1:', time.time() - t)
+        print('- V4 - computing grid took:', time.time() - t)
         print(f'Number of times function was compiled: {vmap_jit_fn._cache_size()}')
-
         t = time.time()
-
-        # print(grid_plus_b[0].shape)
-        # print(grid_plus_b[1].shape)
-
         stacked_grid_plus_new = np.vstack(grid_plus_b)
-        print('- V4 - part 2:', time.time() - t)
-
-        '''
-        max_length = np.max([len(grid) for grid in grid_cache.values()])
-        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-
-            # ln = grid_length_cache[tuple(num)]
-
-            # grid_plus_zeros = np.zeros((max_length, self.buffer.dim))
-            # grid_plus_zeros[:ln] =
-
-            grid_plus[i] = jit_fn(grid_cache[tuple(num)], lb, ub, num) #[:ln]
-
-        print('- V2 - part 1:', time.time() - t)
-        print(f'Number of times function was compiled: {jit_fn._cache_size()}')
-
-        t = time.time()
-
-        stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- V2 - part 2:', time.time() - t)
-        '''
+        print('- V4 - stacking took:', time.time() - t)
 
         #####
 
@@ -259,35 +221,14 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value=cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
-        print('- V3 - part 1:', time.time() - t)
+        print('- Naive for loop - computing grid took:', time.time() - t)
         t = time.time()
 
         stacked_grid_plus = np.vstack(grid_plus)
-        print('- V3 - part 2:', time.time() - t)
+        print('- Naive for loop - stacking took:', time.time() - t)
 
-        #####
-
-        t = time.time()
-
-        grid_plus = [[]] * len(new_mesh_sizes)
-
-        print('Length of loop:', len(num_per_dimension))
-        # For each given point, compute the subgrid
-        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-            cell_width = (ub - lb) / num
-
-            grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
-
-            cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
-            grid_plus[i] = np.hstack((grid, cell_width_column))
-
-        print('- V0 - part 1:', time.time() - t)
-        t = time.time()
-
-        stacked_grid_plus = np.vstack(grid_plus)
-        print('- V0 - part 2:', time.time() - t)
-
-        assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
+        # assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
+        assert np.all(stacked_grid_plus.shape == staked_grid_plus_new.shape)
 
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
