@@ -176,9 +176,8 @@ class Verifier:
             print('ub shape:', points_ub[idxs].shape)
 
             grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            print('Raw output size:', grid3d.shape)
             grid3d = grid3d[:, :len(grid), :]
-
-            print('Output size:', grid3d)
 
             print('- Grid shifted in: ', time.time()-t)
             t = time.time()
