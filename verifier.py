@@ -18,7 +18,7 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 cpu_device = jax.devices('cpu')[0]
 
 @jax.jit
-def jit_fn(grid, lb, ub, num):
+def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
     cell_width = (ub - lb) / num
@@ -31,8 +31,6 @@ def jit_fn(grid, lb, ub, num):
 
     return grid_plus
 
-vmap_jit_fn = jax.jit(jax.vmap(jit_fn, in_axes=(None, 0, 0, None), out_axes=0))
-
 class Verifier:
 
     def __init__(self, env):
@@ -42,6 +40,8 @@ class Verifier:
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+
+        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
 
         return
 
@@ -150,7 +150,7 @@ class Verifier:
             t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
-            grid3d = vmap_jit_fn(grid, points_lb[idxs], points_ub[idxs], num)
+            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], num)
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
@@ -160,7 +160,7 @@ class Verifier:
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - t)
-        print(f'Number of times function was compiled: {vmap_jit_fn._cache_size()}')
+        print(f'Number of times function was compiled: {vmap_grid_multiply_shift._cache_size()}')
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- Cache+vmap - stacking took:', time.time() - t)
