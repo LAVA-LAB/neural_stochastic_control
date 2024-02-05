@@ -141,8 +141,8 @@ def define_grid_jax(low, high, size, mode = 'linspace'):
     if mode == 'linspace':
         points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
     else:
-        widths = (high - low) / (size- 1 )
-        points = [np.arange(low[i], high[i]+EPS, widths[i]) for i in range(len(size))]
+        step = (high-low)/(size-1)
+        points = [np.arange(low[i], high[i]+step[i]/2, step[i]) for i in range(len(size))]
     grid = meshgrid_jax(points, size)
 
     return grid

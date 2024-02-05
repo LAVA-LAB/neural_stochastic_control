@@ -142,7 +142,6 @@ class Verifier:
         t = time.time()
 
         # For each given point, compute the subgrid
-        print('Length of loop 1:', len(num_per_dimension))
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
             # t = time.time()
 
@@ -172,10 +171,7 @@ class Verifier:
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- V1 - part 2b:', time.time() - t)
 
-        #####
-
-        '''
-        t = time.time()
+        ####
 
         @jax.jit
         def jit_fn(grid, lb, ub, num):
@@ -190,6 +186,36 @@ class Verifier:
             grid_plus = jnp.hstack((grid_shift, cell_width_column))
 
             return grid_plus
+
+        t = time.time()
+
+        vmap_jit_fn = jax.jit(jax.vmap(jit_fn, in_axes=(None, 0, 0, None), out_axes=0))
+        grid_plus_b = [[]] * len(new_mesh_sizes)
+
+        for num in unique_num:
+
+            idxs = np.all((num_per_dimension == num), axis=1)
+            grid = grid_cache[tuple(num)]
+            lb = points_lb[idxs]
+            ub = points_ub[idxs]
+
+            grid3d = vmap_jit_fn(grid, lb, ub, num)
+
+            grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[1])
+
+
+
+        #####
+
+        t = time.time()
+
+        print('- V4 - part 1:', time.time() - t)
+        print(f'Number of times function was compiled: {vmap_jit_fn._cache_size()}')
+
+        t = time.time()
+
+        stacked_grid_plus_new = np.vstack(grid_plus)
+        print('- V4 - part 2:', time.time() - t)
 
         max_length = np.max([len(grid) for grid in grid_cache.values()])
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
@@ -208,7 +234,6 @@ class Verifier:
 
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- V2 - part 2:', time.time() - t)
-        '''
 
         #####
 
