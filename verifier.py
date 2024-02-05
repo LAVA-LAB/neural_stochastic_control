@@ -112,62 +112,6 @@ class Verifier:
 
         unique_num = np.unique(num_per_dimension, axis=0)
 
-        #####
-
-        '''
-        t = time.time()
-        print('- Number of unique number of grids to compute:', len(unique_num))
-        grid_cache = {}
-        grid_length_cache = {}
-
-        # Set box from -1 to 1
-        unit_lb = -np.ones(self.buffer.dim)
-        unit_ub = np.ones(self.buffer.dim)
-
-        # First create a cache with all the refined grids that will be needed
-        for num in unique_num:
-            # Width of unit cube is 2 by definition
-            cell_width = 2 / num
-
-            # Define grid over the unit cube, for the given number of points per dimension
-            grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
-            grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
-
-        print('- Caching took:', time.time() - t)
-        
-        t = time.time()
-
-        # For each given point, compute the subgrid
-        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-            # t = time.time()
-
-            # Determine by what factor the grid over the unit cube should be multiplied
-            multiply_factor = (ub - lb) / 2
-            cell_width = (ub - lb) / num
-            mean = (lb + ub) / 2
-
-            # print('a:', time.time()-t)
-            # t = time.time()
-
-            # Get grid from cache and multiply
-            grid = grid_cache[tuple(num)] * multiply_factor + mean
-
-            # print('b:', time.time() - t)
-            # t = time.time()
-
-            cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
-            grid_plus[i] = np.hstack((grid, cell_width_column))
-
-            # print('c:', time.time() - t)
-            # t = time.time()
-
-        print('- V1 - part 2a:', time.time() - t)
-        t = time.time()
-
-        stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- V1 - part 2b:', time.time() - t)
-        '''
-
         ####
 
         @jax.jit
@@ -191,6 +135,8 @@ class Verifier:
 
         for i,num in enumerate(unique_num):
 
+            t = time.time()
+
             # Set box from -1 to 1
             unit_lb = -np.ones(self.buffer.dim)
             unit_ub = np.ones(self.buffer.dim)
@@ -200,11 +146,16 @@ class Verifier:
 
             grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
+            print('- Grid defined in :', t-time.time())
+            t = time.time()
+
             idxs = np.all((num_per_dimension == num), axis=1)
             grid3d = vmap_jit_fn(grid, points_lb[idxs], points_ub[idxs], num)
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
+
+            print('- Grid adapted in :', t - time.time())
 
         #####
 
