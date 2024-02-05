@@ -138,11 +138,7 @@ def meshgrid_jax(points, size):
 
 def define_grid_jax(low, high, size):
 
-    vfun = jax.vmap(jnp.linspace, in_axes=(0, 0, 0), out_axes=0)
-
-    points = vfun(low, high, size)
-
-    # points = [jnp.linspace(low[i], high[i], size[i]) for i in range(len(size))]
+    points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
     grid = meshgrid_jax(points, size)
 
     return grid
