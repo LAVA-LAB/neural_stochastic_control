@@ -17,7 +17,7 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 cpu_device = jax.devices('cpu')[0]
 
-@jax.jit
+@partial(jax.jit, static_argnames=['num'])
 def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
@@ -153,6 +153,7 @@ class Verifier:
             grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], num)
 
             print('- Grid shifted in: ', t-time.time())
+            t = time.time()
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
