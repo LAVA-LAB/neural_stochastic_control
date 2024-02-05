@@ -43,8 +43,7 @@ class Verifier:
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0),
-                                                static_argnums=(3,))
+        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
 
         return
 
@@ -136,6 +135,8 @@ class Verifier:
         t = time.time()
         grid_plus_b = [[]] * len(unique_num)
 
+        max_length = np.max(unique_num) ** self.buffer.dim
+
         for i,num in enumerate(unique_num):
 
             t = time.time()
@@ -153,7 +154,10 @@ class Verifier:
             t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
-            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+
+            grid_zeros = np.zeros((max_length,self.buffer.dim))
+            grid_zeros[:len(grid)] = grid
+            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))[:, len(grid), :]
 
             print('- Grid shifted in: ', t-time.time())
             t = time.time()
@@ -166,7 +170,7 @@ class Verifier:
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - t)
-        print(f'Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
+        print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- Cache+vmap - stacking took:', time.time() - t)
