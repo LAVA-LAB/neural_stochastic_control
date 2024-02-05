@@ -179,6 +179,8 @@ class Verifier:
             print('Raw output size:', grid3d.shape)
             grid3d = grid3d[:, :len(grid), :]
 
+            print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
+
             print('- Grid shifted in: ', time.time()-t)
             t = time.time()
 
