@@ -190,7 +190,7 @@ class Verifier:
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - t)
-        print(f'--- Number of times function was compiled: {grid_multiply_shift._cache_size()}')
+        print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
         # for num in unique_num:
         #     if tuple(num) in self.refine_cache:
