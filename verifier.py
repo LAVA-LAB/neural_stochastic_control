@@ -159,9 +159,10 @@ class Verifier:
             idxs = np.all((num_per_dimension == num), axis=1)
             lb_idxs = points_lb[idxs]
             ub_idxs = points_ub[idxs]
+            sum_idxs = np.sum(idxs)
 
             # If the number of idxs is above the threshold, than use vmap
-            if np.sum(idxs) > THRESHOLD:
+            if sum_idxs > THRESHOLD:
                 print('Use vmap')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
@@ -179,7 +180,7 @@ class Verifier:
                 print('Use for loop')
                 # If number of idxs is not above threshold, than do naive for loop
 
-                grid_plus_sub = [[]]*len(idxs)
+                grid_plus_sub = [[]]*sum_idxs
 
                 # grid_fixed_length = np.zeros((max_length, grid.shape[1]))
                 # grid_fixed_length[:len(grid)] = grid
