@@ -178,7 +178,7 @@ class Verifier:
         print('- Cache+vmap - computing grid took:', time.time() - t)
         print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
-        for num in range(unique_num):
+        for num in unique_num:
             if tuple(num) in self.refine_cache:
                 print(f'--- For num={i}: {self.refine_cache[tuple(num)]._cache_size()}')
 
