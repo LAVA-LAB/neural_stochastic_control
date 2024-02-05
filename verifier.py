@@ -7,7 +7,7 @@ import time
 from jax_utils import lipschitz_coeff
 import os
 from tqdm import tqdm
-from buffer import Buffer, define_grid, define_grid_jax, mesh2cell_width, cell_width2mesh
+from buffer import Buffer, define_grid, define_grid_jax, mesh2cell_width, cell_width2mesh, define_grid_jax_rectangular
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
@@ -174,6 +174,7 @@ class Verifier:
 
         #####
 
+        '''
         t = time.time()
 
         @jax.jit
@@ -207,6 +208,7 @@ class Verifier:
 
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- V2 - part 2:', time.time() - t)
+        '''
 
         #####
 
@@ -214,7 +216,29 @@ class Verifier:
 
         grid_plus = [[]] * len(new_mesh_sizes)
 
-        print('Length of loop 1:', len(num_per_dimension))
+        print('Length of loop:', len(num_per_dimension))
+        # For each given point, compute the subgrid
+        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension[:,0])):
+            cell_width = (ub - lb) / num
+
+            grid = define_grid_jax_rectangular(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
+
+            cell_width_column = np.full((len(grid), 1), fill_value=cell_width[0])
+            grid_plus[i] = np.hstack((grid, cell_width_column))
+
+        print('- V3 - part 1:', time.time() - t)
+        t = time.time()
+
+        stacked_grid_plus = np.vstack(grid_plus)
+        print('- V3 - part 2:', time.time() - t)
+
+        #####
+
+        t = time.time()
+
+        grid_plus = [[]] * len(new_mesh_sizes)
+
+        print('Length of loop:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
             cell_width = (ub - lb) / num

@@ -137,7 +137,23 @@ def meshgrid_jax(points, size):
     return grid
 
 def define_grid_jax(low, high, size):
-    points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
+
+    vfun = jax.vmap(jnp.linspace, in_axes=(0, 0, 0), out_axes=0)
+
+    points = vfun(low, high, size)
+
+    # points = [jnp.linspace(low[i], high[i], size[i]) for i in range(len(size))]
+    grid = meshgrid_jax(points, size)
+
+    return grid
+
+vlinspace = jax.vmap(jnp.linspace, in_axes=(0, 0, None), out_axes=0)
+
+@jax.jit
+def define_grid_jax_rectangular(low, high, size):
+    # For this function to be jitted, we can only handle a single `size` (integer) argument.
+
+    points = vlinspace(low, high, size)
     grid = meshgrid_jax(points, size)
 
     return grid
