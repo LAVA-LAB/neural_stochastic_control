@@ -21,7 +21,7 @@ cpu_device = jax.devices('cpu')[0]
 def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
-    # cell_width = (ub - lb) / num
+    cell_width = (ub - lb) / num
     mean = (lb + ub) / 2
 
     grid_shift = grid * multiply_factor + mean
@@ -139,7 +139,7 @@ class Verifier:
         max_length = int(np.max(unique_num) ** self.buffer.dim)
 
         print('max length:', max_length)
-        print('unique numbers:', unique_num)
+        print('# unique numbers:', len(unique_num))
 
         for i,num in enumerate(unique_num):
 
