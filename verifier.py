@@ -17,7 +17,7 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 cpu_device = jax.devices('cpu')[0]
 
-@jax.jit
+# @jax.jit
 def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
