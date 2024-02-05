@@ -152,15 +152,17 @@ class Verifier:
             idxs = np.all((num_per_dimension == num), axis=1)
             grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], num)
 
+            print('- Grid shifted in: ', t-time.time())
+
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
-            print('- Grid adapted in :', t - time.time())
+            print('- Grid stacked in :', t - time.time())
 
         #####
 
         print('- Cache+vmap - computing grid took:', time.time() - t)
-        print(f'Number of times function was compiled: {vmap_grid_multiply_shift._cache_size()}')
+        print(f'Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- Cache+vmap - stacking took:', time.time() - t)
