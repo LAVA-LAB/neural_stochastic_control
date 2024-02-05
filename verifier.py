@@ -7,7 +7,7 @@ import time
 from jax_utils import lipschitz_coeff
 import os
 from tqdm import tqdm
-from buffer import Buffer, define_grid, define_grid_jax, mesh2cell_width, cell_width2mesh, define_grid_jax_rectangular
+from buffer import Buffer, define_grid, define_grid_jax, mesh2cell_width, cell_width2mesh
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.7"
