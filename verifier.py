@@ -180,7 +180,7 @@ class Verifier:
 
         for num in unique_num:
             if tuple(num) in self.refine_cache:
-                print(f'--- For num={i}: {self.refine_cache[tuple(num)]._cache_size()}')
+                print(f'--- For num={num}: {self.refine_cache[tuple(num)]._cache_size()}')
 
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
