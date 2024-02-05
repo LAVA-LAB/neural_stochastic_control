@@ -159,6 +159,7 @@ class Verifier:
             idxs = np.all((num_per_dimension == num), axis=1)
 
             from copy import deepcopy
+            assert len(grid) == int(num[0] * num[1])
 
             if tuple(num) not in self.refine_cache:
                 self.refine_cache[tuple(num)] = deepcopy(self.vmap_grid_multiply_shift)
