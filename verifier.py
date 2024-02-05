@@ -178,7 +178,7 @@ class Verifier:
         print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
         for i in range(100):
-            print(f'--- Number of times function was compiled: {self.refine_cache[i]._cache_size()}')
+            print(f'--- For num={i}: {self.refine_cache[i]._cache_size()}')
 
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
