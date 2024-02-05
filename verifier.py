@@ -180,8 +180,14 @@ class Verifier:
                 # If number of idxs is not above threshold, than do naive for loop
 
                 grid_plus_sub = [[]]*len(idxs)
+
+                # grid_fixed_length = np.zeros((max_length, grid.shape[1]))
+                # grid_fixed_length[:len(grid)] = grid
+
                 for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
-                    grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num)
+                    grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num) #[:, :len(grid), :]
+
+                print(grid_plus_sub)
 
                 grid_shift[i] = np.vstack(grid_plus_sub)
 
