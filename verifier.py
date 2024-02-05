@@ -161,7 +161,7 @@ class Verifier:
             ub_idxs = points_ub[idxs]
 
             # If the number of idxs is above the threshold, than use vmap
-            if len(idxs) > THRESHOLD:
+            if np.sum(idxs) > THRESHOLD:
                 print('Use vmap')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
