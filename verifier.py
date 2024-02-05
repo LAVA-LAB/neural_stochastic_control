@@ -170,9 +170,8 @@ class Verifier:
 
             print('-- Computing grid took:', time.time() - t)
             print(f'--- Number of times vmap function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
-
             t = time.time()
-            stacked_grid_plus_new = np.vstack(grid_shift)
+            stacked_grid_plus = np.vstack(grid_shift)
             print('- Stacking took:', time.time() - t)
 
         else:
@@ -180,9 +179,8 @@ class Verifier:
             print(f'- Use for-loop for refinement (ratio is {ratio:.2f})')
 
             t = time.time()
-
             grid_plus = [[]] * len(new_mesh_sizes)
-            
+
             # For each given point, compute the subgrid
             for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
                 cell_width = (ub - lb) / num
@@ -194,7 +192,6 @@ class Verifier:
 
             print('- Computing grid took:', time.time() - t)
             t = time.time()
-
             stacked_grid_plus = np.vstack(grid_plus)
             print('- Stacking took:', time.time() - t)
 
