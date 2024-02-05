@@ -156,17 +156,14 @@ class Verifier:
             # t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
-
-            grid_zeros = np.zeros((max_length, grid.shape[1]))
-            grid_zeros[:len(grid)] = grid
-
+            # grid_zeros = np.zeros((max_length, grid.shape[1]))
+            # grid_zeros[:len(grid)] = grid
             # print(grid_zeros.shape)
 
-            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
             # print(grid3d.shape)
-
-            grid3d = grid3d[:, :len(grid), :]
+            # grid3d = grid3d[:, :len(grid), :]
 
             # print(grid3d.shape)
 
