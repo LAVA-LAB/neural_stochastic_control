@@ -110,11 +110,12 @@ class Verifier:
         num_per_dimension = np.array(
             np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
+        unique_num = np.unique(num_per_dimension, axis=0)
+
         #####
 
+        '''
         t = time.time()
-
-        unique_num = np.unique(num_per_dimension, axis=0)
         print('- Number of unique number of grids to compute:', len(unique_num))
         grid_cache = {}
         grid_length_cache = {}
@@ -133,8 +134,7 @@ class Verifier:
             grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
 
         print('- Caching took:', time.time() - t)
-
-        '''
+        
         t = time.time()
 
         # For each given point, compute the subgrid
@@ -191,19 +191,28 @@ class Verifier:
 
         for i,num in enumerate(unique_num):
 
+            # Set box from -1 to 1
+            unit_lb = -np.ones(self.buffer.dim)
+            unit_ub = np.ones(self.buffer.dim)
+
+            # Width of unit cube is 2 by definition
+            cell_width = 2 / num
+
+            grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
+
             idxs = np.all((num_per_dimension == num), axis=1)
-            grid3d = vmap_jit_fn(grid_cache[tuple(num)], points_lb[idxs], points_ub[idxs], num)
+            grid3d = vmap_jit_fn(grid, points_lb[idxs], points_ub[idxs], num)
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
         #####
 
-        print('- V4 - computing grid took:', time.time() - t)
+        print('- Cache+vmap - computing grid took:', time.time() - t)
         print(f'Number of times function was compiled: {vmap_jit_fn._cache_size()}')
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
-        print('- V4 - stacking took:', time.time() - t)
+        print('- Cache+vmap - stacking took:', time.time() - t)
 
         #####
 
