@@ -129,110 +129,74 @@ class Verifier:
         num_per_dimension = np.array(
             np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
+        # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
 
-        ####
+        # Compute average number of copies per counterexample
+        ratio = len(points) / len(unique_num)
+        THRESHOLD = 10000
 
-        tt = time.time()
-        grid_shift = [[]] * len(unique_num)
+        if ratio > THRESHOLD:
+            # Above threshold, use vmap batches version
+            print(f'- Use jax.vmap for refinement (ratio is {ratio:.2f})')
 
-        max_length = int(np.max(unique_num) ** self.buffer.dim)
-        print('# unique numbers:', len(unique_num))
+            t = time.time()
+            grid_shift = [[]] * len(unique_num)
 
-        THRESHOLD = 1000
-
-        ########
-
-        for i,num in enumerate(unique_num):
-
-            # t = time.time()
+            max_length = int(np.max(unique_num) ** self.buffer.dim)
 
             # Set box from -1 to 1
             unit_lb = -np.ones(self.buffer.dim)
             unit_ub = np.ones(self.buffer.dim)
 
-            # Width of unit cube is 2 by definition
-            cell_width = 2 / num
-            grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
+            cell_widths = 2 / unique_num
 
-            # print('- Grid defined in :', time.time()-t)
-            # t = time.time()
+            for i,(num, cell_width) in enumerate(zip(unique_num, cell_widths)):
 
-            idxs = np.all((num_per_dimension == num), axis=1)
-            lb_idxs = points_lb[idxs]
-            ub_idxs = points_ub[idxs]
-            sum_idxs = np.sum(idxs)
+                # Width of unit cube is 2 by definition
+                grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
-            # If the number of idxs is above the threshold, than use vmap
-            if sum_idxs > THRESHOLD:
-                # print('Use vmap')
+                # Determine indexes
+                idxs = np.all((num_per_dimension == num), axis=1)
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
                 grid_fixed_length = np.zeros((max_length, grid.shape[1]))
                 grid_fixed_length[:len(grid)] = grid
-                grid_shift_batch = self.vmap_grid_multiply_shift(grid_fixed_length, lb_idxs, ub_idxs, jnp.array(num))
+                grid_shift_batch = self.vmap_grid_multiply_shift(grid_fixed_length, points_lb[idxs], points_ub[idxs], num)
                 grid_shift_batch = grid_shift_batch[:, :len(grid), :]
 
                 # Concatenate
                 grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
 
-                # print(f'- Iteration {num} mode "vmap" took: {time.time() - t}')
+            print('-- Computing grid took:', time.time() - t)
+            print(f'--- Number of times vmap function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
-            else:
-                # print('Use for loop')
-                # If number of idxs is not above threshold, than do naive for loop
+            t = time.time()
+            stacked_grid_plus_new = np.vstack(grid_shift)
+            print('- Stacking took:', time.time() - t)
 
-                grid_plus_sub = [[]]*sum_idxs
+        else:
+            # Below threshold, use naive for loop (because its faster)
+            print(f'- Use for-loop for refinement (ratio is {ratio:.2f})')
 
-                grid_fixed_length = np.zeros((max_length, grid.shape[1]))
-                grid_fixed_length[:len(grid)] = grid
+            t = time.time()
 
-                for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
-                    grid_plus_sub[j] = grid_multiply_shift(grid_fixed_length, lb, ub, num)[:len(grid), :]
+            grid_plus = [[]] * len(new_mesh_sizes)
+            
+            # For each given point, compute the subgrid
+            for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
+                cell_width = (ub - lb) / num
 
-                grid_shift[i] = np.vstack(grid_plus_sub)
+                grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num, mode='arange')
 
-                # print(f'- Iteration {num} mode "for loop" took: {time.time()-t}')
+                cell_width_column = np.full((len(grid), 1), fill_value=cell_width[0])
+                grid_plus[i] = np.hstack((grid, cell_width_column))
 
-        #####
+            print('- Computing grid took:', time.time() - t)
+            t = time.time()
 
-        print('- Cache+vmap - computing grid took:', time.time() - tt)
-
-        print(f'--- Number of times vmap function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
-        print(f'--- Number of times normal function was compiled: {grid_multiply_shift._cache_size()}')
-
-        # for num in unique_num:
-        #     if tuple(num) in self.refine_cache:
-        #         print(f'--- For num={num}: {self.refine_cache[tuple(num)]._cache_size()}')
-
-        t = time.time()
-        stacked_grid_plus_new = np.vstack(grid_shift)
-        print('- Cache+vmap - stacking took:', time.time() - t)
-
-        #####
-
-        t = time.time()
-
-        grid_plus = [[]] * len(new_mesh_sizes)
-
-        print('Length of loop:', len(num_per_dimension))
-        # For each given point, compute the subgrid
-        for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
-            cell_width = (ub - lb) / num
-
-            grid = define_grid_jax(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num, mode='arange')
-
-            cell_width_column = np.full((len(grid), 1), fill_value=cell_width[0])
-            grid_plus[i] = np.hstack((grid, cell_width_column))
-
-        print('- Naive for loop - computing grid took:', time.time() - t)
-        t = time.time()
-
-        stacked_grid_plus = np.vstack(grid_plus)
-        print('- Naive for loop - stacking took:', time.time() - t)
-
-        # assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
-        assert np.all(stacked_grid_plus.shape == stacked_grid_plus_new.shape)
+            stacked_grid_plus = np.vstack(grid_plus)
+            print('- Stacking took:', time.time() - t)
 
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
