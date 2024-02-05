@@ -166,7 +166,7 @@ class Verifier:
 
             print(grid3d.shape)
 
-            grid3d = grid3d[:, len(grid), :]
+            grid3d = grid3d[:, :len(grid), :]
 
             print(grid3d.shape)
 
