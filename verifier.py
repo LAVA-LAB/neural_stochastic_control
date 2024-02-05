@@ -141,7 +141,7 @@ class Verifier:
 
         for i,num in enumerate(unique_num):
 
-            t = time.time()
+            # t = time.time()
 
             # Set box from -1 to 1
             unit_lb = -np.ones(self.buffer.dim)
@@ -152,31 +152,31 @@ class Verifier:
 
             grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
-            print('- Grid defined in :', t-time.time())
-            t = time.time()
+            # print('- Grid defined in :', t-time.time())
+            # t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
 
             grid_zeros = np.zeros((max_length, grid.shape[1]))
             grid_zeros[:len(grid)] = grid
 
-            print(grid_zeros.shape)
+            # print(grid_zeros.shape)
 
             grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
-            print(grid3d.shape)
+            # print(grid3d.shape)
 
             grid3d = grid3d[:, :len(grid), :]
 
-            print(grid3d.shape)
+            # print(grid3d.shape)
 
-            print('- Grid shifted in: ', t-time.time())
-            t = time.time()
+            # print('- Grid shifted in: ', t-time.time())
+            # t = time.time()
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
-            print('- Grid stacked in :', t - time.time())
+            # print('- Grid stacked in :', t - time.time())
 
         #####
 
