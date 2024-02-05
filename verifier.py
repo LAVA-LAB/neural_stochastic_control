@@ -213,6 +213,10 @@ class Verifier:
 
         t = time.time()
 
+        print(grid_plus_b)
+        print(grid_plus_b[0].shape)
+        print(grid_plus_b[1].shape)
+
         stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- V4 - part 2:', time.time() - t)
 
