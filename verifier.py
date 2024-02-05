@@ -207,7 +207,8 @@ class Verifier:
             print(grid3d.shape)
             print('---')
 
-            grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[1])
+            # Concatenate
+            grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
         #####
 
