@@ -44,7 +44,7 @@ class Verifier:
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
         self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0),
-                                                static_argnums=(3))
+                                                static_argnums=(3,))
 
         return
 
@@ -153,7 +153,7 @@ class Verifier:
             t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
-            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], num)
+            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
             print('- Grid shifted in: ', t-time.time())
             t = time.time()
