@@ -219,6 +219,8 @@ class Verifier:
         print('Length of loop:', len(num_per_dimension))
         # For each given point, compute the subgrid
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension[:,0])):
+            print(num)
+
             cell_width = (ub - lb) / num
 
             grid = define_grid_jax_rectangular(lb + 0.5 * cell_width, ub - 0.5 * cell_width, size=num)
