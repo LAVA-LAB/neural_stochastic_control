@@ -204,8 +204,8 @@ class Verifier:
 
             grid3d = vmap_jit_fn(grid, lb, ub, num)
 
-            print(grid3d.shape)
-            print('---')
+            # print(grid3d.shape)
+            # print('---')
 
             # Concatenate
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
@@ -217,8 +217,8 @@ class Verifier:
 
         t = time.time()
 
-        print(grid_plus_b[0].shape)
-        print(grid_plus_b[1].shape)
+        # print(grid_plus_b[0].shape)
+        # print(grid_plus_b[1].shape)
 
         stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- V4 - part 2:', time.time() - t)
