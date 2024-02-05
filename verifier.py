@@ -228,7 +228,7 @@ class Verifier:
         print('- Naive for loop - stacking took:', time.time() - t)
 
         # assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
-        assert np.all(stacked_grid_plus.shape == staked_grid_plus_new.shape)
+        assert np.all(stacked_grid_plus.shape == stacked_grid_plus_new.shape)
 
         # Store in the buffer
         self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
