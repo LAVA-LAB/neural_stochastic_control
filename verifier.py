@@ -26,8 +26,9 @@ def grid_multiply_shift(grid, lb, ub, num):
 
     grid_shift = grid * multiply_factor + mean
 
-    cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
-    grid_plus = jnp.hstack((grid_shift, cell_width_column))
+    # cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
+    # grid_plus = jnp.hstack((grid_shift, cell_width_column))
+    grid_plus = grid_shift
 
     return grid_plus
 
@@ -43,7 +44,7 @@ class Verifier:
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vmap_grid_multiply_shift = jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0)
+        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
 
         return
@@ -158,15 +159,13 @@ class Verifier:
 
             idxs = np.all((num_per_dimension == num), axis=1)
 
-            from copy import deepcopy
-            assert len(grid) == int(num[0] * num[1])
+            # from copy import deepcopy
+            # assert len(grid) == int(num[0] * num[1])
+            # if tuple(num) not in self.refine_cache:
+            #     self.refine_cache[tuple(num)] = deepcopy(self.vmap_grid_multiply_shift)
+            # grid3d = self.refine_cache[tuple(num)](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
-            if tuple(num) not in self.refine_cache:
-                self.refine_cache[tuple(num)] = deepcopy(self.vmap_grid_multiply_shift)
-
-            grid3d = self.refine_cache[tuple(num)](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
-
-            # grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+            grid3d = self.vmap_grid_multiply_shift(grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
 
             print('- Grid shifted in: ', t-time.time())
             t = time.time()
@@ -181,9 +180,9 @@ class Verifier:
         print('- Cache+vmap - computing grid took:', time.time() - t)
         print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
-        for num in unique_num:
-            if tuple(num) in self.refine_cache:
-                print(f'--- For num={num}: {self.refine_cache[tuple(num)]._cache_size()}')
+        # for num in unique_num:
+        #     if tuple(num) in self.refine_cache:
+        #         print(f'--- For num={num}: {self.refine_cache[tuple(num)]._cache_size()}')
 
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
