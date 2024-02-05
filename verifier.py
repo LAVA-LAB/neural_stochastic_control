@@ -17,19 +17,18 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 cpu_device = jax.devices('cpu')[0]
 
-# @jax.jit
+@jax.jit
 def grid_multiply_shift(grid, lb, ub, num):
 
     multiply_factor = (ub - lb) / 2
-    cell_width = (ub - lb) / num
+    # cell_width = (ub - lb) / num
     mean = (lb + ub) / 2
 
     grid_shift = grid * multiply_factor + mean
 
     cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
     grid_plus = jnp.hstack((grid_shift, cell_width_column))
-    grid_plus = grid_shift
-
+    
     return grid_plus
 
 
@@ -44,7 +43,7 @@ class Verifier:
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
         self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
+        self.vmap_grid_multiply_shift = jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0)
         self.refine_cache = {}
 
         return
@@ -140,6 +139,7 @@ class Verifier:
         max_length = int(np.max(unique_num) ** self.buffer.dim)
 
         print('max length:', max_length)
+        print('unique numbers:', unique_num)
 
         for i,num in enumerate(unique_num):
 
