@@ -139,6 +139,8 @@ class Verifier:
             grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
 
         print('- V1 - part 1:', time.time() - t)
+
+        '''
         t = time.time()
 
         # For each given point, compute the subgrid
@@ -170,6 +172,7 @@ class Verifier:
 
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- V1 - part 2b:', time.time() - t)
+        '''
 
         ####
 
@@ -190,9 +193,9 @@ class Verifier:
         t = time.time()
 
         vmap_jit_fn = jax.jit(jax.vmap(jit_fn, in_axes=(None, 0, 0, None), out_axes=0))
-        grid_plus_b = [[]] * len(new_mesh_sizes)
+        grid_plus_b = [[]] * len(unique_num)
 
-        for num in unique_num:
+        for i,num in enumerate(unique_num):
 
             idxs = np.all((num_per_dimension == num), axis=1)
             grid = grid_cache[tuple(num)]
@@ -203,20 +206,17 @@ class Verifier:
 
             grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[1])
 
-
-
         #####
-
-        t = time.time()
 
         print('- V4 - part 1:', time.time() - t)
         print(f'Number of times function was compiled: {vmap_jit_fn._cache_size()}')
 
         t = time.time()
 
-        stacked_grid_plus_new = np.vstack(grid_plus)
+        stacked_grid_plus_new = np.vstack(grid_plus_b)
         print('- V4 - part 2:', time.time() - t)
 
+        '''
         max_length = np.max([len(grid) for grid in grid_cache.values()])
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
 
@@ -234,6 +234,7 @@ class Verifier:
 
         stacked_grid_plus_new = np.vstack(grid_plus)
         print('- V2 - part 2:', time.time() - t)
+        '''
 
         #####
 
