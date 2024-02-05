@@ -182,13 +182,11 @@ class Verifier:
 
                 grid_plus_sub = [[]]*sum_idxs
 
-                # grid_fixed_length = np.zeros((max_length, grid.shape[1]))
-                # grid_fixed_length[:len(grid)] = grid
+                grid_fixed_length = np.zeros((max_length, grid.shape[1]))
+                grid_fixed_length[:len(grid)] = grid
 
                 for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
-                    grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num) #[:, :len(grid), :]
-
-                print(grid_plus_sub)
+                    grid_plus_sub[j] = grid_multiply_shift(grid_fixed_length, lb, ub, num)[:, :len(grid), :]
 
                 grid_shift[i] = np.vstack(grid_plus_sub)
 
