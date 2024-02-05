@@ -220,6 +220,7 @@ class Verifier:
         # For each given point, compute the subgrid
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension[:,0])):
             print(num)
+            print(lb, ub)
 
             cell_width = (ub - lb) / num
 
