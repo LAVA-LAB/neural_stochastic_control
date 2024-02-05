@@ -133,8 +133,8 @@ class Verifier:
 
         ####
 
-        t = time.time()
-        grid_plus_b = [[]] * len(unique_num)
+        tt = time.time()
+        grid_shift = [[]] * len(unique_num)
 
         max_length = int(np.max(unique_num) ** self.buffer.dim)
         print('# unique numbers:', len(unique_num))
@@ -162,30 +162,34 @@ class Verifier:
 
             # If the number of idxs is above the threshold, than use vmap
             if len(idxs) > THRESHOLD:
+                print('Use vmap')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
-                grid_zeros = np.zeros((max_length, grid.shape[1]))
-                grid_zeros[:len(grid)] = grid
-                grid3d = self.vmap_grid_multiply_shift(grid_zeros, lb_idxs, ub_idxs, jnp.array(num))
-                grid3d = grid3d[:, :len(grid), :]
+                grid_fixed_length = np.zeros((max_length, grid.shape[1]))
+                grid_fixed_length[:len(grid)] = grid
+                grid_shift_batch = self.vmap_grid_multiply_shift(grid_fixed_length, lb_idxs, ub_idxs, jnp.array(num))
+                grid_shift_batch = grid_shift_batch[:, :len(grid), :]
 
                 # Concatenate
-                grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
+                grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
+
+                print(f'- Iteration {num} mode "vmap" took: {time.time() - t}')
 
             else:
+                print('Use for loop')
                 # If number of idxs is not above threshold, than do naive for loop
 
                 grid_plus_sub = [[]]*len(idxs)
                 for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
                     grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num)
 
-                grid_plus_b[i] = np.vstack(grid_plus_sub)
+                grid_shift[i] = np.vstack(grid_plus_sub)
 
-            print('- Grid shifted and stacked in :', time.time()-t)
+                print(f'- Iteration {num} mode "for loop" took: {time.time()-t}')
 
         #####
 
-        print('- Cache+vmap - computing grid took:', time.time() - t)
+        print('- Cache+vmap - computing grid took:', time.time() - tt)
         print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
         # for num in unique_num:
@@ -193,7 +197,7 @@ class Verifier:
         #         print(f'--- For num={num}: {self.refine_cache[tuple(num)]._cache_size()}')
 
         t = time.time()
-        stacked_grid_plus_new = np.vstack(grid_plus_b)
+        stacked_grid_plus_new = np.vstack(grid_shift)
         print('- Cache+vmap - stacking took:', time.time() - t)
 
         #####
