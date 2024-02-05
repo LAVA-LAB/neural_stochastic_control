@@ -137,9 +137,9 @@ class Verifier:
         grid_plus_b = [[]] * len(unique_num)
 
         max_length = int(np.max(unique_num) ** self.buffer.dim)
-
-        print('max length:', max_length)
         print('# unique numbers:', len(unique_num))
+
+        THRESHOLD = 100
 
         for i,num in enumerate(unique_num):
 
@@ -151,43 +151,37 @@ class Verifier:
 
             # Width of unit cube is 2 by definition
             cell_width = 2 / num
-
             grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
             print('- Grid defined in :', time.time()-t)
             t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
+            lb_idxs = points_lb[idxs]
+            ub_idxs = points_ub[idxs]
 
-            print('num shape:', num.shape)
+            # If the number of idxs is above the threshold, than use vmap
+            if len(idxs) > THRESHOLD:
 
-            # from copy import deepcopy
-            # assert len(grid) == int(num[0] * num[1])
-            # if tuple(num) not in self.refine_cache:
-            #     self.refine_cache[tuple(num)] = deepcopy(self.vmap_grid_multiply_shift)
-            # grid3d = self.refine_cache[tuple(num)](grid, points_lb[idxs], points_ub[idxs], jnp.array(num))
+                # Make sure that the grid length is always the same (to reduce the total number of compilations)
+                grid_zeros = np.zeros((max_length, grid.shape[1]))
+                grid_zeros[:len(grid)] = grid
+                grid3d = self.vmap_grid_multiply_shift(grid_zeros, lb_idxs, ub_idxs, jnp.array(num))
+                grid3d = grid3d[:, :len(grid), :]
 
-            grid_zeros = np.zeros((max_length, grid.shape[1]))
-            grid_zeros[:len(grid)] = grid
+                # Concatenate
+                grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
 
-            print('grid shape:',grid_zeros.shape)
-            print('num shape:', num.shape)
-            print('lb shape:', points_lb[idxs].shape)
-            print('ub shape:', points_ub[idxs].shape)
+            else:
+                # If number of idxs is not above threshold, than do naive for loop
 
-            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))
-            print('Raw output size:', grid3d.shape)
-            grid3d = grid3d[:, :len(grid), :]
+                grid_plus_sub = [[]]*len(idxs)
+                for j, (lb, ub) in enumerate(zip(lb_idxs, ub_idxs)):
+                    grid_plus_sub[j] = grid_multiply_shift(grid, lb, ub, num)
 
-            print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
+                grid_plus_b[i] = np.vstack(grid_plus_sub)
 
-            print('- Grid shifted in: ', time.time()-t)
-            t = time.time()
-
-            # Concatenate
-            grid_plus_b[i] = grid3d.reshape(-1, grid3d.shape[2])
-
-            print('- Grid stacked in :', time.time()-t)
+            print('- Grid shifted and stacked in :', time.time()-t)
 
         #####
 
