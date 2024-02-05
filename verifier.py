@@ -178,8 +178,9 @@ class Verifier:
         print('- Cache+vmap - computing grid took:', time.time() - t)
         print(f'--- Number of times function was compiled: {self.vmap_grid_multiply_shift._cache_size()}')
 
-        for i in range(100):
-            print(f'--- For num={i}: {self.refine_cache[i]._cache_size()}')
+        for num in range(unique_num):
+            if tuple(num) in self.refine_cache:
+                print(f'--- For num={i}: {self.refine_cache[tuple(num)]._cache_size()}')
 
         t = time.time()
         stacked_grid_plus_new = np.vstack(grid_plus_b)
