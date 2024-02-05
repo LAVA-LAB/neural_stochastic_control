@@ -143,7 +143,7 @@ class Verifier:
 
         for i,num in enumerate(unique_num):
 
-            t = time.time()
+            # t = time.time()
 
             # Set box from -1 to 1
             unit_lb = -np.ones(self.buffer.dim)
@@ -153,8 +153,8 @@ class Verifier:
             cell_width = 2 / num
             grid = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
 
-            print('- Grid defined in :', time.time()-t)
-            t = time.time()
+            # print('- Grid defined in :', time.time()-t)
+            # t = time.time()
 
             idxs = np.all((num_per_dimension == num), axis=1)
             lb_idxs = points_lb[idxs]
@@ -163,7 +163,7 @@ class Verifier:
 
             # If the number of idxs is above the threshold, than use vmap
             if sum_idxs > THRESHOLD:
-                print('Use vmap')
+                # print('Use vmap')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
                 grid_fixed_length = np.zeros((max_length, grid.shape[1]))
@@ -174,10 +174,10 @@ class Verifier:
                 # Concatenate
                 grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
 
-                print(f'- Iteration {num} mode "vmap" took: {time.time() - t}')
+                # print(f'- Iteration {num} mode "vmap" took: {time.time() - t}')
 
             else:
-                print('Use for loop')
+                # print('Use for loop')
                 # If number of idxs is not above threshold, than do naive for loop
 
                 grid_plus_sub = [[]]*sum_idxs
@@ -190,7 +190,7 @@ class Verifier:
 
                 grid_shift[i] = np.vstack(grid_plus_sub)
 
-                print(f'- Iteration {num} mode "for loop" took: {time.time()-t}')
+                # print(f'- Iteration {num} mode "for loop" took: {time.time()-t}')
 
         #####
 
