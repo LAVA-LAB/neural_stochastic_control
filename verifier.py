@@ -135,7 +135,7 @@ class Verifier:
         t = time.time()
         grid_plus_b = [[]] * len(unique_num)
 
-        max_length = np.max(unique_num) ** self.buffer.dim
+        max_length = int(np.max(unique_num) ** self.buffer.dim)
 
         for i,num in enumerate(unique_num):
 
@@ -155,12 +155,18 @@ class Verifier:
 
             idxs = np.all((num_per_dimension == num), axis=1)
 
-            grid_zeros = np.zeros((max_length,self.buffer.dim))
+            grid_zeros = np.zeros((max_length, grid.shape[1]))
             grid_zeros[:len(grid)] = grid
 
             print(grid_zeros.shape)
 
-            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))[:, len(grid)]
+            lb = np.zeros(max_length)
+            lb[:len(grid)] = points_lb[idxs]
+
+            ub = np.zeros(max_length)
+            ub[:len(grid)] = points_ub[idxs]
+
+            grid3d = self.vmap_grid_multiply_shift(grid_zeros, lb, ub, jnp.array(num))[:, len(grid)]
 
             print(grid3d.shape)
 
