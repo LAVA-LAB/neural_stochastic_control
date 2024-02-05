@@ -118,7 +118,7 @@ class Verifier:
 
         # TODO: Precompute the new grids fir every unique "num_per_dimension". Then assign these around the given points
         unique_num = np.unique(num_per_dimension, axis=0)
-        print('- Number onique number of grids to compute:', len(unique_num))
+        print('- Number of unique number of grids to compute:', len(unique_num))
         grid_cache = {}
         grid_length_cache = {}
 
@@ -126,10 +126,9 @@ class Verifier:
         unit_lb = -np.ones(self.buffer.dim)
         unit_ub = np.ones(self.buffer.dim)
 
-        print('- New local refinement took part 0:', time.time() - t)
+        print('- V1 - part 0:', time.time() - t)
         t = time.time()
 
-        print('Length of loop 1:', len(unique_num))
         # First create a cache with all the refined grids that will be needed
         for num in unique_num:
             # Width of unit cube is 2 by definition
@@ -139,11 +138,11 @@ class Verifier:
             grid_cache[tuple(num)] = define_grid_jax(unit_lb + 0.5 * cell_width, unit_ub - 0.5 * cell_width, size=num)
             grid_length_cache[tuple(num)] = len(grid_cache[tuple(num)])
 
-        print('- New local refinement took part 1:', time.time() - t)
+        print('- V1 - part 1:', time.time() - t)
         t = time.time()
 
-        print('Length of loop 2:', len(num_per_dimension))
         # For each given point, compute the subgrid
+        print('Length of loop 1:', len(num_per_dimension))
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
             # t = time.time()
 
@@ -167,11 +166,11 @@ class Verifier:
             # print('c:', time.time() - t)
             # t = time.time()
 
-        print('- New local refinement took part 2a:', time.time() - t)
+        print('- V1 - part 2a:', time.time() - t)
         t = time.time()
 
         stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- New local refinement took part 2b:', time.time() - t)
+        print('- V1 - part 2b:', time.time() - t)
 
         #####
 
@@ -194,20 +193,20 @@ class Verifier:
         max_length = np.max([len(grid) for grid in grid_cache.values()])
         for i, (lb, ub, num) in enumerate(zip(points_lb, points_ub, num_per_dimension)):
 
-            ln = grid_length_cache[tuple(num)]
+            # ln = grid_length_cache[tuple(num)]
 
-            grid_plus_zeros = np.zeros((max_length, self.buffer.dim))
-            grid_plus_zeros[:ln] = grid_cache[tuple(num)]
+            # grid_plus_zeros = np.zeros((max_length, self.buffer.dim))
+            # grid_plus_zeros[:ln] =
 
-            grid_plus[i] = jit_fn(grid_plus_zeros, lb, ub, num)[:ln]
+            grid_plus[i] = jit_fn(grid_cache[tuple(num)], lb, ub, num) #[:ln]
 
-        print('- New v2 part 2a took:', time.time() - t)
+        print('- V2 - part 1:', time.time() - t)
         print(f'Number of times function was compiled: {jit_fn._cache_size()}')
 
         t = time.time()
 
         stacked_grid_plus_new = np.vstack(grid_plus)
-        print('- New v2 part 2b took:', time.time() - t)
+        print('- V2 - part 2:', time.time() - t)
 
         #####
 
@@ -225,13 +224,11 @@ class Verifier:
             cell_width_column = np.full((len(grid), 1), fill_value = cell_width[0])
             grid_plus[i] = np.hstack((grid, cell_width_column))
 
-        print('- Old local refinement took part 2a:', time.time() - t)
+        print('- V0 - part 1:', time.time() - t)
         t = time.time()
 
         stacked_grid_plus = np.vstack(grid_plus)
-        print('- Old local refinement took part 2b:', time.time() - t)
-
-        print( np.abs(stacked_grid_plus - stacked_grid_plus_new) )
+        print('- V0 - part 2:', time.time() - t)
 
         assert np.max(np.abs(stacked_grid_plus - stacked_grid_plus_new)) <= 1e-5
 
