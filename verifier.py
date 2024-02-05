@@ -17,6 +17,22 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 
 cpu_device = jax.devices('cpu')[0]
 
+@jax.jit
+def jit_fn(grid, lb, ub, num):
+
+    multiply_factor = (ub - lb) / 2
+    cell_width = (ub - lb) / num
+    mean = (lb + ub) / 2
+
+    grid_shift = grid * multiply_factor + mean
+
+    cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
+    grid_plus = jnp.hstack((grid_shift, cell_width_column))
+
+    return grid_plus
+
+vmap_jit_fn = jax.jit(jax.vmap(jit_fn, in_axes=(None, 0, 0, None), out_axes=0))
+
 class Verifier:
 
     def __init__(self, env):
@@ -114,23 +130,7 @@ class Verifier:
 
         ####
 
-        @jax.jit
-        def jit_fn(grid, lb, ub, num):
-
-            multiply_factor = (ub - lb) / 2
-            cell_width = (ub - lb) / num
-            mean = (lb + ub) / 2
-
-            grid_shift = grid * multiply_factor + mean
-
-            cell_width_column = jnp.full((len(grid_shift), 1), fill_value=cell_width[0])
-            grid_plus = jnp.hstack((grid_shift, cell_width_column))
-
-            return grid_plus
-
         t = time.time()
-
-        vmap_jit_fn = jax.jit(jax.vmap(jit_fn, in_axes=(None, 0, 0, None), out_axes=0))
         grid_plus_b = [[]] * len(unique_num)
 
         for i,num in enumerate(unique_num):
