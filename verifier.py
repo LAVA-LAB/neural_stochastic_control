@@ -157,7 +157,12 @@ class Verifier:
 
             grid_zeros = np.zeros((max_length,self.buffer.dim))
             grid_zeros[:len(grid)] = grid
-            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))[:, len(grid), :]
+
+            print(grid_zeros.shape)
+
+            grid3d = self.vmap_grid_multiply_shift(grid_zeros, points_lb[idxs], points_ub[idxs], jnp.array(num))[:, len(grid)]
+
+            print(grid3d.shape)
 
             print('- Grid shifted in: ', t-time.time())
             t = time.time()
