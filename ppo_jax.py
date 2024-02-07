@@ -321,7 +321,7 @@ def compute_gae(
     storage = storage.replace(returns=storage.advantages + storage.values)
     return storage
 
-@partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
+# @partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
 def update_ppo_jit(
         env,
         args: PPOargs,
@@ -337,6 +337,8 @@ def update_ppo_jit(
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
+
+    print(b_actions)
 
     def ppo_loss(
             agent_state: AgentState,
@@ -430,8 +432,6 @@ def update_ppo_jit(
 
         iMax = (args.batch_size // args.minibatch_size)
         b_inds_mat = jnp.reshape(b_inds[:iMax * args.minibatch_size], (iMax, args.minibatch_size))
-
-        print(b_actions)
 
         val = (agent_state,
                b_obs,
