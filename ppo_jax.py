@@ -742,6 +742,9 @@ def PPO(environment_function,
     # Get actions
     action, _ = agent_state.actor_fn(agent_state.params['actor'], grid)
 
+    print('Actions:')
+    print(action)
+
     key = jax.random.split(jax.random.PRNGKey(args.seed), len(grid))
 
     # Make step
@@ -750,6 +753,8 @@ def PPO(environment_function,
 
     scaling = 1
     vectors = (next_obs - grid) * scaling
+
+    print(vectors)
 
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
