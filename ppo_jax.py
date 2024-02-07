@@ -583,6 +583,8 @@ def PPO(environment_function,
 
     obs, env_key, steps_since_reset = env.vreset(env_key)
 
+    print(np.array(env.action_space.shape).prod())
+
     # Create both networks
     actor = Actor(action_shape_prod=np.array(env.action_space.shape).prod(),
                   neurons_per_layer=neurons_per_layer,
