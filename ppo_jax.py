@@ -600,6 +600,9 @@ def PPO(environment_function,
         frac = 1.0 - (count // (args.num_minibatches * args.update_epochs)) / args.num_iterations
         return args.learning_rate * frac
 
+    actor.apply = jax.jit(actor.apply)
+    critic.apply = jax.jit(critic.apply)
+
     # Initialize parameters of networks
     agent_state = AgentState.create(
         apply_fn=None,
@@ -614,11 +617,8 @@ def PPO(environment_function,
         ),
     )
 
-    actor.apply = jax.jit(actor.apply)
-    critic.apply = jax.jit(critic.apply)
-
     out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([0,1,2,3]))
-    out_critic = agent_state.actor_fn(agent_state.params['critic'], np.array([0,1,2,3]))
+    out_critic = agent_state.critic_fn(agent_state.params['critic'], np.array([0,1,2,3]))
 
     print(out_actor)
     print(out_critic)
