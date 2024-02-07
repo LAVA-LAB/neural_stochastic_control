@@ -542,6 +542,8 @@ def update_ppo(
     # Create function that will return gradient of the specified function
     ppo_loss_grad_fn = jit(value_and_grad(ppo_loss, argnums=1, has_aux=True))
 
+    print(b_actions[mb_inds])
+
     for epoch in range(args.update_epochs):
         key, subkey = jax.random.split(key)
         b_inds = jax.random.permutation(subkey, args.batch_size, independent=True)
