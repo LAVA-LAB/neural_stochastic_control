@@ -754,6 +754,8 @@ def PPO(environment_function,
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
-    plt.show()
+    # Save figure
+    filepath = 'plots/latest_ppo_vector.png'
+    plt.savefig(filepath, format='png', bbox_inches='tight')
 
     return agent_state
