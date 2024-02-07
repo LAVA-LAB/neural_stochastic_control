@@ -321,7 +321,7 @@ def compute_gae(
     storage = storage.replace(returns=storage.advantages + storage.values)
     return storage
 
-# @partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
+@partial(jax.jit, static_argnums=(0,1,)) # Don't JIT the environment
 def update_ppo_jit(
         env,
         args: PPOargs,
@@ -330,7 +330,6 @@ def update_ppo_jit(
         max_policy_lipschitz: jnp.float32,
         key: jax.Array,
 ):
-    print('Shape:', storage.actions.shape)
 
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
@@ -339,8 +338,6 @@ def update_ppo_jit(
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
-
-    print(b_actions)
 
     def ppo_loss(
             agent_state: AgentState,
@@ -595,9 +592,6 @@ def PPO(environment_function,
     critic = Critic(neurons_per_layer=neurons_per_layer,
                     activation_func=activation_functions)
 
-    print(actor)
-    print(critic)
-
     # Anneal learning rate over time
     def linear_schedule(count):
         # anneal learning rate linearly after one training iteration which contains
@@ -621,12 +615,6 @@ def PPO(environment_function,
             ),
         ),
     )
-
-    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([[0,1,2,3]]))
-    out_critic = agent_state.critic_fn(agent_state.params['critic'], np.array([[0,1,2,3]]))
-
-    print(out_actor)
-    print(out_critic)
 
     # ALGO Logic: Storage setup
     storage = Storage(
