@@ -28,7 +28,7 @@ class AnaesthesiaEnv(gym.Env):
 
         self.render_mode = render_mode
 
-        self.variable_names = ['position', 'velocity']
+        self.variable_names = ['c1', 'c2', 'c3']
 
         self.min_torque = -10
         self.max_torque = 40
@@ -38,13 +38,12 @@ class AnaesthesiaEnv(gym.Env):
         self.clock = None
         self.isopen = True
 
-        self.state_dim = 3
-
         self.A = np.array([
             [0.8192, 0.03412, 0.01265],
             [0.01646, 0.9822, 0.0001],
             [0.0009, 0.00002, 0.9989]
         ])
+        self.state_dim = len(self.A)
         self.B = np.array([[0.01883],
                            [0.005],
                            [0.003]])
@@ -53,7 +52,7 @@ class AnaesthesiaEnv(gym.Env):
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f_l1 = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
         self.lipschitz_f_linfty = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=1)))
-        
+
         self.lipschitz_f_l1_A = float(np.max(np.sum(self.A, axis=0)))
         self.lipschitz_f_linfty_A = float(np.max(np.sum(self.A, axis=1)))
         self.lipschitz_f_l1_B = float(np.max(np.sum(self.B, axis=0)))
@@ -63,7 +62,7 @@ class AnaesthesiaEnv(gym.Env):
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=self.min_torque, high=self.max_torque, shape=(1,), dtype=np.float32
+            low=self.min_torque, high=self.max_torque, shape=(len(self.max_torque),), dtype=np.float32
         )
 
         # Set observation / state space
@@ -74,7 +73,7 @@ class AnaesthesiaEnv(gym.Env):
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1, 1], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-        self.noise_dim = 3
+        self.noise_dim = len(high)
 
         # Set target set
         self.target_space = RectangularSet(low=np.array([4, 8, 8]), high=np.array([6, 10, 10]), dtype=np.float32)
@@ -192,9 +191,8 @@ class AnaesthesiaEnv(gym.Env):
         return jax.lax.cond(done, self._reset, lambda key: (state, key, steps_since_reset), key)
 
     def _reset(self, key):
-
-        low = np.array([1, 0, 0])
-        high = np.array([6, 10, 10])
+        high = self.observation_space.high
+        low = self.observation_space.low
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,

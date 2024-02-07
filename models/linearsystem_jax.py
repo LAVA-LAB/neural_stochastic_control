@@ -37,12 +37,11 @@ class LinearEnv(gym.Env):
         self.clock = None
         self.isopen = True
 
-        self.state_dim = 2
-
         self.A = np.array([
             [1, 0.045],
             [0, 0.9]
         ])
+        self.state_dim = len(self.A)
         self.B = np.array([
             [0.45],
             [0.5]
@@ -62,7 +61,7 @@ class LinearEnv(gym.Env):
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
+            low=-self.max_torque, high=self.max_torque, shape=(len(self.max_torque),), dtype=np.float32
         )
 
         # Set observation / state space
@@ -72,7 +71,7 @@ class LinearEnv(gym.Env):
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-        self.noise_dim = 2
+        self.noise_dim = len(high)
 
         # Set target set
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)

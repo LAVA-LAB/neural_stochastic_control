@@ -251,8 +251,7 @@ verify.partition_noise(env, args)
 num_per_dimension_train = np.array(np.ceil((env.observation_space.high -
                                             env.observation_space.low) / args.train_mesh_cell_width), dtype=int)
 
-print(num_per_dimension_train)
-
+print(f'- Create initial training grid of size: {num_per_dimension_train}')
 initial_train_grid = define_grid(env.observation_space.low + 0.5 * args.mesh_train_grid,
                                   env.observation_space.high - 0.5 * args.mesh_train_grid, size=num_per_dimension_train)
 
@@ -263,6 +262,7 @@ initial_train_grid_plus = np.hstack(( initial_train_grid, 1e-5 * np.ones((len(in
 train_buffer.append(initial_train_grid_plus)
 
 # Set counterexample buffer. Use uniform training grid as initial counterexamples
+print(f'- Create initial counterexample buffer')
 counterx_buffer = Buffer(dim = env.observation_space.shape[0],
                          max_size = len(initial_train_grid) * args.counterx_fraction / (1-args.counterx_fraction),
                          extra_dims = 1)
