@@ -332,7 +332,7 @@ def update_ppo_jit(
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = storage.logprobs.reshape(-1)
-    b_actions = storage.actions.reshape((-1,) + env.observation_space.shape)
+    b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
@@ -486,7 +486,7 @@ def update_ppo(
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = storage.logprobs.reshape(-1)
-    b_actions = storage.actions.reshape((-1,) + env.observation_space.shape)
+    b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
