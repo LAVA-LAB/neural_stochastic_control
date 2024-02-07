@@ -201,7 +201,7 @@ class LinearEnv4D(gym.Env):
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,
-                                   maxval=high, shape=(2,))
+                                   maxval=high, shape=(self.state_dim,))
 
         steps_since_reset = 0
 
