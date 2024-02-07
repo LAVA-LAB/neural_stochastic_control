@@ -135,7 +135,7 @@ class Critic(nn.Module):
                 afun
             ]
 
-        return nn.Sequential(fnn + [linear_layer_init(1, std=1.0)])(x)
+        return nn.Sequential(fnn + [linear_layer_init(2, std=1.0)])(x)
 
 
 # Helper function to quickly declare linear layer with weight and bias initializers
