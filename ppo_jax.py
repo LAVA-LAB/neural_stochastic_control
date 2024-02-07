@@ -616,7 +616,7 @@ def PPO(environment_function,
     # ALGO Logic: Storage setup
     storage = Storage(
         obs=jnp.zeros((args.num_steps, args.num_envs) + env.observation_space.shape),
-        actions=jnp.zeros((args.num_steps, args.num_envs) + env.observation_space.shape),
+        actions=jnp.zeros((args.num_steps, args.num_envs) + env.action_space.shape),
         logprobs=jnp.zeros((args.num_steps, args.num_envs)),
         dones=jnp.zeros((args.num_steps, args.num_envs)),
         values=jnp.zeros((args.num_steps, args.num_envs)),
