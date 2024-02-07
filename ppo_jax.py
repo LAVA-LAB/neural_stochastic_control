@@ -754,15 +754,15 @@ def PPO(environment_function,
     scaling = 1
     vectors = (next_obs - grid) * scaling
 
-    print(vectors)
-
     print('grid')
     print(grid[0:10, 0])
     print(grid[0:10], 1)
+    print(grid.shape)
 
     print('vectors')
     print(vectors[0:10, 0])
     print(vectors[0:10, 1])
+    print(vectors.shape)
 
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
