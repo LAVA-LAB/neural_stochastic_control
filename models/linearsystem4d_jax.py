@@ -177,7 +177,7 @@ class LinearEnv4D(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        costs = -1 + state[0] ** 2 + state[1] ** 2
+        costs = -1 + state[0] ** 2 + state[1] ** 2 + state[2] ** 2 + state[3] ** 2
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
@@ -196,9 +196,8 @@ class LinearEnv4D(gym.Env):
         return jax.lax.cond(done, self._reset, lambda key: (state, key, steps_since_reset), key)
 
     def _reset(self, key):
-
-        high = np.array([1, 1])
-        low = -high  # We enforce symmetric limits.
+        high = self.observation_space.high
+        low = self.observation_space.low
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,
