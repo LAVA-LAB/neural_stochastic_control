@@ -30,8 +30,8 @@ class AnaesthesiaEnv(gym.Env):
 
         self.variable_names = ['c1', 'c2', 'c3']
 
-        self.min_torque = -10
-        self.max_torque = 40
+        self.min_torque = np.array([-10])
+        self.max_torque = np.array([40])
 
         self.screen_dim = 500
         self.screen = None
