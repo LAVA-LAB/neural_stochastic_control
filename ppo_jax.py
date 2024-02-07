@@ -135,7 +135,7 @@ class Critic(nn.Module):
                 afun
             ]
 
-        return nn.Sequential(fnn + [linear_layer_init(2, std=[1.0, 1.0])])(x)
+        return nn.Sequential(fnn + [linear_layer_init(1, std=1.0)])(x)
 
 
 # Helper function to quickly declare linear layer with weight and bias initializers
@@ -616,6 +616,12 @@ def PPO(environment_function,
 
     actor.apply = jax.jit(actor.apply)
     critic.apply = jax.jit(critic.apply)
+
+    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([0,1,2,3]))
+    out_critic = agent_state.actor_fn(agent_state.params['critic'], np.array([0,1,2,3]))
+
+    print(out_actor)
+    print(out_critic)
 
     # ALGO Logic: Storage setup
     storage = Storage(
