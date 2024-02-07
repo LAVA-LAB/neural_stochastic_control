@@ -24,11 +24,11 @@ class LinearEnv4D(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, g=10.0):
+    def __init__(self, render_mode: Optional[str] = None):
 
         self.render_mode = render_mode
 
-        self.variable_names = ['position', 'velocity']
+        self.variable_names = ['position1', 'velocity1', 'position2', 'velocity2']
 
         self.max_torque = np.array([1, 1])
 
@@ -37,14 +37,13 @@ class LinearEnv4D(gym.Env):
         self.clock = None
         self.isopen = True
 
-        self.state_dim = 4
-
         self.A = np.array([
             [1, 0.045, 0, 0],
             [0, 0.9, 0, 0],
             [0, 0, 1, 0.045],
             [0, 0, 0, 0.9],
         ])
+        self.state_dim = len(self.A)
         self.B = np.array([
             [0.45, 0],
             [0.5, 0],
@@ -76,7 +75,7 @@ class LinearEnv4D(gym.Env):
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1, 1, 1], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-        self.noise_dim = 2
+        self.noise_dim = len(high)
 
         # Set target set
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2, -0.2, -0.2]), high=np.array([0.2, 0.2, 0.2, 0.2]), dtype=np.float32)
