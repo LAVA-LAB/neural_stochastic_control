@@ -330,6 +330,8 @@ def update_ppo_jit(
         max_policy_lipschitz: jnp.float32,
         key: jax.Array,
 ):
+    print('Shape:', storage.actions.shape)
+
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = storage.logprobs.reshape(-1)
