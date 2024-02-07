@@ -135,7 +135,7 @@ class Critic(nn.Module):
                 afun
             ]
 
-        return nn.Sequential(fnn + [linear_layer_init(2, std=1.0)])(x)
+        return nn.Sequential(fnn + [linear_layer_init(1, std=1.0)])(x)
 
 
 # Helper function to quickly declare linear layer with weight and bias initializers
@@ -159,8 +159,7 @@ def get_action_and_value2(
 
     probs = tfp.Normal(action_mean, action_std)
 
-    test = probs.log_prob(action)
-    retval1 = test.sum(1)
+    retval1 = probs.log_prob(action).sum(1)
     retval2 = probs.entropy().sum(1)
     retval3 = value.squeeze()
 
@@ -330,11 +329,10 @@ def update_ppo_jit(
         max_policy_lipschitz: jnp.float32,
         key: jax.Array,
 ):
-
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = storage.logprobs.reshape(-1)
-    b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
+    b_actions = storage.actions.reshape((-1,) + env.observation_space.shape)
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
@@ -488,7 +486,7 @@ def update_ppo(
     # Flatten collected experiences
     b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
     b_logprobs = storage.logprobs.reshape(-1)
-    b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
+    b_actions = storage.actions.reshape((-1,) + env.observation_space.shape)
     b_advantages = storage.advantages.reshape(-1)
     b_returns = storage.returns.reshape(-1)
     b_values = storage.values.reshape(-1)
@@ -592,6 +590,9 @@ def PPO(environment_function,
     critic = Critic(neurons_per_layer=neurons_per_layer,
                     activation_func=activation_functions)
 
+    print(actor)
+    print(critic)
+
     # Anneal learning rate over time
     def linear_schedule(count):
         # anneal learning rate linearly after one training iteration which contains
@@ -615,6 +616,12 @@ def PPO(environment_function,
             ),
         ),
     )
+
+    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([[0,1,2,3]]))
+    out_critic = agent_state.critic_fn(agent_state.params['critic'], np.array([[0,1,2,3]]))
+
+    print(out_actor)
+    print(out_critic)
 
     # ALGO Logic: Storage setup
     storage = Storage(
