@@ -590,9 +590,6 @@ def PPO(environment_function,
     critic = Critic(neurons_per_layer=neurons_per_layer,
                     activation_func=activation_functions)
 
-    print(actor)
-    print(critic)
-
     # Anneal learning rate over time
     def linear_schedule(count):
         # anneal learning rate linearly after one training iteration which contains
@@ -739,7 +736,8 @@ def PPO(environment_function,
 
     vectors_per_dim = 10
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim, vectors_per_dim])
+    grid = define_grid(env.observation_space.low, env.observation_space.high,
+                       size=[vectors_per_dim]*len(env.observation_space.low))
 
     # Get actions
     action, _ = agent_state.actor_fn(agent_state.params['actor'], grid)
