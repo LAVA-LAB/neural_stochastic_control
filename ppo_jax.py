@@ -617,7 +617,7 @@ def PPO(environment_function,
         ),
     )
 
-    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([0,1,2,3]))
+    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([[0,1,2,3]]))
     out_critic = agent_state.critic_fn(agent_state.params['critic'], np.array([0,1,2,3]))
 
     print(out_actor)
