@@ -639,6 +639,9 @@ def PPO(environment_function,
         print(f'Start iter {iteration}')
         start_iter_time = time.time()
 
+        print(next_obs)
+        assert False
+
         start_time = time.time()
         next_obs, next_done, storage, action_key, env_key = \
             rollout_jax_jit(env, args, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
