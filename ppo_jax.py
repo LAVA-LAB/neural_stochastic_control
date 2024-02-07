@@ -736,8 +736,9 @@ def PPO(environment_function,
 
     vectors_per_dim = 10
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high,
-                       size=[vectors_per_dim]*len(env.observation_space.low))
+    sizes = [vectors_per_dim]*2 + [1]*(len(env.observation_space.low)-2)
+
+    grid = define_grid(env.observation_space.low, env.observation_space.high, size=sizes)
 
     # Get actions
     action, _ = agent_state.actor_fn(agent_state.params['actor'], grid)
@@ -756,7 +757,7 @@ def PPO(environment_function,
 
     print('grid')
     print(grid[0:10, 0])
-    print(grid[0:10], 1)
+    print(grid[0:10, 1)
     print(grid.shape)
 
     print('vectors')
