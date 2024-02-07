@@ -756,6 +756,14 @@ def PPO(environment_function,
 
     print(vectors)
 
+    print('grid')
+    print(grid[0:10, 0])
+    print(grid[0:10], 1)
+
+    print('vectors')
+    print(vectors[0:10, 0])
+    print(vectors[0:10, 1])
+
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
