@@ -586,6 +586,9 @@ def PPO(environment_function,
     critic = Critic(neurons_per_layer=neurons_per_layer,
                     activation_func=activation_functions)
 
+    print(actor)
+    print(critic)
+
     # Anneal learning rate over time
     def linear_schedule(count):
         # anneal learning rate linearly after one training iteration which contains

@@ -72,8 +72,6 @@ class LinearEnv4D(gym.Env):
         high = np.array([1.5, 1.5, 1.5, 1.5], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
-        print(self.observation_space.shape)
-
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1, 1, 1], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
