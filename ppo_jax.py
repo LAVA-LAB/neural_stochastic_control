@@ -583,8 +583,6 @@ def PPO(environment_function,
 
     obs, env_key, steps_since_reset = env.vreset(env_key)
 
-    print(np.array(env.action_space.shape).prod())
-
     # Create both networks
     actor = Actor(action_shape_prod=np.array(env.action_space.shape).prod(),
                   neurons_per_layer=neurons_per_layer,
@@ -618,12 +616,6 @@ def PPO(environment_function,
             ),
         ),
     )
-
-    out_actor = agent_state.actor_fn(agent_state.params['actor'], np.array([[0,1,2,3]]))
-    out_critic = agent_state.critic_fn(agent_state.params['critic'], np.array([[0,1,2,3]]))
-
-    print(out_actor)
-    print(out_critic)
 
     # ALGO Logic: Storage setup
     storage = Storage(
