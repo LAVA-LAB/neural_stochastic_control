@@ -757,7 +757,7 @@ def PPO(environment_function,
 
     print('grid')
     print(grid[0:10, 0])
-    print(grid[0:10, 1)
+    print(grid[0:10, 1])
     print(grid.shape)
 
     print('vectors')
