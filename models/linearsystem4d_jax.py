@@ -37,7 +37,7 @@ class LinearEnv4D(gym.Env):
         self.clock = None
         self.isopen = True
 
-        self.state_dim = 2
+        self.state_dim = 4
 
         self.A = np.array([
             [1, 0.045, 0, 0],
