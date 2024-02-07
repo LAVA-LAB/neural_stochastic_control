@@ -66,7 +66,7 @@ class LinearEnv4D(gym.Env):
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
+            low=-self.max_torque, high=self.max_torque, shape=(len(self.max_torque),), dtype=np.float32
         )
 
         # Set observation / state space
