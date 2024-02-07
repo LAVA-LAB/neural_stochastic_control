@@ -5,6 +5,7 @@ from ppo_jax import PPO, PPOargs
 from models.linearsystem_jax import LinearEnv
 from models.pendulum_jax import PendulumEnv
 from models.anaesthesia_jax import AnaesthesiaEnv
+from models.linearsystem4d_jax import LinearEnv4D
 from datetime import datetime
 import os
 from pathlib import Path
@@ -123,6 +124,8 @@ args.cwd = os.getcwd()
 
 if args.model == 'LinearEnv':
     envfun = LinearEnv
+elif args.model == 'LinearEnv4D':
+    envfun = LinearEnv4D
 elif args.model == 'PendulumEnv':
     envfun = PendulumEnv
 elif args.model == 'Anaesthesia':
