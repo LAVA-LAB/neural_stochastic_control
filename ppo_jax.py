@@ -159,7 +159,8 @@ def get_action_and_value2(
 
     probs = tfp.Normal(action_mean, action_std)
 
-    retval1 = probs.log_prob(action).sum(1)
+    test = probs.log_prob(action)
+    retval1 = test.sum(1)
     retval2 = probs.entropy().sum(1)
     retval3 = value.squeeze()
 
