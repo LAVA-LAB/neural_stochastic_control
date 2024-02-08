@@ -134,7 +134,7 @@ class Verifier:
 
         # Compute average number of copies per counterexample
         ratio = len(points) / len(unique_num)
-        THRESHOLD = 10000
+        THRESHOLD = 10000 * 10000
 
         if ratio > THRESHOLD:
             # Above threshold, use vmap batches version
@@ -158,6 +158,8 @@ class Verifier:
 
                 # Determine indexes
                 idxs = np.all((num_per_dimension == num), axis=1)
+
+                print(f'--- Refined grid size: {num}; copies: {np.sum(idxs)}')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
                 grid_fixed_length = np.zeros((max_length, grid.shape[1]))

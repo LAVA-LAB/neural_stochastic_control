@@ -54,7 +54,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
 def plot_dataset(env, train_data=None, additional_data=None, folder=False, filename=False):
 
     if len(env.observation_space.low) != 2:
-        print(f" >> Cannot create layout plot: environment has wrong state dimension (namely {len(env.observation_space.low)}.")
+        print(f" >> Cannot create layout plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
         return
 
     fig, ax = plt.subplots()
