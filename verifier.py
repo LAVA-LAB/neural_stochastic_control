@@ -165,7 +165,7 @@ class Verifier:
                 grid_fixed_length = np.zeros((max_length, grid.shape[1]))
                 grid_fixed_length[:len(grid)] = grid
 
-                starts, ends = create_batches(len(grid_fixed_length), batch_size = 100_000)
+                starts, ends = create_batches(len(grid_fixed_length), batch_size = 10_000)
                 grid_shift_batch = np.array([self.vmap_grid_multiply_shift(grid_fixed_length[i:j], points_lb[idxs], points_ub[idxs], num)
                                              for (i,j) in zip(starts, ends)])
                 grid_shift_batch = np.vstack(grid_shift_batch)
