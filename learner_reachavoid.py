@@ -308,17 +308,17 @@ def batch_training_data(env, key, buffer, epochs, batch_size):
     if len(samples['init']) == 0:
         num_init = 0
     else:
-        num_init = int(max(1, len(samples['init']) * batch_size / total_samples))
+        num_init = int(max(2, len(samples['init']) * batch_size / total_samples))
 
     if len(samples['unsafe']) == 0:
         num_unsafe = 0
     else:
-        num_unsafe = int(max(1, len(samples['unsafe']) * batch_size / total_samples))
+        num_unsafe = int(max(2, len(samples['unsafe']) * batch_size / total_samples))
 
     if len(samples['target']) == 0:
         num_target = 0
     else:
-        num_target = int(max(1, len(samples['target']) * batch_size / total_samples))
+        num_target = int(max(2, len(samples['target']) * batch_size / total_samples))
 
     num_decrease = int(batch_size - num_init - num_unsafe - num_target)
 
