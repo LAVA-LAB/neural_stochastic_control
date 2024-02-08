@@ -389,8 +389,9 @@ for i in range(args.cegis_iterations):
         elif np.min(suggested_mesh) >= current_mesh:
             print(f'\n- Skip refinement, because min. suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current max. value ({current_mesh:.5f})')
             verify_done = True
-        elif len(counterx) > 1000000:
+        elif len(counterx) > 1_000_000:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
+            verify_done = True
         else:
             # Clip the suggested mesh at the lowest allowed value
             counterx_current_mesh = counterx[:, -1]
