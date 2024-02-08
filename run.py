@@ -315,11 +315,6 @@ for i in range(args.cegis_iterations):
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
-            print(np.vstack((X_decrease[k], CX_decrease[k])))
-            print(np.vstack((X_init[k], CX_init[k])))
-            print(np.vstack((X_unsafe[k], CX_unsafe[k])))
-            print(np.vstack((X_target[k], CX_target[k])))
-
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
             V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
                 key = key,
@@ -341,6 +336,12 @@ for i in range(args.cegis_iterations):
                 V_state = V_state.apply_gradients(grads=V_grads)
             if args.update_policy and i >= update_policy_after_iteration:
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
+
+            if np.isnan(infos['0. total']):
+                print(np.vstack((X_decrease[k], CX_decrease[k])))
+                print(np.vstack((X_init[k], CX_init[k])))
+                print(np.vstack((X_unsafe[k], CX_unsafe[k])))
+                print(np.vstack((X_target[k], CX_target[k])))
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
