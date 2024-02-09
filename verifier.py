@@ -134,7 +134,7 @@ class Verifier:
 
         # Compute average number of copies per counterexample
         ratio = len(points) / len(unique_num)
-        THRESHOLD = 10000
+        THRESHOLD = 100
 
         if ratio > THRESHOLD:
             # Above threshold, use vmap batches version
