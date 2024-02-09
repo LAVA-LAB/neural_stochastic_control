@@ -17,7 +17,7 @@ from jax_utils import vsplit
 from commons import RectangularSet, MultiRectangularSet
 from scipy.stats import triang
 
-class LinearEnv4D(gym.Env):
+class LinearEnv3D(gym.Env):
 
     metadata = {
         "render_modes": [],
