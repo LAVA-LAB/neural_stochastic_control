@@ -171,7 +171,7 @@ class Verifier:
                 print(lbs)
                 print(ubs)
 
-                starts, ends = create_batches(len(lbs), batch_size = 10_000)
+                starts, ends = create_batches(len(lbs), batch_size = 100)
 
                 print('====')
                 print(starts)
