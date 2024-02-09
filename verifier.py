@@ -177,6 +177,9 @@ class Verifier:
                 print(starts)
                 print(ends)
 
+                for (i,j) in zip(starts, ends):
+                    print(self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num).shape)
+
                 grid_shift_batch = np.array([self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num)
                                              for (i,j) in zip(starts, ends)])
                 grid_shift_batch = np.vstack(grid_shift_batch)
