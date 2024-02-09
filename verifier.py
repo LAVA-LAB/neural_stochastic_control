@@ -162,14 +162,14 @@ class Verifier:
                 print(f'--- Refined grid size: {num}; copies: {np.sum(idxs)}')
 
                 # Make sure that the grid length is always the same (to reduce the total number of compilations)
-                grid_fixed_length = np.zeros((max_length, grid.shape[1]))
-                grid_fixed_length[:len(grid)] = grid
+                # grid_fixed_length = np.zeros((max_length, grid.shape[1]))
+                # grid_fixed_length[:len(grid)] = grid
 
-                starts, ends = create_batches(len(grid_fixed_length), batch_size = 10_000)
-                grid_shift_batch = np.array([self.vmap_grid_multiply_shift(grid_fixed_length[i:j], points_lb[idxs], points_ub[idxs], num)
+                starts, ends = create_batches(len(points_lb[idxs]), batch_size = 10_000)
+                grid_shift_batch = np.array([self.vmap_grid_multiply_shift(grid, points_lb[idxs][i:j], points_ub[idxs][i:j], num)
                                              for (i,j) in zip(starts, ends)])
                 grid_shift_batch = np.vstack(grid_shift_batch)
-                grid_shift_batch = grid_shift_batch[:, :len(grid), :]
+                # grid_shift_batch = grid_shift_batch[:, :len(grid), :]
 
                 # Concatenate
                 grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
