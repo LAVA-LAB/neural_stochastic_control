@@ -30,7 +30,7 @@ class LinearEnv3D(gym.Env):
 
         self.variable_names = ['position1', 'velocity1', 'position2', 'velocity2']
 
-        self.max_torque = np.array([1, 1])
+        self.max_torque = np.array([1])
 
         self.screen_dim = 500
         self.screen = None
