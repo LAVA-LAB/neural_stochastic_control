@@ -168,20 +168,20 @@ class Verifier:
                 lbs = points_lb[idxs]
                 ubs = points_ub[idxs]
 
-                print(lbs)
-                print(ubs)
+                # print(lbs)
+                # print(ubs)
 
                 starts, ends = create_batches(len(lbs), batch_size = 100)
 
-                print('====')
-                print(starts)
-                print(ends)
+                # print('====')
+                # print(starts)
+                # print(ends)
+                #
+                # for (i,j) in zip(starts, ends):
+                #     print(self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num).shape)
 
-                for (i,j) in zip(starts, ends):
-                    print(self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num).shape)
-
-                grid_shift_batch = np.array([self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num)
-                                             for (i,j) in zip(starts, ends)])
+                grid_shift_batch = [self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num)
+                                    for (i,j) in zip(starts, ends)]
                 grid_shift_batch = np.vstack(grid_shift_batch)
                 # grid_shift_batch = grid_shift_batch[:, :len(grid), :]
 
