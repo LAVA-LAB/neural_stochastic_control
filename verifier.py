@@ -134,7 +134,7 @@ class Verifier:
 
         # Compute average number of copies per counterexample
         ratio = len(points) / len(unique_num)
-        THRESHOLD = 100
+        THRESHOLD = 10000
 
         if ratio > THRESHOLD:
             # Above threshold, use vmap batches version
@@ -168,18 +168,7 @@ class Verifier:
                 lbs = points_lb[idxs]
                 ubs = points_ub[idxs]
 
-                # print(lbs)
-                # print(ubs)
-
-                starts, ends = create_batches(len(lbs), batch_size = 100)
-
-                # print('====')
-                # print(starts)
-                # print(ends)
-                #
-                # for (i,j) in zip(starts, ends):
-                #     print(self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num).shape)
-
+                starts, ends = create_batches(len(lbs), batch_size = 10_000)
                 grid_shift_batch = [self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num)
                                     for (i,j) in zip(starts, ends)]
                 grid_shift_batch = np.vstack(grid_shift_batch)
