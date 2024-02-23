@@ -169,15 +169,16 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
     # Visualize certificate network
     grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101]*dim)
+
+    # Only keep unique elements in first two dimensions
+    _, idxs = np.unique(grid, return_index=True, axis=0)
+    grid = grid[idxs]
+
     X = np.round(grid[:, 0], 3)
     Y = np.round(grid[:, 1], 3)
     out = cert_state.apply_fn(cert_state.params, grid).flatten()
 
     data = pd.DataFrame(data={'x': X, 'y': Y, 'z': out})
-
-    print('z shape:', X.shape)
-    print('y shape:', Y.shape)
-    print('z shape:', out.shape)
 
     data = data.pivot(index='y', columns='x', values='z')[::-1]
     sns.heatmap(data)
