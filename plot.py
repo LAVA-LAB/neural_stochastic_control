@@ -155,10 +155,14 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         ax.set_title("Vector field of dynamics under current policy", fontsize=10)
 
         if hasattr(env, 'variable_names)'):
+            print('- add axis labels')
             ax.set_xlabel(env.variable_names[0])
             ax.set_ylabel(env.variable_names[1])
             ax.set_zlabel(env.variable_names[2])
 
+        ax.set_xlabel('c0')
+        ax.set_ylabel('c1')
+        ax.set_zlabel('c2')
 
     if folder and filename:
         # Save figure
