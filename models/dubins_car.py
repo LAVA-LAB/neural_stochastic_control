@@ -56,7 +56,7 @@ class DubinsEnv(gym.Env):
         )
 
         # Set observation / state space
-        high = np.array([-2, -2, -2], dtype=np.float32)
+        high = np.array([2, 2, 2], dtype=np.float32)
         self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
