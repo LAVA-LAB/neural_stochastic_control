@@ -136,10 +136,6 @@ elif args.model == 'Dubins':
 else:
     assert False
 
-neurons_per_layer = [128, 128, 1]
-V_act_funcs = [nn.relu, nn.relu, nn.softplus]
-Policy_act_funcs = [nn.relu, nn.relu, None]
-
 print('\nRun using arguments:')
 for key,val in vars(args).items():
     print(' - `'+str(key)+'`: '+str(val))
@@ -210,8 +206,13 @@ env = envfun()
 
 args.train_mesh_cell_width = mesh2cell_width(args.mesh_train_grid, env.state_dim, args.linfty)
 
+V_neurons_per_layer = [128, 128, 1]
+V_act_funcs = [nn.relu, nn.relu, nn.softplus]
+Policy_neurons_per_layer = [128, 128, len(env.action_space.low)]
+Policy_act_funcs = [nn.relu, nn.relu, None]
+
 # Initialize certificate network
-certificate_model = MLP(neurons_per_layer, V_act_funcs)
+certificate_model = MLP(V_neurons_per_layer, V_act_funcs)
 V_state = create_train_state(
     model=certificate_model,
     act_funcs=V_act_funcs,
@@ -221,7 +222,7 @@ V_state = create_train_state(
 )
 
 # Initialize policy network
-policy_model = MLP(neurons_per_layer, Policy_act_funcs)
+policy_model = MLP(policy_neurons_per_layer, Policy_act_funcs)
 Policy_state = create_train_state(
     model=policy_model,
     act_funcs=Policy_act_funcs,
