@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
 
-def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
+def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=False, filename=False):
 
     dim = env.plot_dim
     if dim not in [2,3]:
@@ -37,7 +37,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         ax = plt.figure().add_subplot()
 
         for i in range(num_traces):
-            plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
+            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=4)
             plt.plot(traces[0,i,0], traces[0,i,1], 'ro')
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], 'bo')
 
@@ -56,7 +56,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         ax = plt.figure().add_subplot(projection='3d')
 
         for i in range(num_traces):
-            plt.plot(traces[:,i,0], traces[:,i,1], traces[:,i,2], '-', color="blue", linewidth=1)
+            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=4)
             plt.plot(traces[0, i, 0], traces[0, i, 1], traces[0, i, 2], 'ro')
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], traces[-1, i, 2], 'bo')
 
