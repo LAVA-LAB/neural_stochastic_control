@@ -357,7 +357,7 @@ for i in range(args.cegis_iterations):
 
     # Create plots (only works for 2D model)
     if args.plot_intermediate:
-        Plot traces
+        # Plot traces
         filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
         plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)
 
