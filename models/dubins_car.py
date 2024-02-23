@@ -33,7 +33,7 @@ class DubinsEnv(gym.Env):
 
         self.variable_names = ['x', 'y', 'ang.vel.']
 
-        self.max_torque = np.array([1, 1], dtype=np.float32)
+        self.max_torque = np.array([1, 2], dtype=np.float32)
 
         self.delta = 0.1
 
