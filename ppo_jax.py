@@ -752,6 +752,12 @@ def PPO(environment_function,
     scaling = 1
     vectors = (next_obs - grid) * scaling
 
+    import numpy as np
+    np.set_printoptions(threshold=np.inf)
+
+    print('Vectors:',)
+    print(vectors)
+
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
