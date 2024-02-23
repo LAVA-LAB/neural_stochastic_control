@@ -171,7 +171,7 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101]*dim)
 
     # Only keep unique elements in first two dimensions
-    _, idxs = np.unique(grid, return_index=True, axis=0)
+    _, idxs = np.unique(grid[:,0:2], return_index=True, axis=0)
     grid = grid[idxs]
 
     X = np.round(grid[:, 0], 3)
