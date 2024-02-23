@@ -167,7 +167,7 @@ class DubinsEnv(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(2,))
 
-        costs = state[0] ** 2 + 0.1 * state[1] ** 2
+        costs = state[0] ** 2 + state[1] ** 2
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
