@@ -2,11 +2,6 @@ import argparse
 import jax
 import flax.linen as nn
 from ppo_jax import PPO, PPOargs
-from models.linearsystem_jax import LinearEnv
-from models.pendulum_jax import PendulumEnv
-from models.anaesthesia_jax import AnaesthesiaEnv
-from models.linearsystem3d_jax import LinearEnv3D
-from models.linearsystem4d_jax import LinearEnv4D
 from datetime import datetime
 import os
 from pathlib import Path
@@ -22,6 +17,9 @@ from buffer import Buffer, define_grid, mesh2cell_width
 from verifier import Verifier
 from jax_utils import create_train_state, lipschitz_coeff
 from plot import plot_certificate_2D, plot_dataset, plot_traces, vector_plot
+
+# Import all benchmark models
+import models
 
 start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -124,15 +122,17 @@ args = parser.parse_args()
 args.cwd = os.getcwd()
 
 if args.model == 'LinearEnv':
-    envfun = LinearEnv
+    envfun = models.LinearEnv
 elif args.model == 'LinearEnv3D':
-    envfun = LinearEnv3D
+    envfun = models.LinearEnv3D
 elif args.model == 'LinearEnv4D':
-    envfun = LinearEnv4D
+    envfun = models.LinearEnv4D
 elif args.model == 'PendulumEnv':
-    envfun = PendulumEnv
+    envfun = models.PendulumEnv
 elif args.model == 'Anaesthesia':
-    envfun = AnaesthesiaEnv
+    envfun = models.AnaesthesiaEnv
+elif args.model == 'dubins':
+    envfun = models.Dubins
 else:
     assert False
 

@@ -17,7 +17,10 @@ from jax_utils import vsplit
 from commons import RectangularSet, MultiRectangularSet
 from scipy.stats import triang
 
-class AnaesthesiaEnv(gym.Env):
+def angle_normalize(x):
+    return ((x + np.pi) % (2 * np.pi)) - np.pi
+
+class Dubins(gym.Env):
 
     metadata = {
         "render_modes": [],
@@ -28,65 +31,50 @@ class AnaesthesiaEnv(gym.Env):
 
         self.render_mode = render_mode
 
-        self.variable_names = ['c1', 'c2', 'c3']
+        self.variable_names = ['x', 'y', 'ang.vel.']
 
-        self.min_torque = np.array([-10])
-        self.max_torque = np.array([40])
+        self.max_torque = 1
+
+        self.V = 0.2
+        self.delta = 0.01
 
         self.screen_dim = 500
         self.screen = None
         self.clock = None
         self.isopen = True
 
-        self.A = np.array([
-            [0.8192, 0.03412, 0.01265],
-            [0.01646, 0.9822, 0.0001],
-            [0.0009, 0.00002, 0.9989]
-        ])
-        self.state_dim = len(self.A)
-        self.B = np.array([[0.01883],
-                           [0.005],
-                           [0.003]])
-        self.W = np.diag([0.0001, 0.0001, 0.0001])
+        self.state_dim = 3
 
-        # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
-        self.lipschitz_f_l1 = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
-        self.lipschitz_f_linfty = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=1)))
-
-        self.lipschitz_f_l1_A = float(np.max(np.sum(self.A, axis=0)))
-        self.lipschitz_f_linfty_A = float(np.max(np.sum(self.A, axis=1)))
-        self.lipschitz_f_l1_B = float(np.max(np.sum(self.B, axis=0)))
-        self.lipschitz_f_linfty_B = float(np.max(np.sum(self.B, axis=1)))
+        self.lipschitz_f_l1 = float(1.78)
+        #TODO: compute self.lipschitz_f_linfty
 
         # This will throw a warning in tests/envs/test_envs in utils/env_checker.py as the space is not symmetric
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=self.min_torque, high=self.max_torque, shape=(len(self.max_torque),), dtype=np.float32
+            low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
         )
 
         # Set observation / state space
-        low = np.array([1, 0, 0], dtype=np.float32)
-        high = np.array([6, 10, 10], dtype=np.float32)
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
+        high = np.array([-2, -2, -2], dtype=np.float32)
+        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
-        high = np.array([1, 1, 1], dtype=np.float32)
+        high = np.array([0.0001], dtype=np.float32)
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
-        self.noise_dim = len(high)
+        self.noise_dim = 1
 
         # Set target set
-        self.target_space = RectangularSet(low=np.array([1, 0, 8]), high=np.array([6, 10, 10]), dtype=np.float32)
+        self.target_space = RectangularSet(low=np.array([-0.2, -0.2, -2]), high=np.array([0.2, 0.2, 2]), dtype=np.float32)
 
-        self.init_space = MultiRectangularSet([
-            RectangularSet(low=np.array([2.5, 3, 3]), high=np.array([3, 4, 4]), dtype=np.float32),
-        ])
+        self.init_space = RectangularSet(low=np.array([-0.3, -0.3, -0.3]), high=np.array([0.3, 0.3, 0.3]), dtype=np.float32)
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([1, 0, 0]), high=np.array([2, 2, 2]), dtype=np.float32),
+            RectangularSet(low=np.array([-2, -2, -2]), high=np.array([-1.8, -1.8, 2]), dtype=np.float32),
+            RectangularSet(low=np.array([1.8, 1.8, -2]), high=np.array([2, 2, 2]), dtype=np.float32)
         ])
 
-        self.num_steps_until_reset = 10000
+        self.num_steps_until_reset = 1000
 
         # Define vectorized functions
         self.vreset = jax.vmap(self.reset, in_axes=0, out_axes=0)
@@ -98,8 +86,8 @@ class AnaesthesiaEnv(gym.Env):
 
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
-        return jax.random.triangular(key, self.noise_space.low * jnp.ones(self.noise_dim), jnp.zeros(self.noise_dim),
-                                     self.noise_space.high * jnp.ones(self.noise_dim))
+        return jax.random.triangular(key, self.noise_space.low * jnp.ones(2), jnp.array([0, 0]),
+                                     self.noise_space.high * jnp.ones(2))
 
     @partial(jit, static_argnums=(0,))
     def step_base(self, state, u, w):
@@ -107,14 +95,21 @@ class AnaesthesiaEnv(gym.Env):
         Make a step in the dynamics. When defining a new environment, this the function that should be modified.
         '''
 
-        u = jnp.clip(u, self.min_torque, self.max_torque)
-        state = jnp.matmul(self.A, state) + jnp.matmul(self.B, u) + jnp.matmul(self.W, w)
+        u = jnp.clip(u, -self.max_torque, self.max_torque)
+
+        x = state[0] + self.delta * self.V * np.cos(state[2])
+        y = state[1] + self.delta * self.V * np.sin(state[2])
+        theta = state[2] + self.delta * (u + w[0])
+
+        # Lower bound state
+        state = jnp.clip(jnp.array([x, y, theta]), self.observation_space.low, self.observation_space.high)
 
         return state
 
     @partial(jit, static_argnums=(0,))
     def step_noise_set(self, state, u, w_lb, w_ub):
-        ''' Make step with dynamics for a set of noise values '''
+        ''' Make step with dynamics for a set of noise values.
+        Propagate state under lower/upper bound of the noise (note: this works because the noise is additive) '''
 
         # Propogate dynamics for both the lower bound and upper bound of the noise
         # (note: this works because the noise is additive)
@@ -155,7 +150,7 @@ class AnaesthesiaEnv(gym.Env):
         key, subkey = jax.random.split(key)
 
         # Sample noise value
-        noise = self.sample_noise(subkey, size=(self.noise_dim,))
+        noise = self.sample_noise(subkey, size=(2,))
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
@@ -169,10 +164,9 @@ class AnaesthesiaEnv(gym.Env):
         key, subkey = jax.random.split(key)
 
         # Sample noise value
-        noise = self.sample_noise(subkey, size=(self.noise_dim,))
+        noise = self.sample_noise(subkey, size=(2,))
 
-        target_mean = (self.target_space.high + self.target_space.low) / 2
-        costs = -1 + (state[0]-target_mean[0]) ** 2 + (state[1]-target_mean[1]) ** 2 + (state[2]-target_mean[2]) ** 2
+        costs = state[0] ** 2 + 0.1 * state[1] ** 2
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
@@ -196,7 +190,7 @@ class AnaesthesiaEnv(gym.Env):
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,
-                                   maxval=high, shape=(self.state_dim,))
+                                   maxval=high, shape=(2,))
 
         steps_since_reset = 0
 

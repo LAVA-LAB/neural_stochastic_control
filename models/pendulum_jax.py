@@ -196,9 +196,8 @@ class PendulumEnv(gym.Env):
         return jax.lax.cond(done, self._reset, lambda key: (state, key, steps_since_reset), key)
 
     def _reset(self, key):
-
-        high = np.array([0.7, 0.7])
-        low = -high  # We enforce symmetric limits.
+        high = self.observation_space.high
+        low = self.observation_space.low
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,
