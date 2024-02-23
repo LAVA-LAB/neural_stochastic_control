@@ -20,7 +20,7 @@ Pendulum environment:
 
 Experiment with 3D environment:
 
-```python3 run.py --model Anaesthesia --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 3000 --expdecrease_loss_type 2 --probability_bound 0.8 --expDecr_multiplier 100 --local_refinement --epochs 25 --perturb_counterexamples --mesh_train_grid 0.2 --mesh_verify_grid_init 0.1 --mesh_verify_grid_min 0.1 --mesh_refine_min 0.001 --mesh_loss 0.01 --ppo_total_timesteps 10000000 --ppo_load_file ckpt/Anaesthesia_seed=1_2024-01-24_15-07-12```
+```python3 run.py --model Anaesthesia --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 3000 --expdecrease_loss_type 2 --probability_bound 0.8 --expDecr_multiplier 100 --local_refinement --epochs 25 --perturb_counterexamples --mesh_train_grid 0.2 --mesh_verify_grid_init 0.1 --mesh_verify_grid_min 0.1 --mesh_refine_min 0.001 --mesh_loss 0.01 --ppo_total_timesteps 10000000 --ppo_load_file ckpt/Anaesthesia_seed=1_2024-01-24_15-07-12 --plot_intermediate```
 
 # Installing mujoco
 
@@ -34,7 +34,7 @@ Experiment with 3D environment:
 # Running with GPU acceleration
 
 - We tested by installing via Conda with `conda install jaxlib=*=*cuda* jax cuda-nvcc -c conda-forge -c nvidia`.
-- Thereafter, install the remaining requirements via pip.
+- Thereafter, install the remaining requirements via pip (except for jax and jaxlib, because they are already installed via Conda!).
 
 # TODO list
 

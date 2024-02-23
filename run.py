@@ -189,6 +189,7 @@ if args.ppo_load_file == '':
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
     orbax_checkpointer.save(checkpoint_path, ckpt, save_args=save_args)
+    print(f'- Export PPO checkpoint to file: {checkpoint_path}')
 
     print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
 else:
@@ -355,7 +356,7 @@ for i in range(args.cegis_iterations):
     print('Lipschitz certificate (all methods)', [lipschitz_coeff(V_state.params, i1, i2, i3) for i1 in [True, False] for i2 in [True, False] for i3 in [True, False]])
 
     # Create plots (only works for 2D model)
-    if args.plot_intermediate and env.state_dim == 2:
+    if args.plot_intermediate:
         # Plot traces
         # filename = f"plots/{start_datetime}_policy_traces_iteration={i}"
         # plot_traces(env, Policy_state, key=jax.random.PRNGKey(2), folder=args.cwd, filename=filename)

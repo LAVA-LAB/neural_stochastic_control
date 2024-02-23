@@ -10,6 +10,10 @@ from buffer import define_grid
 
 def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
 
+    dim = env.state_dim
+    if dim != 2:
+        print(f" >> Creating trace plot only for state dimensions [0,1].")
+
     fig, ax = plt.subplots()
 
     # Simulate traces
@@ -53,7 +57,8 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
 
 def plot_dataset(env, train_data=None, additional_data=None, folder=False, filename=False):
 
-    if len(env.observation_space.low) != 2:
+    dim = env.state_dim
+    if dim != 2:
         print(f" >> Cannot create layout plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
         return
 
@@ -101,6 +106,11 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
 
 def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, filename=False):
 
+    dim = env.state_dim
+    if dim not in [2,3]:
+        print(f" >> Cannot create vector plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
+        return
+
     fig, ax = plt.subplots()
 
     grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim, vectors_per_dim])
@@ -118,7 +128,10 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
     vectors = (next_obs - grid) * scaling
 
     # Plot vectors
-    ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
+    if dim == 2:
+        ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
+    elif dim == 3:
+        ax.quiver(grid[:, 0], grid[:, 1], grid[:,2], vectors[:, 0], vectors[:, 1], vectors[:,2])
 
     ax.set_title("Vector field of closed-loop dynamics", fontsize=10)
     if hasattr(env, 'variable_names)'):
@@ -134,6 +147,10 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
     return
 
 def plot_certificate_2D(env, cert_state, folder=False, filename=False):
+
+    dim = env.state_dim
+    if dim != 2:
+        print(f" >> Creating certificate plot only for state dimensions [0,1].")
 
     fig, ax = plt.subplots()
 
