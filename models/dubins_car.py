@@ -35,8 +35,8 @@ class DubinsEnv(gym.Env):
 
         self.max_torque = 1
 
-        self.V = 0.2
-        self.delta = 0.01
+        self.V = 1
+        self.delta = 0.1
 
         self.screen_dim = 500
         self.screen = None
