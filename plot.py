@@ -18,6 +18,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=F
 
     # Simulate traces
     traces = np.zeros((len_traces+1, num_traces, len(env.observation_space.low)))
+    actions = np.zeros((len_traces, num_traces, len(env.action_space.low)))
 
     # Initialize traces
     for i in range(num_traces):
@@ -28,9 +29,17 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=F
             # Get state and action
             state = traces[j,i]
             action = Policy_state.apply_fn(Policy_state.params, state)
+            actions[j,i] = action
 
             # Make step in environment
             traces[j+1,i], key = env.step_noise_key(state, key, action)
+
+        print('Trace', i)
+        print(traces[:,i])
+        print('With actions')
+        print(actions[:,i])
+
+        print('\n====\n')
 
     # Plot traces
     if dim == 2:
