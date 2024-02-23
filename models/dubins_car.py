@@ -33,9 +33,8 @@ class DubinsEnv(gym.Env):
 
         self.variable_names = ['x', 'y', 'ang.vel.']
 
-        self.max_torque = 1
+        self.max_torque = np.array([1, 1], dtype=np.float32)
 
-        self.V = 1
         self.delta = 0.1
 
         self.screen_dim = 500
@@ -52,7 +51,7 @@ class DubinsEnv(gym.Env):
         #   or normalised as max_torque == 2 by default. Ignoring the issue here as the default settings are too old
         #   to update to follow the openai gym api
         self.action_space = spaces.Box(
-            low=-self.max_torque, high=self.max_torque, shape=(1,), dtype=np.float32
+            low=-self.max_torque, high=self.max_torque, shape=(2,), dtype=np.float32
         )
 
         # Set observation / state space
@@ -97,8 +96,8 @@ class DubinsEnv(gym.Env):
 
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
-        x = state[0] + self.delta * self.V * jnp.cos(state[2])
-        y = state[1] + self.delta * self.V * jnp.sin(state[2])
+        x = state[0] + self.delta * u[1] * jnp.cos(state[2])
+        y = state[1] + self.delta * u[1] * jnp.sin(state[2])
         theta = state[2] + self.delta * (u[0] + w[0])
 
         # Lower bound state
