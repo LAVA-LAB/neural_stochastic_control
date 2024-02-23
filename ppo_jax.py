@@ -7,6 +7,7 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import numpy as np
+np.set_printoptions(threshold=np.inf)
 import optax
 from flax.training.train_state import TrainState
 
@@ -751,9 +752,6 @@ def PPO(environment_function,
 
     scaling = 1
     vectors = (next_obs - grid) * scaling
-
-    import numpy as np
-    np.set_printoptions(threshold=np.inf)
 
     print('Vectors:',)
     print(vectors)
