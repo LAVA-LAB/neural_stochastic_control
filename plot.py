@@ -174,6 +174,11 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     out = cert_state.apply_fn(cert_state.params, grid).flatten()
 
     data = pd.DataFrame(data={'x': X, 'y': Y, 'z': out})
+
+    print('z shape:', X.shape)
+    print('y shape:', Y.shape)
+    print('z shape:', out.shape)
+
     data = data.pivot(index='y', columns='x', values='z')[::-1]
     sns.heatmap(data)
 
