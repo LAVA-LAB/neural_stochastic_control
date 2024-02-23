@@ -11,7 +11,7 @@ from buffer import define_grid
 def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
 
     dim = env.state_dim
-    if dim not in  [2,3]:
+    if dim not in [2,3]:
         print(f">> Creating trace plot only for state dimensions [0,1].")
     else:
         print("Create trace plot...")
@@ -217,7 +217,7 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
     if hasattr(env, 'variable_names'):
         plt.xlabel(env.variable_names[0])
-        plt.ylabellabel(env.variable_names[1])
+        plt.ylabel(env.variable_names[1])
 
     if folder and filename:
         # Save figure
