@@ -131,7 +131,7 @@ elif args.model == 'PendulumEnv':
     envfun = models.PendulumEnv
 elif args.model == 'Anaesthesia':
     envfun = models.AnaesthesiaEnv
-elif args.model == 'dubins':
+elif args.model == 'Dubins':
     envfun = models.Dubins
 else:
     assert False
