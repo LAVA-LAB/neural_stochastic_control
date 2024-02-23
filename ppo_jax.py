@@ -720,6 +720,9 @@ def PPO(environment_function,
 
         plt.plot(X, Y, '-', color="blue", linewidth=1)
 
+        print('Trace', i)
+        print(obs_plot[:, i, :])
+
     # Goal x-y limits
     low = env.observation_space.low
     high = env.observation_space.high
@@ -752,9 +755,6 @@ def PPO(environment_function,
 
     scaling = 1
     vectors = (next_obs - grid) * scaling
-
-    print('Vectors:',)
-    print(vectors)
 
     # Plot vectors
     ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
