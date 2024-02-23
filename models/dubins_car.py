@@ -27,7 +27,7 @@ class DubinsEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, g=10.0):
+    def __init__(self, render_mode: Optional[str] = None):
 
         self.render_mode = render_mode
 
@@ -85,8 +85,8 @@ class DubinsEnv(gym.Env):
 
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
-        return jax.random.triangular(key, self.noise_space.low * jnp.ones(2), jnp.array([0, 0]),
-                                     self.noise_space.high * jnp.ones(2))
+        return jax.random.triangular(key, self.noise_space.low * jnp.ones(self.noise_dim), jnp.array([0, 0]),
+                                     self.noise_space.high * jnp.ones(self.noise_dim))
 
     @partial(jit, static_argnums=(0,))
     def step_base(self, state, u, w):
@@ -150,7 +150,7 @@ class DubinsEnv(gym.Env):
         key, subkey = jax.random.split(key)
 
         # Sample noise value
-        noise = self.sample_noise(subkey, size=(2,))
+        noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
@@ -164,7 +164,7 @@ class DubinsEnv(gym.Env):
         key, subkey = jax.random.split(key)
 
         # Sample noise value
-        noise = self.sample_noise(subkey, size=(2,))
+        noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
         costs = state[0] ** 2 + state[1] ** 2
 
