@@ -39,6 +39,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         for i in range(num_traces):
             plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
             plt.plot(traces[0,i,0], traces[0,i,1], 'ro')
+            plt.plot(traces[-1, i, 0], traces[-1, i, 1], 'bo')
 
             # Goal x-y limits
         low = env.observation_space.low
@@ -57,6 +58,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         for i in range(num_traces):
             plt.plot(traces[:,i,0], traces[:,i,1], traces[:,i,2], '-', color="blue", linewidth=1)
             plt.plot(traces[0, i, 0], traces[0, i, 1], traces[0, i, 2], 'ro')
+            plt.plot(traces[-1, i, 0], traces[-1, i, 1], traces[-1, i, 2], 'bo')
 
         # Goal x-y limits
         low = env.observation_space.low
