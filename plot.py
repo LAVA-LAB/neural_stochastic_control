@@ -111,8 +111,6 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         print(f" >> Cannot create vector plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
         return
 
-    fig, ax = plt.subplots()
-
     grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim]*3)
 
     # Get actions
@@ -132,9 +130,11 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
     # Plot vectors
     if dim == 2:
         print('- 2D Quiver...')
+        ax = plt.figure().add_subplot()
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
     elif dim == 3:
         print('- 3D Quiver...')
+        ax = plt.figure().add_subplot(projection='3d')
         ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
                   length=0.1, normalize=True)
 
