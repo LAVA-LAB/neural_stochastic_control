@@ -86,7 +86,7 @@ class AnaesthesiaEnv(gym.Env):
             RectangularSet(low=np.array([1, 0, 0]), high=np.array([2, 2, 2]), dtype=np.float32),
         ])
 
-        self.num_steps_until_reset = 1000
+        self.num_steps_until_reset = 10000
 
         # Define vectorized functions
         self.vreset = jax.vmap(self.reset, in_axes=0, out_axes=0)

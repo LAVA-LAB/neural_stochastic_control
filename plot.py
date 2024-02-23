@@ -11,12 +11,10 @@ from buffer import define_grid
 def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
 
     dim = env.state_dim
-    if dim != 2:
+    if dim not in  [2,3]:
         print(f">> Creating trace plot only for state dimensions [0,1].")
     else:
         print("Create trace plot...")
-
-    fig, ax = plt.subplots()
 
     # Simulate traces
     traces = np.zeros((len_traces+1, num_traces, len(env.observation_space.low)))
@@ -35,19 +33,41 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
             traces[j+1,i], key = env.step_noise_key(state, key, action)
 
     # Plot traces
-    for i in range(num_traces):
-        plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
+    if dim == 2:
+        ax = plt.figure().add_subplot()
 
-    # Goal x-y limits
-    low = env.observation_space.low
-    high = env.observation_space.high
-    ax.set_xlim(low[0], high[0])
-    ax.set_ylim(low[1], high[1])
+        for i in range(num_traces):
+            plt.plot(traces[:,i,0], traces[:,i,1], '-', color="blue", linewidth=1)
 
-    ax.set_title("Simulated traces under given controller", fontsize=10)
-    if hasattr(env, 'variable_names)'):
-        plt.xlabel(env.variable_names[0])
-        plt.xlabel(env.variable_names[1])
+        # Goal x-y limits
+        low = env.observation_space.low
+        high = env.observation_space.high
+        ax.set_xlim(low[0], high[0])
+        ax.set_ylim(low[1], high[1])
+
+        ax.set_title("Simulated traces under given controller", fontsize=10)
+        if hasattr(env, 'variable_names'):
+            plt.xlabel(env.variable_names[0])
+            plt.ylabel(env.variable_names[1])
+
+    else:
+        ax = plt.figure().add_subplot(projection='3d')
+
+        for i in range(num_traces):
+            plt.plot(traces[:,i,0], traces[:,i,1], traces[:,i,2], '-', color="blue", linewidth=1)
+
+        # Goal x-y limits
+        low = env.observation_space.low
+        high = env.observation_space.high
+        ax.set_xlim(low[0], high[0])
+        ax.set_ylim(low[1], high[1])
+        ax.set_zlim(low[2], high[2])
+
+        ax.set_title("Simulated traces under given controller", fontsize=10)
+        if hasattr(env, 'variable_names'):
+            plt.xlabel(env.variable_names[0])
+            plt.ylabel(env.variable_names[1])
+            plt.zlabel(env.variable_names[2])
 
     if folder and filename:
         # Save figure
@@ -96,9 +116,9 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
     ax.set_ylim(low[1], high[1])
 
     ax.set_title("Samples (black) and counterexamples (blue)", fontsize=10)
-    if hasattr(env, 'variable_names)'):
+    if hasattr(env, 'variable_names'):
         plt.xlabel(env.variable_names[0])
-        plt.xlabel(env.variable_names[1])
+        plt.ylabel(env.variable_names[1])
 
     if folder and filename:
         # Save figure
@@ -140,9 +160,9 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
         ax.set_title("Vector field of dynamics under current policy", fontsize=10)
-        if hasattr(env, 'variable_names)'):
+        if hasattr(env, 'variable_names'):
             plt.xlabel(env.variable_names[0])
-            plt.xlabel(env.variable_names[1])
+            plt.ylabel(env.variable_names[1])
 
     elif dim == 3:
         print('- 3D Quiver...')
@@ -154,15 +174,10 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
 
         ax.set_title("Vector field of dynamics under current policy", fontsize=10)
 
-        if hasattr(env, 'variable_names)'):
-            print('- add axis labels')
+        if hasattr(env, 'variable_names'):
             ax.set_xlabel(env.variable_names[0])
             ax.set_ylabel(env.variable_names[1])
             ax.set_zlabel(env.variable_names[2])
-
-        ax.set_xlabel('c0')
-        ax.set_ylabel('c1')
-        ax.set_zlabel('c2')
 
     if folder and filename:
         # Save figure
@@ -200,9 +215,9 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
     ax.set_title(f"Trained Lyapunov function ({filename})", fontsize=10)
 
-    if hasattr(env, 'variable_names)'):
+    if hasattr(env, 'variable_names'):
         plt.xlabel(env.variable_names[0])
-        plt.xlabel(env.variable_names[1])
+        plt.ylabellabel(env.variable_names[1])
 
     if folder and filename:
         # Save figure
