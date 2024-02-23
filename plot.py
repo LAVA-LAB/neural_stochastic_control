@@ -65,9 +65,9 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
 
         ax.set_title("Simulated traces under given controller", fontsize=10)
         if hasattr(env, 'variable_names'):
-            plt.xlabel(env.variable_names[0])
-            plt.ylabel(env.variable_names[1])
-            plt.zlabel(env.variable_names[2])
+            ax.set_xlabel(env.variable_names[0])
+            ax.set_ylabel(env.variable_names[1])
+            ax.set_zlabel(env.variable_names[2])
 
     if folder and filename:
         # Save figure
