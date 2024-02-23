@@ -8,7 +8,7 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
 
-def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=False, filename=False):
+def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=False, filename=False):
 
     dim = env.plot_dim
     if dim not in [2,3]:
