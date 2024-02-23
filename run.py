@@ -222,7 +222,7 @@ V_state = create_train_state(
 )
 
 # Initialize policy network
-policy_model = MLP(policy_neurons_per_layer, Policy_act_funcs)
+policy_model = MLP(Policy_neurons_per_layer, Policy_act_funcs)
 Policy_state = create_train_state(
     model=policy_model,
     act_funcs=Policy_act_funcs,
