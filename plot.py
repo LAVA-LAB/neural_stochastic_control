@@ -12,7 +12,9 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
 
     dim = env.state_dim
     if dim != 2:
-        print(f" >> Creating trace plot only for state dimensions [0,1].")
+        print(f">> Creating trace plot only for state dimensions [0,1].")
+    else:
+        print("Create trace plot...")
 
     fig, ax = plt.subplots()
 
@@ -59,8 +61,10 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
 
     dim = env.state_dim
     if dim != 2:
-        print(f" >> Cannot create layout plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
+        print(f">> Cannot create dataset plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
         return
+    else:
+        print("Create dataset plot...")
 
     fig, ax = plt.subplots()
 
@@ -108,10 +112,12 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
 
     dim = env.state_dim
     if dim not in [2,3]:
-        print(f" >> Cannot create vector plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
+        print(f">> Cannot create vector plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
         return
+    else:
+        print("Create vector plot...")
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim]*3)
+    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim]*dim)
 
     # Get actions
     action = Pi_state.apply_fn(Pi_state.params, grid)
@@ -155,12 +161,14 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
 
     dim = env.state_dim
     if dim != 2:
-        print(f" >> Creating certificate plot only for state dimensions [0,1].")
+        print(f">> Creating certificate plot only for state dimensions [0,1].")
+    else:
+        print("Create certificate plot...")
 
     fig, ax = plt.subplots()
 
     # Visualize certificate network
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101, 101])
+    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101]*dim)
     X = np.round(grid[:, 0], 3)
     Y = np.round(grid[:, 1], 3)
     out = cert_state.apply_fn(cert_state.params, grid).flatten()
