@@ -97,8 +97,8 @@ class DubinsEnv(gym.Env):
 
         u = jnp.clip(u, -self.max_torque, self.max_torque)
 
-        x = state[0] + self.delta * self.V * np.cos(state[2])
-        y = state[1] + self.delta * self.V * np.sin(state[2])
+        x = state[0] + self.delta * self.V * jnp.cos(state[2])
+        y = state[1] + self.delta * self.V * jnp.sin(state[2])
         theta = state[2] + self.delta * (u + w[0])
 
         # Lower bound state
