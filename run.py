@@ -178,7 +178,8 @@ if args.ppo_load_file == '':
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                     neurons_per_layer=neurons_per_layer,
-                    activation_functions=act_funcs)
+                    activation_functions=act_funcs,
+                    verbose=False)
 
     # Save checkpoint of PPO state
     ckpt = {'model': ppo_state}

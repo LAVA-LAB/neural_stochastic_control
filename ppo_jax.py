@@ -569,7 +569,8 @@ def PPO(environment_function,
         args,
         max_policy_lipschitz,
         neurons_per_layer=[64,64],
-        activation_functions=[nn.relu, nn.relu]):
+        activation_functions=[nn.relu, nn.relu],
+        verbose=False):
 
     max_policy_lipschitz = jnp.float32(max_policy_lipschitz)
 
@@ -641,14 +642,17 @@ def PPO(environment_function,
 
     for iteration in range(1, args.num_iterations + 1):
 
-        print(f'Start iter {iteration}')
+        if verbose:
+            print(f'Start iter {iteration}')
         start_iter_time = time.time()
 
         start_time = time.time()
         next_obs, next_done, storage, action_key, env_key = \
             rollout_jax_jit(env, args, agent_state, next_obs, next_done, storage, action_key, env_key, steps_since_reset)
         time_diff = time.time() - start_time
-        print(f'- Rollout done in  {(time_diff):.3f} [s] ({(steps_per_iteration / time_diff):.1f} steps per second)')
+
+        if verbose:
+            print(f'- Rollout done in  {(time_diff):.3f} [s] ({(steps_per_iteration / time_diff):.1f} steps per second)')
 
         # Increment global number of steps
         global_step += 1 * args.num_envs * args.num_steps
@@ -667,22 +671,27 @@ def PPO(environment_function,
         #     jnp.isclose(entropy_loss, entropy_loss2) and jnp.isclose(approx_kl, approx_kl2)
 
         time_diff = time.time() - start_time
-        print(f'- Policy update done in  {(time_diff):.3f} [s]')
-        print('-- Components of loss:')
-        for key,info in losses.items():
-            print(f'--- {key}: {info:.4f}')
+        if verbose:
+            print(f'- Policy update done in  {(time_diff):.3f} [s]')
+            print('-- Components of loss:')
+            for key,info in losses.items():
+                print(f'--- {key}: {info:.4f}')
 
-        lip_policy = lipschitz_coeff(agent_state.params['actor'], args.weighted, args.cplip, args.linfty)[0]
+            lip_policy = lipschitz_coeff(agent_state.params['actor'], args.weighted, args.cplip, args.linfty)[0]
+            print(f'- Lipschitz coefficient (L1-norm) of policy network: {lip_policy:.3f}')
 
-        print(f'- Lipschitz coefficient (L1-norm) of policy network: {lip_policy:.3f}')
+        else:
+            if iteration % 20 == 0:
+                print(f"- Total loss after iteration {iteration}: {losses['Total loss']}")
 
         # Calculate how good an approximation of the return is the value function
         y_pred, y_true = storage.values, storage.returns
         var_y = jnp.var(y_true)
         explained_var = np.nan if var_y == 0 else 1 - np.var(y_true - y_pred) / var_y
 
-        speed = steps_per_iteration / (time.time() - start_iter_time)
-        print(f' - Speed of total iteration: {speed:.2f} steps per second')
+        if verbose:
+            speed = steps_per_iteration / (time.time() - start_iter_time)
+            print(f' - Speed of total iteration: {speed:.2f} steps per second')
 
     # %%
 
