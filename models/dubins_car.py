@@ -64,13 +64,13 @@ class DubinsEnv(gym.Env):
         self.noise_dim = 1
 
         # Set target set
-        self.target_space = RectangularSet(low=np.array([-0.2, -0.2, -2]), high=np.array([0.2, 0.2, 2]), dtype=np.float32)
+        self.target_space = RectangularSet(low=np.array([-0.2, -0.2, -3]), high=np.array([0.2, 0.2, 3]), dtype=np.float32)
 
-        self.init_space = RectangularSet(low=np.array([-0.3, -0.3, -0.3]), high=np.array([0.3, 0.3, 0.3]), dtype=np.float32)
+        self.init_space = RectangularSet(low=np.array([-0.2, -0.6, -0.3]), high=np.array([0.2, -0.4, 0.3]), dtype=np.float32)
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-2, -2, -2]), high=np.array([-1.8, -1.8, 2]), dtype=np.float32),
-            RectangularSet(low=np.array([1.8, 1.8, -2]), high=np.array([2, 2, 2]), dtype=np.float32)
+            RectangularSet(low=np.array([-2, -2, -3]), high=np.array([-1.8, -1.8, 3]), dtype=np.float32),
+            RectangularSet(low=np.array([1.8, 1.8, -3]), high=np.array([2, 2, 3]), dtype=np.float32)
         ])
 
         self.num_steps_until_reset = 1000
