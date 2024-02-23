@@ -43,6 +43,7 @@ class DubinsEnv(gym.Env):
         self.isopen = True
 
         self.state_dim = 3
+        self.plot_dim = 2
 
         self.lipschitz_f_l1 = float(1.78)
         #TODO: compute self.lipschitz_f_linfty

@@ -49,6 +49,7 @@ class PendulumEnv(gym.Env):
         self.isopen = True
 
         self.state_dim = 2
+        self.plot_dim = self.state_dim
 
         self.lipschitz_f_l1 = float(1.78)
         #TODO: compute self.lipschitz_f_linfty

@@ -42,6 +42,7 @@ class LinearEnv(gym.Env):
             [0, 0.9]
         ])
         self.state_dim = len(self.A)
+        self.plot_dim = self.state_dim
         self.B = np.array([
             [0.45],
             [0.5]

@@ -44,6 +44,7 @@ class AnaesthesiaEnv(gym.Env):
             [0.0009, 0.00002, 0.9989]
         ])
         self.state_dim = len(self.A)
+        self.plot_dim = self.state_dim
         self.B = np.array([[0.01883],
                            [0.005],
                            [0.003]])

@@ -10,7 +10,7 @@ from buffer import define_grid
 
 def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=False, filename=False):
 
-    dim = env.state_dim
+    dim = env.plot_dim
     if dim not in [2,3]:
         print(f">> Creating trace plot only for state dimensions [0,1].")
     else:
