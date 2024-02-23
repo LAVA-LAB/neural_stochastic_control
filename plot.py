@@ -53,7 +53,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=256, folder=Fa
         # Save figure
         for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
-            plt.savefig(filepath, format=form, bbox_inches='tight')
+            plt.savefig(filepath, format=form, bbox_inches='tight', dpi=300))
 
     return traces
 
@@ -104,7 +104,7 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
         # Save figure
         for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
-            plt.savefig(filepath, format=form, bbox_inches='tight')
+            plt.savefig(filepath, format=form, bbox_inches='tight', dpi=300))
 
     return
 
@@ -140,6 +140,8 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
     elif dim == 3:
         print('- 3D Quiver...')
+        print('- Vectors:\n', vectors)
+
         ax = plt.figure().add_subplot(projection='3d')
         ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
                   length=0.1, normalize=True)
@@ -153,7 +155,7 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         # Save figure
         for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
-            plt.savefig(filepath, format=form, bbox_inches='tight')
+            plt.savefig(filepath, format=form, bbox_inches='tight', dpi=300))
 
     return
 
@@ -193,4 +195,4 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
         # Save figure
         for form in ['png']: #['pdf', 'png']:
             filepath = Path(folder, filename).with_suffix('.'+str(form))
-            plt.savefig(filepath, format=form, bbox_inches='tight')
+            plt.savefig(filepath, format=form, bbox_inches='tight', dpi=300))
