@@ -698,6 +698,7 @@ def PPO(environment_function,
     next_done = np.zeros(args.num_envs)
 
     obs_plot = np.zeros((len_traces, args.num_envs) + env.observation_space.shape)
+    action_hist = np.zeros((len_traces, args.num_envs) + env.action_space.shape)
 
     for step in range(0, len_traces):
         global_step += args.num_envs
@@ -705,6 +706,8 @@ def PPO(environment_function,
 
         # Get action
         action, _ = agent_state.actor_fn(agent_state.params['actor'], next_obs)
+
+        action_hist[step] = action
 
         next_obs, env_key, steps_since_reset, reward, terminated, truncated, infos \
             = env.vstep(next_obs, env_key, jax.device_get(action), steps_since_reset)
@@ -722,6 +725,10 @@ def PPO(environment_function,
 
         print('Trace', i)
         print(obs_plot[:, i, :])
+        print('With actions')
+        print(action_hist[:, i, :])
+
+        print('\n====\n')
 
     # Goal x-y limits
     low = env.observation_space.low
