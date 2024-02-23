@@ -113,7 +113,7 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
 
     fig, ax = plt.subplots()
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim, vectors_per_dim])
+    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim]*3)
 
     # Get actions
     action = Pi_state.apply_fn(Pi_state.params, grid)
