@@ -127,11 +127,16 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
     scaling = 1
     vectors = (next_obs - grid) * scaling
 
+    print('Vectors shape:', vectors.shape)
+
     # Plot vectors
     if dim == 2:
+        print('- 2D Quiver...')
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
     elif dim == 3:
-        ax.quiver(grid[:, 0], grid[:, 1], grid[:,2], vectors[:, 0], vectors[:, 1], vectors[:,2])
+        print('- 3D Quiver...')
+        ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
+                  length=0.1, normalize=True)
 
     ax.set_title("Vector field of closed-loop dynamics", fontsize=10)
     if hasattr(env, 'variable_names)'):
