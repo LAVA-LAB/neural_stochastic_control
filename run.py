@@ -143,6 +143,9 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
+neurons_per_layer = [128, 128]
+act_funcs = [nn.relu, nn.relu]
+
 if args.ppo_load_file == '':
     print(f'Run PPO for model `{args.model}`')
 
@@ -174,8 +177,8 @@ if args.ppo_load_file == '':
     ppo_state = PPO(envfun,
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
-                    neurons_per_layer=neurons_per_layer[:-1],
-                    activation_functions=Policy_act_funcs[:-1])
+                    neurons_per_layer=neurons_per_layer,
+                    activation_functions=act_funcs)
 
     # Save checkpoint of PPO state
     ckpt = {'model': ppo_state}
@@ -206,10 +209,10 @@ env = envfun()
 
 args.train_mesh_cell_width = mesh2cell_width(args.mesh_train_grid, env.state_dim, args.linfty)
 
-V_neurons_per_layer = [128, 128, 1]
-V_act_funcs = [nn.relu, nn.relu, nn.softplus]
-Policy_neurons_per_layer = [128, 128, len(env.action_space.low)]
-Policy_act_funcs = [nn.relu, nn.relu, None]
+V_neurons_per_layer = neurons_per_layer + [1]
+V_act_funcs = act_funcs + [nn.softplus]
+Policy_neurons_per_layer = neurons_per_layer + [len(env.action_space.low)]
+Policy_act_funcs = act_funcs + [None]
 
 # Initialize certificate network
 certificate_model = MLP(V_neurons_per_layer, V_act_funcs)
