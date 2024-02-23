@@ -682,7 +682,7 @@ def PPO(environment_function,
 
         else:
             if iteration % 20 == 0:
-                print(f"- Total loss after iteration {iteration}: {losses['Total loss']}")
+                print(f"- Total loss after iteration {iteration}: {losses['Total loss']:.4f}")
 
         # Calculate how good an approximation of the return is the value function
         y_pred, y_true = storage.values, storage.returns
