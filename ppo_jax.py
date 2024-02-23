@@ -691,7 +691,7 @@ def PPO(environment_function,
     fig, ax = plt.subplots()
 
     len_traces = 20
-    num_traces = min(1, args.num_envs)
+    num_traces = min(10, args.num_envs)
 
     next_obs, env_key, steps_since_reset = env.vreset(env_key)
     next_obs = np.array(next_obs)

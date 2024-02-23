@@ -170,8 +170,6 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
 
     elif dim == 3:
         print('- 3D Quiver...')
-        print('- Vectors:\n', vectors)
-
         ax = plt.figure().add_subplot(projection='3d')
         ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
                   length=0.5, normalize=False, arrow_length_ratio=0.5)
