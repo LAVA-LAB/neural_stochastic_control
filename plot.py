@@ -37,7 +37,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=F
         ax = plt.figure().add_subplot()
 
         for i in range(num_traces):
-            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=4)
+            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=1)
             plt.plot(traces[0,i,0], traces[0,i,1], 'ro')
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], 'bo')
 
@@ -56,7 +56,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=1000, folder=F
         ax = plt.figure().add_subplot(projection='3d')
 
         for i in range(num_traces):
-            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=4)
+            plt.plot(traces[:,i,0], traces[:,i,1], 'o', color="gray", linewidth=1, markersize=1)
             plt.plot(traces[0, i, 0], traces[0, i, 1], traces[0, i, 2], 'ro')
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], traces[-1, i, 2], 'bo')
 
