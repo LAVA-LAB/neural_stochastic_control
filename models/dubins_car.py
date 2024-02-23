@@ -99,10 +99,11 @@ class DubinsEnv(gym.Env):
 
         x = state[0] + self.delta * self.V * jnp.cos(state[2])
         y = state[1] + self.delta * self.V * jnp.sin(state[2])
-        theta = state[2] + self.delta * (u + w[0])
+        theta = state[2] + self.delta * (u[0] + w[0])
 
         # Lower bound state
-        state = jnp.clip(jnp.array([x, y, theta]), self.observation_space.low, self.observation_space.high)
+        state = jnp.array([x, y, theta])
+        state = jnp.clip(state, self.observation_space.low, self.observation_space.high)
 
         return state
 
