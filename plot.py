@@ -138,18 +138,27 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         print('- 2D Quiver...')
         ax = plt.figure().add_subplot()
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
+
+        ax.set_title("Vector field of dynamics under current policy", fontsize=10)
+        if hasattr(env, 'variable_names)'):
+            plt.xlabel(env.variable_names[0])
+            plt.xlabel(env.variable_names[1])
+
     elif dim == 3:
         print('- 3D Quiver...')
         print('- Vectors:\n', vectors)
 
         ax = plt.figure().add_subplot(projection='3d')
         ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
-                  length=0.1, arrow_length_ratio=1)
+                  length=0.5, normalize=False, arrow_length_ratio=0.5)
 
-    ax.set_title("Vector field of closed-loop dynamics", fontsize=10)
-    if hasattr(env, 'variable_names)'):
-        plt.xlabel(env.variable_names[0])
-        plt.xlabel(env.variable_names[1])
+        ax.set_title("Vector field of dynamics under current policy", fontsize=10)
+
+        if hasattr(env, 'variable_names)'):
+            ax.set_xlabel(env.variable_names[0])
+            ax.set_ylabel(env.variable_names[1])
+            ax.set_zlabel(env.variable_names[2])
+
 
     if folder and filename:
         # Save figure
