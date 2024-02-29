@@ -350,10 +350,11 @@ for i in range(args.cegis_iterations):
                 Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
             if np.isnan(infos['0. total']):
-                print(np.vstack((X_decrease[k], CX_decrease[k])))
-                print(np.vstack((X_init[k], CX_init[k])))
-                print(np.vstack((X_unsafe[k], CX_unsafe[k])))
-                print(np.vstack((X_target[k], CX_target[k])))
+                print('Severe warning: The learned losses contained NaN values, which indicates most probably at an error in the learner module.')
+                # print(np.vstack((X_decrease[k], CX_decrease[k])))
+                # print(np.vstack((X_init[k], CX_init[k])))
+                # print(np.vstack((X_unsafe[k], CX_unsafe[k])))
+                # print(np.vstack((X_target[k], CX_target[k])))
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
