@@ -22,4 +22,4 @@ python3 run.py --model PendulumEnv --counterx_refresh_fraction 0.5 --counterx_fr
 
 # Dubins car
 # L1
-python3 run.py --model Dubins --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 2 --probability_bound 0.5 --expDecr_multiplier 100 --local_refinement --epochs 10 --perturb_counterexamples --mesh_refine_min 0.000001 --mesh_loss 0.005 --mesh_train_grid 0.05 --mesh_verify_grid_init 0.05 --mesh_verify_grid_min 0.05 --max_refine_factor 2 --plot_intermediate --no-split_lip --ppo_total_timesteps 20000000 --ppo_max_policy_lipschitz 10
+python3 run.py --model Dubins --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --expdecrease_loss_type 2 --probability_bound 0.5 --expDecr_multiplier 100 --local_refinement --epochs 10 --perturb_counterexamples --mesh_refine_min 0.000001 --mesh_loss 0.005 --mesh_train_grid 0.05 --mesh_verify_grid_init 0.05 --mesh_verify_grid_min 0.05 --max_refine_factor 2 --plot_intermediate --no-split_lip --ppo_total_timesteps 100000000 --ppo_max_policy_lipschitz 10

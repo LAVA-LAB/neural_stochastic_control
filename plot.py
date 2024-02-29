@@ -34,12 +34,11 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
             # Make step in environment
             traces[j+1,i], key = env.step_noise_key(state, key, action)
 
-        print('Trace', i)
-        print(traces[:,i])
-        print('With actions')
-        print(actions[:,i])
-
-        print('\n====\n')
+        # print('Trace', i)
+        # print(traces[:,i])
+        # print('With actions')
+        # print(actions[:,i])
+        # print('\n====\n')
 
     # Plot traces
     if dim == 2:
