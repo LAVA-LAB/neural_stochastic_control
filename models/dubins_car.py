@@ -33,8 +33,8 @@ class DubinsEnv(gym.Env):
 
         self.variable_names = ['x', 'y', 'ang.vel.']
 
-        self.min_torque = np.array([-1, -1], dtype=np.float32)
-        self.max_torque = np.array([1, 1], dtype=np.float32)
+        self.min_torque = np.array([-np.pi, -1], dtype=np.float32)
+        self.max_torque = np.array([np.pi, 1], dtype=np.float32)
 
         self.delta = 0.1
 
@@ -57,8 +57,9 @@ class DubinsEnv(gym.Env):
         )
 
         # Set observation / state space
-        high = np.array([2, 2, 2], dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        low = np.array([-2, -2, 0], dtype=np.float32)
+        high = np.array([2, 2, 1], dtype=np.float32)
+        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([0.0001], dtype=np.float32)
@@ -66,13 +67,13 @@ class DubinsEnv(gym.Env):
         self.noise_dim = 1
 
         # Set target set
-        self.target_space = RectangularSet(low=np.array([-0.2, -0.2, -3]), high=np.array([0.2, 0.2, 3]), dtype=np.float32)
+        self.target_space = RectangularSet(low=np.array([-0.2, -0.2, 0]), high=np.array([0.2, 0.2, 1]), dtype=np.float32)
 
-        self.init_space = RectangularSet(low=np.array([-0.2, -0.6, -0.3]), high=np.array([0.2, -0.4, 0.3]), dtype=np.float32)
+        self.init_space = RectangularSet(low=np.array([-0.2, -0.6, 0.2]), high=np.array([0.2, -0.4, 0.3]), dtype=np.float32)
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-2, -2, -3]), high=np.array([-1.8, -1.8, 3]), dtype=np.float32),
-            RectangularSet(low=np.array([1.8, 1.8, -3]), high=np.array([2, 2, 3]), dtype=np.float32)
+            RectangularSet(low=np.array([-2, -2, 0]), high=np.array([-1.8, -1.8, 1]), dtype=np.float32),
+            RectangularSet(low=np.array([1.8, 1.8, 0]), high=np.array([2, 2, 1]), dtype=np.float32)
         ])
 
         self.num_steps_until_reset = 1000
@@ -98,12 +99,15 @@ class DubinsEnv(gym.Env):
 
         u = jnp.clip(u, self.min_torque, self.max_torque)
 
-        x = state[0] + self.delta * u[1] * jnp.cos(10 * state[2])
-        y = state[1] + self.delta * u[1] * jnp.sin(10 * state[2])
-        theta = state[2] + self.delta * (u[0] + w[0])
+        # Convert State[2], which is bounded by [-1, 1], such that it  represents a full 360 degrees turn.
+        theta_curr = state[2] * (2*np.pi / 1)
+
+        x = state[0] + self.delta * u[1] * jnp.cos(theta_curr)
+        y = state[1] + self.delta * u[1] * jnp.sin(theta_curr)
+        theta_next = angle_normalize(theta_curr + self.delta * (u[0] + w[0])) / (2*np.pi / 1)
 
         # Lower bound state
-        state = jnp.array([x, y, theta])
+        state = jnp.array([x, y, theta_next])
         state = jnp.clip(state, self.observation_space.low, self.observation_space.high)
 
         return state
