@@ -59,6 +59,8 @@ parser.add_argument('--mesh_refine_min', type=float, default=0.0001,
                     help="Lowest allowed verification grid mesh size in the final verification")
 parser.add_argument('--max_refine_factor', type=float, default=100,
                     help="Maximum value to split each grid point into, during the (local) refinement")
+parser.add_argument('--max_refine_samples', type=float, default=1_000_000_000,
+                    help="Maximum number of samples to allow in the refinement step (if there are more, stop the refinement)")
 
 ### LEARNER ARGUMENTS
 parser.add_argument('--cegis_iterations', type=int, default=100,
@@ -405,7 +407,7 @@ for i in range(args.cegis_iterations):
         elif np.min(suggested_mesh) >= current_mesh:
             print(f'\n- Skip refinement, because min. suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current max. value ({current_mesh:.5f})')
             verify_done = True
-        elif len(counterx) > 50_000_000:
+        elif len(counterx) > args.max_refine_samples:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
             verify_done = True
         else:
