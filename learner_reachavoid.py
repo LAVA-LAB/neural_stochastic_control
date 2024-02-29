@@ -139,7 +139,7 @@ class Learner:
             # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
             #                         + lip_certificate * mesh_loss - 1)
 
-            losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * 0.0001 - 1)
+            losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * mesh_loss - 1)
             loss_init = jnp.max(losses_init)
             loss_init_counterx = jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
 
@@ -149,7 +149,7 @@ class Learner:
             #                           + lip_certificate * mesh_loss)
 
             losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
-                                           + lip_certificate * 0.0001)
+                                            + lip_certificate * mesh_loss)
             loss_unsafe = jnp.max(losses_unsafe)
             loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
             
@@ -166,7 +166,7 @@ class Learner:
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,
                                                        x_decrease + perturbation, actions, expDecr_keys)
 
-            loss_expdecr2 = self.loss_exp_decrease_vmap(0.001 * K, V_state, certificate_params,
+            loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         x_decrease + perturbation, actions, expDecr_keys)
 
             if self.expected_decrease_loss == 0: # Base loss function
