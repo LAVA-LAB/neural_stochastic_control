@@ -18,7 +18,7 @@ from commons import RectangularSet, MultiRectangularSet
 from scipy.stats import triang
 
 def angle_normalize(x):
-    return ((x + np.pi) % (2 * np.pi)) - np.pi
+    return x % (2 * np.pi)
 
 class DubinsEnv(gym.Env):
 
