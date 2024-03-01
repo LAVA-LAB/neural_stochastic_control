@@ -359,28 +359,17 @@ class Verifier:
 
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
-            softpus_lip_factor = 1 - jnp.exp(-V_ub.flatten()[check_idxs])
+            print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
+            softpus_lip_factor = 1 - np.exp(-V_ub.flatten()[check_idxs])
             assert len(softpus_lip_factor) == len(Vdiff), \
                 f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
-                print(f'- Number of factors below {i}: {np.sum(softpus_lip_factor <= i)}')
+                print(f'-- Number of factors below {i}: {np.sum(softpus_lip_factor <= i)}')
         else:
             softpus_lip_factor = 1
 
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
-
-        print('Shape K:', K.shape)
-        print('Type K:', type(K))
-        print('Shape softpus_lip_factor:', softpus_lip_factor.shape)
-        print('Type softpus_lip_factor:', type(softpus_lip_factor))
-        print('Shape K*softpus_lip_factor:', (K * softpus_lip_factor).shape)
-
-        print('Vdiff shape:', Vdiff.shape)
-        print('Vdiff type:', type(Vdiff))
-
-        print('tau shape:', tau.shape)
-        print('tau type:', type(tau))
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
