@@ -138,6 +138,9 @@ def meshgrid_jax(points, size):
 
 EPS = 1e-8
 def define_grid_jax(low, high, size, mode = 'linspace'):
+    print('low:', low)
+    print('high:', high)
+    print('size:', size)
     if mode == 'linspace':
         points = [np.linspace(low[i], high[i], size[i]) for i in range(len(size))]
     else:
