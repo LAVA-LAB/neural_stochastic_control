@@ -362,6 +362,8 @@ class Verifier:
             softpus_lip_factor = 1 - jnp.exp(-V_ub[check_idxs])
             assert len(softpus_lip_factor) == len(Vdiff), \
                 f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
+            for i in [0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
+                print(f'- Number of factors below {i}: {len(np.sum(softpus_lip_factor <= i))}')
         else:
             softpus_lip_factor = 1
 
