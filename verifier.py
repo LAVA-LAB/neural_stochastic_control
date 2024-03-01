@@ -359,7 +359,7 @@ class Verifier:
 
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
-            softpus_lip_factor = 1 - jnp.exp(-V_ub[check_idxs])
+            softpus_lip_factor = 1 - jnp.exp(-V_ub.flatten()[check_idxs])
             assert len(softpus_lip_factor) == len(Vdiff), \
                 f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
@@ -374,7 +374,13 @@ class Verifier:
         print('Type K:', type(K))
         print('Shape softpus_lip_factor:', softpus_lip_factor.shape)
         print('Type softpus_lip_factor:', type(softpus_lip_factor))
-        print('Shape K*softpus_lip_factor:', K * softpus_lip_factor)
+        print('Shape K*softpus_lip_factor:', (K * softpus_lip_factor).shape)
+
+        print('Vdiff shape:', Vdiff.shape)
+        print('Vdiff type:', type(Vdiff))
+
+        print('tau shape:', tau.shape)
+        print('tau type:', type(tau))
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
