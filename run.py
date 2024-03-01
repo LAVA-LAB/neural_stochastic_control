@@ -119,6 +119,8 @@ parser.add_argument('--cplip', action=argparse.BooleanOptionalAction, default=Tr
                     help="If True, use CPLip method to compute Lipschitz constants")
 parser.add_argument('--split_lip', action=argparse.BooleanOptionalAction, default=True,
                     help="If True, use L_f split over the system state space and control action space")
+parser.add_argument('--improved_softplus_lip', action=argparse.BooleanOptionalAction, default=True,
+                    help="If True, use improved (local) Lipschitz constants for softplus in V (if False, global constant of 1 is used)")
 
 args = parser.parse_args()
 args.cwd = os.getcwd()
@@ -345,10 +347,6 @@ for i in range(args.cegis_iterations):
 
             if np.isnan(infos['0. total']):
                 print('(!!!) Severe warning: The learned losses contained NaN values, which indicates most probably at an error in the learner module.')
-                # print(np.vstack((X_decrease[k], CX_decrease[k])))
-                # print(np.vstack((X_init[k], CX_init[k])))
-                # print(np.vstack((X_unsafe[k], CX_unsafe[k])))
-                # print(np.vstack((X_target[k], CX_target[k])))
 
             else:
                 # Update parameters

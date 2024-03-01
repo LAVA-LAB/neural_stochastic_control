@@ -324,12 +324,12 @@ class Verifier:
         print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
 
         # Expected decrease condition check on all states outside target set
-        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
+        V_lb, V_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
                                                 0.5 * self.check_decrease[:, -1], 1)
         check_idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
         check_expDecr_at = self.check_decrease[check_idxs]
 
-        # Determine actions for every point in subgrid
+            # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
                                             env.action_space.shape[0])
 
@@ -357,16 +357,23 @@ class Verifier:
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
+        # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
+        if args.improved_softplus_lip:
+            softpus_lip_factor = 1 - jnp.exp(-V_ub[check_idxs])
+            assert len(V_ub) == len(Vdiff)
+        else:
+            softpus_lip_factor = 1
+
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * K)
+        violation_idxs = (Vdiff >= -tau * (K * softpus_lip_factor))
         counterx_expDecr = check_expDecr_at[violation_idxs]
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / K)
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K)
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
