@@ -370,6 +370,12 @@ class Verifier:
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
 
+        print('Shape K:', K.shape)
+        print('Type K:', type(K))
+        print('Shape softpus_lip_factor:', softpus_lip_factor.shape)
+        print('Type softpus_lip_factor:', type(softpus_lip_factor))
+        print('Shape K*softpus_lip_factor:', K * softpus_lip_factor)
+
         # Negative is violation
         assert len(tau) == len(Vdiff)
         violation_idxs = (Vdiff >= -tau * (K * softpus_lip_factor))
