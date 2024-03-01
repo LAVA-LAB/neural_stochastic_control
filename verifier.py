@@ -360,7 +360,8 @@ class Verifier:
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
             softpus_lip_factor = 1 - jnp.exp(-V_ub[check_idxs])
-            assert len(V_ub) == len(Vdiff)
+            assert len(softpus_lip_factor) == len(Vdiff), \
+                f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
         else:
             softpus_lip_factor = 1
 

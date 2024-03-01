@@ -732,12 +732,12 @@ def PPO(environment_function,
 
         plt.plot(X, Y, '-', color="blue", linewidth=1)
 
-        print('Trace', i)
-        print(obs_plot[:, i, :])
-        print('With actions')
-        print(action_hist[:, i, :])
-
-        print('\n====\n')
+        if verbose:
+            print('Trace', i)
+            print(obs_plot[:, i, :])
+            print('With actions')
+            print(action_hist[:, i, :])
+            print('\n====\n')
 
     # Goal x-y limits
     low = env.observation_space.low
