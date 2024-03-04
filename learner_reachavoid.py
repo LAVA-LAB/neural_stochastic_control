@@ -22,15 +22,15 @@ class Learner:
 
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
-        if isinstance(env.init_space.sets, MultiRectangularSet):
+        if isinstance(env.init_space, MultiRectangularSet):
             self.num_samples_init = tuple(Set.volume / totvol * self.base_grid_size for Set in env.init_space.sets)
         else:
             self.num_samples_init = env.init_space.volume / totvol * self.base_grid_size
-        if isinstance(env.unsafe_space.sets, MultiRectangularSet):
+        if isinstance(env.unsafe_space, MultiRectangularSet):
             self.num_samples_unsafe = tuple(Set.volume / totvol * self.base_grid_size for Set in env.unsafe_space.sets)
         else:
             self.num_samples_unsafe = env.unsafe_space.volume / totvol * self.base_grid_size
-        if isinstance(env.target_space.sets, MultiRectangularSet):
+        if isinstance(env.target_space, MultiRectangularSet):
             self.num_samples_target = tuple(Set.volume / totvol * self.base_grid_size for Set in env.target_space.sets)
         else:
             self.num_samples_target = env.target_space.volume / totvol * self.base_grid_size
