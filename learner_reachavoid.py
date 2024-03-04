@@ -23,17 +23,17 @@ class Learner:
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
-            self.num_samples_init = tuple(Set.volume / totvol * self.base_grid_size for Set in env.init_space.sets)
+            self.num_samples_init = tuple(np.round(Set.volume / totvol * self.base_grid_size for Set in env.init_space.sets))
         else:
-            self.num_samples_init = env.init_space.volume / totvol * self.base_grid_size
+            self.num_samples_init = np.round(env.init_space.volume / totvol * self.base_grid_size)
         if isinstance(env.unsafe_space, MultiRectangularSet):
-            self.num_samples_unsafe = tuple(Set.volume / totvol * self.base_grid_size for Set in env.unsafe_space.sets)
+            self.num_samples_unsafe = tuple(np.round(Set.volume / totvol * self.base_grid_size for Set in env.unsafe_space.sets))
         else:
-            self.num_samples_unsafe = env.unsafe_space.volume / totvol * self.base_grid_size
+            self.num_samples_unsafe = np.round(env.unsafe_space.volume / totvol * self.base_grid_size)
         if isinstance(env.target_space, MultiRectangularSet):
-            self.num_samples_target = tuple(Set.volume / totvol * self.base_grid_size for Set in env.target_space.sets)
+            self.num_samples_target = tuple(np.round(Set.volume / totvol * self.base_grid_size for Set in env.target_space.sets))
         else:
-            self.num_samples_target = env.target_space.volume / totvol * self.base_grid_size
+            self.num_samples_target = np.round(env.target_space.volume / totvol * self.base_grid_size)
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
@@ -119,9 +119,9 @@ class Learner:
 
         # Sample from each region of interest
         samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
-        samples_unsafe = self.env.unsafe_space.sample(rng=init_key, N=self.num_samples_unsafe)
-        samples_target = self.env.target_space.sample(rng=init_key, N=self.num_samples_target)
-        samples_decrease = self.env.init_space.sample(rng=init_key, N=self.base_grid_size)
+        samples_unsafe = self.env.unsafe_space.sample(rng=unsafe_key, N=self.num_samples_unsafe)
+        samples_target = self.env.target_space.sample(rng=target_key, N=self.num_samples_target)
+        samples_decrease = self.env.init_space.sample(rng=decrease_key, N=self.base_grid_size)
 
         # Split RNG keys for process noise in environment stap
         expDecr_keys = jax.random.split(noise_key, (self.base_grid_size, self.N_expectation))
