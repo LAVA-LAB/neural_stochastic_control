@@ -122,9 +122,9 @@ class RectangularSet:
             return xvector[bools]
 
     @partial(jax.jit, static_argnums=(0, 2))
-    def sample(self, rng, n):
+    def sample(self, rng, N):
         # Uniformly sample n values from this state set
-        samples = jax.random.uniform(rng, (n, self.dimension), minval=self.low, maxval=self.high)
+        samples = jax.random.uniform(rng, (N, self.dimension), minval=self.low, maxval=self.high)
 
         return samples
 
