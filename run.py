@@ -291,7 +291,6 @@ for i in range(args.cegis_iterations):
                 Policy_state = Policy_state,
                 counterexamples = counterx_buffer.data,
                 mesh_loss = args.mesh_loss,
-                mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,
                 expDecr_multiplier = args.expDecr_multiplier
             )
@@ -333,7 +332,6 @@ for i in range(args.cegis_iterations):
 
     verify_done = False
     refine_nr = 0
-    current_mesh = args.mesh_verify_grid_init
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
@@ -355,27 +353,22 @@ for i in range(args.cegis_iterations):
         elif np.min(suggested_mesh) < args.mesh_refine_min:
             print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.mesh_refine_min:.5f})')
             verify_done = True
-        elif np.min(suggested_mesh) >= current_mesh:
-            print(f'\n- Skip refinement, because min. suggested mesh ({np.min(suggested_mesh):.5f}) is not smaller than the current max. value ({current_mesh:.5f})')
-            verify_done = True
         elif len(counterx) > args.max_refine_samples:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
             verify_done = True
         else:
             # Clip the suggested mesh at the lowest allowed value
-            counterx_current_mesh = counterx[:, -1]
-            min_allowed_mesh = counterx_current_mesh / args.max_refine_factor
+            min_allowed_mesh = args.mesh_verify_grid_init / args.max_refine_factor**i
             suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
 
-            current_mesh = np.max(suggested_mesh)
             if args.local_refinement:
-                print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}]')
+                print(f'\n- Locally refine mesh size to [{np.min(suggested_mesh):.5f}, {np.max(suggested_mesh):.5f}] (min. allowed is {min_allowed_mesh})')
                 # If local refinement is used, then use a different suggested mesh for each counterexample
                 verify.local_grid_refinement(env, counterx, suggested_mesh, args.linfty)
             else:
                 # If global refinement is used, then use the lowest of all suggested mesh values
                 args.mesh_verify_grid_init = np.min(suggested_mesh)
-                print(f'\n- Globally refine mesh size to {args.mesh_verify_grid_init:.5f}')
+                print(f'\n- Globally refine mesh size to {args.mesh_verify_grid_init:.5f} (min. allowed is {min_allowed_mesh})')
                 verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=args.linfty)
 
         refine_nr += 1

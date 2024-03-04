@@ -105,7 +105,7 @@ class Verifier:
 
 
 
-    def local_grid_refinement(self, env, data, new_mesh_sizes, Linfty):
+    def local_grid_refinement(self, env, data, new_mesh_sizes, Linfty, vmap_threshold = 10000):
         '''
         Refine the given array of points in the state space.
         '''
@@ -121,33 +121,23 @@ class Verifier:
         # Width of each cell in the partition. The grid points are the centers of the cells.
         new_cell_widths = mesh2cell_width(new_mesh_sizes, env.state_dim, Linfty)
 
-        print('diff:\n', new_cell_widths - cell_widths)
-
         # Retrieve bounding box of cell in old grid
         points_lb = (points.T - 0.5 * cell_widths).T
         points_ub = (points.T + 0.5 * cell_widths).T
 
         # Number of cells per dimension of the state space
-        num_per_dimension = np.array(
-            np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
+        num_per_dimension = np.array(np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
         # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
 
-        print(unique_num)
-
         # Compute average number of copies per counterexample
-        ratio = len(points) / len(unique_num)
-        THRESHOLD = 10000
-
-        if ratio > THRESHOLD:
+        if len(points) / len(unique_num) > vmap_threshold:
             # Above threshold, use vmap batches version
-            print(f'- Use jax.vmap for refinement (ratio is {ratio:.2f})')
+            print(f'- Use jax.vmap for refinement')
 
             t = time.time()
             grid_shift = [[]] * len(unique_num)
-
-            max_length = int(np.max(unique_num) ** self.buffer.dim)
 
             # Set box from -1 to 1
             unit_lb = -np.ones(self.buffer.dim)
@@ -165,10 +155,6 @@ class Verifier:
 
                 print(f'--- Refined grid size: {num}; copies: {np.sum(idxs)}')
 
-                # Make sure that the grid length is always the same (to reduce the total number of compilations)
-                # grid_fixed_length = np.zeros((max_length, grid.shape[1]))
-                # grid_fixed_length[:len(grid)] = grid
-
                 lbs = points_lb[idxs]
                 ubs = points_ub[idxs]
 
@@ -176,7 +162,6 @@ class Verifier:
                 grid_shift_batch = [self.vmap_grid_multiply_shift(grid, lbs[i:j], ubs[i:j], num)
                                     for (i,j) in zip(starts, ends)]
                 grid_shift_batch = np.vstack(grid_shift_batch)
-                # grid_shift_batch = grid_shift_batch[:, :len(grid), :]
 
                 # Concatenate
                 grid_shift[i] = grid_shift_batch.reshape(-1, grid_shift_batch.shape[2])
@@ -189,7 +174,7 @@ class Verifier:
 
         else:
             # Below threshold, use naive for loop (because its faster)
-            print(f'- Use for-loop for refinement (ratio is {ratio:.2f})')
+            print(f'- Use for-loop for refinement')
 
             t = time.time()
             grid_plus = [[]] * len(new_mesh_sizes)
