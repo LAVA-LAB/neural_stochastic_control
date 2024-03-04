@@ -81,13 +81,13 @@ class Verifier:
 
         # Number of cells per dimension of the state space
         num_per_dimension = np.array(
-            np.ceil((env.observation_space.high - env.observation_space.low) / verify_mesh_cell_width), dtype=int)
+            np.ceil((env.state_space.high - env.state_space.low) / verify_mesh_cell_width), dtype=int)
 
         # Create the (rectangular) verification grid and add it to the buffer
-        self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
+        self.buffer = Buffer(dim=env.state_space.dimension, extra_dims=1)
 
-        grid = define_grid_jax(env.observation_space.low + 0.5 * verify_mesh_cell_width,
-                           env.observation_space.high - 0.5 * verify_mesh_cell_width,
+        grid = define_grid_jax(env.state_space.low + 0.5 * verify_mesh_cell_width,
+                           env.state_space.high - 0.5 * verify_mesh_cell_width,
                            size=num_per_dimension)
 
         # Also store the cell width associated with each point
@@ -205,7 +205,7 @@ class Verifier:
             print('- Stacking took:', time.time() - t)
 
         # Store in the buffer
-        self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
+        self.buffer = Buffer(dim=env.state_space.dimension, extra_dims=1)
         self.buffer.append(stacked_grid_plus)
 
         # Format the verification grid into the relevant regions of the state space
