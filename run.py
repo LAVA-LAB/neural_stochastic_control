@@ -277,7 +277,7 @@ for i in range(args.cegis_iterations):
 
     if args.batches == -1:
         # Automatically determine number of batches
-        num_batches = int(np.ceil(args.samples_per_epoch / args.batch_size))
+        num_batches = int(np.ceil(args.num_samples_per_epoch / args.batch_size))
     else:
         # Use given number of batches
         num_batches = args.batches
@@ -293,7 +293,7 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 counterexamples = counterx_buffer.data,
-                num_cx_per_batch = args.samples_per_epoch * args.counterx_fraction,
+                num_cx_per_batch = args.num_samples_per_epoch * args.counterx_fraction,
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,
