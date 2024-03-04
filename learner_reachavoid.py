@@ -145,16 +145,12 @@ class Learner:
         samples_target = self.env.target_space.sample(rng=target_key, N=self.num_samples_target)
         samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.num_samples_decrease)
 
-        # Split RNG keys for process noise in environment stap
-        expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
-
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples > 0:
             perturbation = jax.random.uniform(perturbation_key, samples_decrease.shape,
                                               minval=-0.5 * self.perturb_samples,
                                               maxval=0.5 * self.perturb_samples)
             samples_decrease = samples_decrease + perturbation
-            expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
 
         def loss_fun(certificate_params, policy_params):
 
@@ -185,6 +181,7 @@ class Learner:
             actions = Policy_state.apply_fn(policy_params, samples_decrease)
 
             # Expected decrease loss
+            expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
             loss_exp_decrease = jnp.mean(loss_expdecr)
@@ -202,6 +199,7 @@ class Learner:
 
                 # Expected decrease
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
+                expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
                 L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
                 loss_expdecr_counterx = expDecr_multiplier * jnp.sum(cx_weights * cx_bool_decrease * jnp.ravel(L)) / jnp.sum(cx_weights)
 
