@@ -25,22 +25,22 @@ class Learner:
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
             rel_vols = np.array([Set.volume / totvol for Set in env.init_space.sets])
-            self.num_samples_init = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
+            self.num_samples_init = tuple(np.maximum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
-            self.num_samples_init = np.minimum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
+            self.num_samples_init = np.maximum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
         if isinstance(env.unsafe_space, MultiRectangularSet):
             rel_vols = np.array([Set.volume / totvol for Set in env.unsafe_space.sets])
-            self.num_samples_unsafe = tuple(np.minimum(1, np.ceil(rel_vols * self.batch_size_base)).astype(int))
+            self.num_samples_unsafe = tuple(np.maximum(1, np.ceil(rel_vols * self.batch_size_base)).astype(int))
         else:
-            self.num_samples_unsafe = np.minimum(np.ceil(env.unsafe_space.volume / totvol * self.batch_size_base), 1).astype(int)
+            self.num_samples_unsafe = np.maximum(np.ceil(env.unsafe_space.volume / totvol * self.batch_size_base), 1).astype(int)
         if isinstance(env.target_space, MultiRectangularSet):
             rel_vols = np.array([Set.volume / totvol for Set in env.target_space.sets])
-            self.num_samples_target = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
+            self.num_samples_target = tuple(np.maximum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
-            self.num_samples_target = np.minimum(1, np.ceil(env.target_space.volume / totvol * self.batch_size_base)).astype(int)
+            self.num_samples_target = np.maximum(1, np.ceil(env.target_space.volume / totvol * self.batch_size_base)).astype(int)
 
         # Infer the number of expected decrease samples based on the other batch sizes
-        self.num_samples_decrease = np.minimum(self.batch_size_base
+        self.num_samples_decrease = np.maximum(self.batch_size_base
                                                - np.sum(self.num_samples_init)
                                                - np.sum(self.num_samples_unsafe)
                                                - np.sum(self.num_samples_target), 1).astype(int)
