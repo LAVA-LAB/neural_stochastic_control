@@ -45,6 +45,11 @@ parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
 
 ### MESH SIZES
+parser.add_argument('--num_samples_per_epoch', type=int, default=90000,
+                    help="Total number of samples to train over in each epoch")
+parser.add_argument('--num_counterexamples_in_buffer', type=int, default=30000,
+                    help="Total number of samples to train over in each epoch")
+
 parser.add_argument('--train_cell_width', type=float, default=0.01,
                     help="Cell width (same in every dimension) for the base train grid")
 parser.add_argument('--mesh_loss', type=float, default=0.001,
@@ -252,7 +257,7 @@ verify.partition_noise(env, args)
 # Define counterexample buffer
 print(f'- Create initial counterexample buffer')
 counterx_buffer = Buffer(dim = env.state_space.dimension,
-                         max_size = learn.base_grid_size * args.counterx_fraction / (1-args.counterx_fraction),
+                         max_size = args.num_counterexamples_in_buffer,
                          extra_dims = 1)
 
 # Set uniform verify grid, which covers the complete state space with the specified `tau` (mesh size)
@@ -267,12 +272,12 @@ key = jax.random.PRNGKey(args.seed)
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
-    print(f'\n== Iter. {i} (num. train samples: {learn.base_grid_size}; num. counterexamples: {len(counterx_buffer.data)}) ==\n')
+    print(f'\n== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ==\n')
     iteration_init = time.time()
 
     if args.batches == -1:
         # Automatically determine number of batches
-        num_batches = int(np.ceil((learn.base_grid_size + len(counterx_buffer.data)) / args.batch_size))
+        num_batches = int(np.ceil(args.samples_per_epoch / args.batch_size))
     else:
         # Use given number of batches
         num_batches = args.batches
@@ -288,6 +293,7 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 counterexamples = counterx_buffer.data,
+                num_cx_per_batch = args.samples_per_epoch * args.counterx_fraction,
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,

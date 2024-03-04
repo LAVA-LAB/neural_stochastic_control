@@ -15,9 +15,6 @@ class Learner:
     def __init__(self, env, args):
 
         # Set properties of base training grid
-        self.samples_per_dimension = np.array(np.ceil((env.state_space.high -
-                                                    env.state_space.low) / args.train_cell_width), dtype=int)
-        self.base_grid_size = np.prod(self.samples_per_dimension).astype(int)
         self.base_grid_cell_width = args.train_cell_width
 
         # Set batch size
@@ -76,9 +73,6 @@ class Learner:
         return
 
 
-    def fraction_of_volume(self, regionA, regionB):
-        ''' Compute relative volume of regionA with respect to regionB '''
-
 
     def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
         '''
@@ -112,16 +106,23 @@ class Learner:
                    V_state: TrainState,
                    Policy_state: TrainState,
                    counterexamples,
+                   num_cx_per_batch,
                    mesh_loss,
                    mesh_verify_grid_init,
                    probability_bound,
                    expDecr_multiplier
                    ):
 
-        cx_samples = counterexamples[:, :-1]
-        cx_weights = counterexamples[:, -1]
+        # Generate all random keys
+        key, cx_key, init_key, unsafe_key, target_key, decrease_key, noise_key, perturbation_key = jax.random.split(key, 8)
 
-        key, init_key, unsafe_key, target_key, decrease_key, noise_key, perturbation_key = jax.random.split(key, 7)
+        # Sample from the full list of counterexamples
+        if len(counterexamples) > 0:
+            cx = jax.random.choice(cx_key, counterexamples, shape=(num_cx_per_batch,), replace=False)
+            cx_init = self.env.init_space.contains(cx, dim=self.env.state_dim)
+
+            cx_samples = cx[:, :-1]
+            cx_weights = cx[:, -1]
 
         # Sample from each region of interest
         samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
@@ -152,7 +153,10 @@ class Learner:
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, samples_init))
                                     + lip_certificate * mesh_loss - 1)
 
-            loss_init_counterx = 0
+            if len(counterexamples) > 0:
+                loss_init_counterx = 0
+            else:
+                loss_init_counterx = 0
 
             # losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, samples_init) + lip_certificate * mesh_loss - 1)
             # loss_init = jnp.max(losses_init)
