@@ -12,31 +12,33 @@ import time
 
 class Learner:
 
-    def __init__(self, env, args, num_cx_per_batch):
+    def __init__(self, env, args):
 
-        # Set batch size
-        self.batch_size = args.batch_size
+        self.batch_size_total = self.batch_size
+        # Set batch sizes
+        self.batch_size_base = args.batch_size * (1-args.counterx_fraction)
+        self.batch_size_counterx = args.batch_size * args.counterx_fraction
 
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.init_space.sets]
-            self.num_samples_init = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
+            self.num_samples_init = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
-            self.num_samples_init = np.ceil(env.init_space.volume / totvol * self.batch_size).astype(int)
+            self.num_samples_init = np.minimum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
         if isinstance(env.unsafe_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.unsafe_space.sets]
-            self.num_samples_unsafe = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
+            self.num_samples_unsafe = tuple(np.minimum(1, np.ceil(rel_vols * self.batch_size_base)).astype(int))
         else:
-            self.num_samples_unsafe = np.ceil(env.unsafe_space.volume / totvol * self.batch_size).astype(int)
+            self.num_samples_unsafe = np.minimum(np.ceil(env.unsafe_space.volume / totvol * self.batch_size_base), 1).astype(int)
         if isinstance(env.target_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.target_space.sets]
-            self.num_samples_target = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
+            self.num_samples_target = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
-            self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.batch_size).astype(int)
+            self.num_samples_target = np.minimum(1, np.ceil(env.target_space.volume / totvol * self.batch_size_base)).astype(int)
 
-        # Set number of counterexamples per batch
-        self.num_cx_per_batch = int(num_cx_per_batch)
+        # Infer the number of expected decrease samples based on the other batch sizes
+        self.num_samples_decrease = np.minimum(self.num_samples_init - self.num_samples_unsafe - self.num_samples_target, 1).astype(int)
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
@@ -129,11 +131,10 @@ class Learner:
         samples_init = self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
         samples_unsafe = self.env.unsafe_space.sample(rng=unsafe_key, N=self.num_samples_unsafe)
         samples_target = self.env.target_space.sample(rng=target_key, N=self.num_samples_target)
-        samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.batch_size)
+        samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.num_samples_decrease)
 
         # Split RNG keys for process noise in environment stap
         expDecr_keys = jax.random.split(noise_key, (self.batch_size, self.N_expectation))
-        expDecr_keys_cx = jax.random.split(noise_key, (self.num_cx_per_batch, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples > 0:
@@ -141,6 +142,7 @@ class Learner:
                                               minval=-0.5 * self.perturb_samples,
                                               maxval=0.5 * self.perturb_samples)
             samples_decrease = samples_decrease + perturbation
+            expDecr_keys_cx = jax.random.split(noise_key, (self.num_cx_per_batch, self.N_expectation))
 
         def loss_fun(certificate_params, policy_params):
 

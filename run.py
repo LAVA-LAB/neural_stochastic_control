@@ -247,7 +247,7 @@ for layer in Policy_state.params['params'].keys():
 # %%
 
 # Define Learner
-learn = Learner(env, args=args, num_cx_per_batch = args.num_samples_per_epoch * args.counterx_fraction)
+learn = Learner(env, args=args)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 
@@ -269,7 +269,7 @@ key = jax.random.PRNGKey(args.seed)
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
-    print(f'\n== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ==\n')
+    print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
     iteration_init = time.time()
 
     if args.batches == -1:
