@@ -129,7 +129,7 @@ class RectangularSet:
         :param xvector: vector of points
         '''
 
-        bools = jnp.all(xvector.T >= self.low, axis=1) * jnp.all(xvector <= self.high, axis=1)
+        bools = jnp.all(xvector >= self.low, axis=1) * jnp.all(xvector <= self.high, axis=1)
         return bools
 
     def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):

@@ -193,7 +193,7 @@ class Learner:
                 # Expected decrease
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
                 L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
-                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(cx_weights, jnp.ravel(L))) / jnp.sum(cx_weights)
+                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(cx_weights * cx_bool_decrease * jnp.ravel(L)) / jnp.sum(cx_weights)
 
             else:
                 loss_init_counterx = 0
