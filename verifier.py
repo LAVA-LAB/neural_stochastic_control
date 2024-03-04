@@ -134,7 +134,7 @@ class Verifier:
 
         # Compute average number of copies per counterexample
         if len(points) / len(unique_num) > vmap_threshold:
-            # Above threshold, use vmap batches version
+            # Above threshold, use vmap batches vƒersion
             print(f'- Use jax.vmap for refinement')
 
             t = time.time()
@@ -346,6 +346,15 @@ class Verifier:
 
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
+
+        # Print 100 most violating points
+        most_violating_idxs = np.argsort(Vdiff)[::-1]
+        print('Most violating states:')
+        print(check_expDecr_at[most_violating_idxs])
+
+        print('Corresponding V values are:')
+        print(V_lb[check_idxs][most_violating_idxs])
+        print(V_ub[check_idxs][most_violating_idxs])
 
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
