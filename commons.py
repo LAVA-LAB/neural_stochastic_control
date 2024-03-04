@@ -17,7 +17,7 @@ class MultiRectangularSet:
         self.sets = sets
         self.dimension = sets[0].dimension
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0, 2, 4))
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
 
         # Remove the extra columns from the data (storing additional data beyond the grid points)
@@ -37,7 +37,7 @@ class MultiRectangularSet:
         else:
             return xvector[bools]
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0, 2, 4))
     def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
 
         # Remove the extra columns from the data (storing additional data beyond the grid points)
@@ -79,7 +79,7 @@ class RectangularSet:
         self.dimension = len(self.low)
         self.volume = np.prod(self.high - self.low)
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0, 2, 4))
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is contained in the rectangular set, expanded by a value of delta.
@@ -103,7 +103,7 @@ class RectangularSet:
         else:
             return xvector[bools]
 
-    @partial(jax.jit, static_argnums=(0,))
+    @partial(jax.jit, static_argnums=(0, 2, 4))
     def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is *not* contained in the rectangular set, expanded by a value of delta.
