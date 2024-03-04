@@ -272,7 +272,7 @@ for i in range(args.cegis_iterations):
 
     if args.batches == -1:
         # Automatically determine number of batches
-        num_batches = int(np.ceil((len(learn.base_grid_size) + len(counterx_buffer.data)) / args.batch_size))
+        num_batches = int(np.ceil((learn.base_grid_size + len(counterx_buffer.data)) / args.batch_size))
     else:
         # Use given number of batches
         num_batches = args.batches
