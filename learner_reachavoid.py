@@ -15,14 +15,14 @@ class Learner:
     def __init__(self, env, args):
 
         # Set batch sizes
-        self.batch_size_total = args.batch_size
-        self.batch_size_base = args.batch_size * (1-args.counterx_fraction)
-        self.batch_size_counterx = args.batch_size * args.counterx_fraction
+        self.batch_size_total = int(args.batch_size)
+        self.batch_size_base = int(args.batch_size * (1-args.counterx_fraction))
+        self.batch_size_counterx = int(args.batch_size * args.counterx_fraction)
 
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
-            rel_vols = [Set.volume / totvol for Set in env.init_space.sets]
+            rel_vols = np.array([Set.volume / totvol for Set in env.init_space.sets])
             print(rel_vols)
             print(np.ceil(rel_vols * self.batch_size_base))
             print(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
@@ -30,12 +30,12 @@ class Learner:
         else:
             self.num_samples_init = np.minimum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
         if isinstance(env.unsafe_space, MultiRectangularSet):
-            rel_vols = [Set.volume / totvol for Set in env.unsafe_space.sets]
+            rel_vols = np.array([Set.volume / totvol for Set in env.unsafe_space.sets])
             self.num_samples_unsafe = tuple(np.minimum(1, np.ceil(rel_vols * self.batch_size_base)).astype(int))
         else:
             self.num_samples_unsafe = np.minimum(np.ceil(env.unsafe_space.volume / totvol * self.batch_size_base), 1).astype(int)
         if isinstance(env.target_space, MultiRectangularSet):
-            rel_vols = [Set.volume / totvol for Set in env.target_space.sets]
+            rel_vols = np.array([Set.volume / totvol for Set in env.target_space.sets])
             self.num_samples_target = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
             self.num_samples_target = np.minimum(1, np.ceil(env.target_space.volume / totvol * self.batch_size_base)).astype(int)
