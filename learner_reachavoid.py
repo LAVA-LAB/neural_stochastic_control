@@ -35,8 +35,8 @@ class Learner:
         else:
             self.num_samples_target = env.target_space.volume / totvol * self.base_grid_size
 
-        self.expected_decrease_loss = args.expected_decrease_loss
-        self.perturb_samples = args.perturb_samples
+        self.expected_decrease_loss = args.expdecrease_loss_type
+        self.perturb_samples = args.perturb_train_samples
 
         # Lipschitz factor
         self.lambda_lipschitz = args.loss_lipschitz_lambda
