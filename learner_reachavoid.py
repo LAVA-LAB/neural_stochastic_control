@@ -39,7 +39,7 @@ class Learner:
             self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.batch_size).astype(int)
 
         # Set number of counterexamples per batch
-        self.num_cx_per_batch = num_cx_per_batch
+        self.num_cx_per_batch = int(num_cx_per_batch)
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
