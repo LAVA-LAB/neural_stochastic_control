@@ -69,7 +69,7 @@ class LinearEnv3D(gym.Env):
 
         # Set observation / state space
         high = np.array([1.5, 1.5, 1.5], dtype=np.float32)
-        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
+        self.state_space = RectangularSet(low=-high, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1, 1], dtype=np.float32)
@@ -193,8 +193,8 @@ class LinearEnv3D(gym.Env):
         return jax.lax.cond(done, self._reset, lambda key: (state, key, steps_since_reset), key)
 
     def _reset(self, key):
-        high = self.observation_space.high
-        low = self.observation_space.low
+        high = self.state_space.high
+        low = self.state_space.low
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,

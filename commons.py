@@ -15,6 +15,7 @@ class MultiRectangularSet:
 
     def __init__(self, sets):
         self.sets = sets
+        self.dimension = sets[0].dimension
 
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
 
@@ -52,6 +53,15 @@ class MultiRectangularSet:
         else:
             return xvector[bools]
 
+    @partial(jax.jit, static_argnums=(0, 2))
+    def sample(self, rng, N):
+        # Sample n values for each of the state sets and return the stacked vector
+        rngs = jax.random.split(rng, len(N))
+        samples = [Set.sample(rng, n) for (Set,rng,n) in zip(self.sets, rngs, N)]
+        samples = jnp.vstack(samples)
+
+        return samples
+
 class RectangularSet:
     '''
     Class to create a rectangular set with cheap containment checks (faster than gymnasium Box.contains).
@@ -62,6 +72,8 @@ class RectangularSet:
         self.low = np.array(low, dtype=dtype)
         self.high = np.array(high, dtype=dtype)
         self.gymspace = spaces.Box(low=low, high=high, dtype=dtype)
+        self.dimension = len(self.low)
+        self.volume = np.prod(self.high - self.low)
 
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
@@ -108,6 +120,13 @@ class RectangularSet:
             return bools
         else:
             return xvector[bools]
+
+    @partial(jax.jit, static_argnums=(0, 2))
+    def sample(self, rng, n):
+        # Uniformly sample n values from this state set
+        samples = jax.random.uniform(rng, (n, self.dimension), minval=self.low, maxval=self.high)
+
+        return samples
 
 def lqr(A, B, Q, R, verbose=False):
 

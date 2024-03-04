@@ -59,7 +59,7 @@ class DubinsEnv(gym.Env):
         # Set observation / state space
         low = np.array([-2, -2, 0], dtype=np.float32)
         high = np.array([2, 2, 1], dtype=np.float32)
-        self.observation_space = spaces.Box(low=low, high=high, dtype=np.float32)
+        self.state_space = RectangularSet(low=low, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([0.0001], dtype=np.float32)
@@ -108,7 +108,7 @@ class DubinsEnv(gym.Env):
 
         # Lower bound state
         state = jnp.array([x, y, theta_next])
-        state = jnp.clip(state, self.observation_space.low, self.observation_space.high)
+        state = jnp.clip(state, self.state_space.low, self.state_space.high)
 
         return state
 
@@ -191,8 +191,8 @@ class DubinsEnv(gym.Env):
         return jax.lax.cond(done, self._reset, lambda key: (state, key, steps_since_reset), key)
 
     def _reset(self, key):
-        high = self.observation_space.high
-        low = self.observation_space.low
+        high = self.state_space.high
+        low = self.state_space.low
 
         key, subkey = jax.random.split(key)
         new_state = jax.random.uniform(subkey, minval=low,

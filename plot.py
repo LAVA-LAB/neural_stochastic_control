@@ -17,7 +17,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
         print("Create trace plot...")
 
     # Simulate traces
-    traces = np.zeros((len_traces+1, num_traces, len(env.observation_space.low)))
+    traces = np.zeros((len_traces+1, num_traces, len(env.state_space.low)))
     actions = np.zeros((len_traces, num_traces, len(env.action_space.low)))
 
     # Initialize traces
@@ -50,8 +50,8 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], 'bo')
 
             # Goal x-y limits
-        low = env.observation_space.low
-        high = env.observation_space.high
+        low = env.state_space.low
+        high = env.state_space.high
         ax.set_xlim(low[0], high[0])
         ax.set_ylim(low[1], high[1])
 
@@ -69,8 +69,8 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], traces[-1, i, 2], 'bo')
 
         # Goal x-y limits
-        low = env.observation_space.low
-        high = env.observation_space.high
+        low = env.state_space.low
+        high = env.state_space.high
         ax.set_xlim(low[0], high[0])
         ax.set_ylim(low[1], high[1])
         ax.set_zlim(low[2], high[2])
@@ -93,7 +93,7 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
 
     dim = env.state_dim
     if dim != 2:
-        print(f">> Cannot create dataset plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
+        print(f">> Cannot create dataset plot: environment has wrong state dimension (namely {len(env.state_space.low)}).")
         return
     else:
         print("Create dataset plot...")
@@ -122,8 +122,8 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
         plt.scatter(x,y, color='blue', s=0.1)
 
     # XY limits
-    low = env.observation_space.low
-    high = env.observation_space.high
+    low = env.state_space.low
+    high = env.state_space.high
     ax.set_xlim(low[0], high[0])
     ax.set_ylim(low[1], high[1])
 
@@ -144,12 +144,12 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
 
     dim = env.state_dim
     if dim not in [2,3]:
-        print(f">> Cannot create vector plot: environment has wrong state dimension (namely {len(env.observation_space.low)}).")
+        print(f">> Cannot create vector plot: environment has wrong state dimension (namely {len(env.state_space.low)}).")
         return
     else:
         print("Create vector plot...")
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[vectors_per_dim]*dim)
+    grid = define_grid(env.state_space.low, env.state_space.high, size=[vectors_per_dim]*dim)
 
     # Get actions
     action = Pi_state.apply_fn(Pi_state.params, grid)
@@ -208,7 +208,7 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     fig, ax = plt.subplots()
 
     # Visualize certificate network
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=[101]*dim)
+    grid = define_grid(env.state_space.low, env.state_space.high, size=[101]*dim)
 
     # Only keep unique elements in first two dimensions
     _, idxs = np.unique(grid[:,0:2], return_index=True, axis=0)

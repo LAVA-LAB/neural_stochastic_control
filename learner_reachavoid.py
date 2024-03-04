@@ -7,37 +7,49 @@ from jax import random, numpy as jnp
 from flax.training.train_state import TrainState
 import flax.linen as nn
 from jax_utils import lipschitz_coeff
+from commons import MultiRectangularSet, RectangularSet
 import time
 
 class Learner:
 
-    def __init__(self,
-                 env,
-                 expected_decrease_loss,
-                 perturb_samples,
-                 loss_lipschitz_lambda,
-                 loss_lipschitz_certificate,
-                 loss_lipschitz_policy,
-                 linfty,
-                 weighted,
-                 cplip,
-                 split_lip):
+    def __init__(self, env, args):
 
-        self.expected_decrease_loss = expected_decrease_loss
-        self.perturb_samples = perturb_samples
+        # Set properties of base training grid
+        self.samples_per_dimension = np.array(np.ceil((env.state_space.high -
+                                                    env.state_space.low) / args.train_cell_width), dtype=int)
+        self.base_grid_size = np.prod(self.samples_per_dimension)
+        self.base_grid_cell_width = args.train_cell_width
+
+        # Calculate the number of samples for each region type (without counterexamples)
+        totvol = env.state_space.volume
+        if isinstance(env.init_space.sets, MultiRectangularSet):
+            self.num_samples_init = tuple(Set.volume / totvol * self.base_grid_size for Set in env.init_space.sets)
+        else:
+            self.num_samples_init = env.init_space.volume / totvol * self.base_grid_size
+        if isinstance(env.unsafe_space.sets, MultiRectangularSet):
+            self.num_samples_unsafe = tuple(Set.volume / totvol * self.base_grid_size for Set in env.unsafe_space.sets)
+        else:
+            self.num_samples_unsafe = env.unsafe_space.volume / totvol * self.base_grid_size
+        if isinstance(env.target_space.sets, MultiRectangularSet):
+            self.num_samples_target = tuple(Set.volume / totvol * self.base_grid_size for Set in env.target_space.sets)
+        else:
+            self.num_samples_target = env.target_space.volume / totvol * self.base_grid_size
+
+        self.expected_decrease_loss = args.expected_decrease_loss
+        self.perturb_samples = args.perturb_samples
 
         # Lipschitz factor
-        self.lambda_lipschitz = loss_lipschitz_lambda
+        self.lambda_lipschitz = args.loss_lipschitz_lambda
 
         # Maximum value for lipschitz coefficients (above this, incur loss)
-        self.max_lip_certificate = loss_lipschitz_certificate
-        self.max_lip_policy = loss_lipschitz_policy
+        self.max_lip_certificate = args.loss_lipschitz_certificate
+        self.max_lip_policy = args.loss_lipschitz_policy
 
         # Lipschitz coefficient settings
-        self.linfty = linfty
-        self.weighted = weighted
-        self.cplip = cplip
-        self.split_lip = split_lip
+        self.linfty = args.linfty
+        self.weighted = args.weighted
+        self.cplip = args.cplip
+        self.split_lip = args.split_lip
 
         print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
@@ -57,6 +69,9 @@ class Learner:
 
         return
 
+
+    def fraction_of_volume(self, regionA, regionB):
+        ''' Compute relative volume of regionA with respect to regionB '''
 
 
     def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
@@ -90,41 +105,33 @@ class Learner:
                    key: jax.Array,
                    V_state: TrainState,
                    Policy_state: TrainState,
-                   samples_decrease,
-                   samples_init,
-                   samples_unsafe,
-                   samples_target,
-                   max_grid_perturb,
+                   counterexamples,
                    mesh_loss,
                    mesh_verify_grid_init,
                    probability_bound,
                    expDecr_multiplier
                    ):
 
-        w_decrease = samples_decrease[:, -1]
-        x_decrease = samples_decrease[:, :-1]
+        cx_samples = counterexamples[:, :-1]
+        cx_weights = counterexamples[:, -1]
 
-        w_init = samples_init[:, -1]
-        x_init = samples_init[:, :-1]
+        key, init_key, unsafe_key, target_key, decrease_key, noise_key, perturbation_key = jax.random.split(key, 7)
 
-        w_unsafe = samples_unsafe[:, -1]
-        x_unsafe = samples_unsafe[:, :-1]
-
-        w_target = samples_target[:, -1]
-        x_target = samples_target[:, :-1]
-
-        key, noise_key, perturbation_key = jax.random.split(key, 3)
+        # Sample from each region of interest
+        samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
+        samples_unsafe = self.env.unsafe_space.sample(rng=init_key, N=self.num_samples_unsafe)
+        samples_target = self.env.target_space.sample(rng=init_key, N=self.num_samples_target)
+        samples_decrease = self.env.init_space.sample(rng=init_key, N=self.base_grid_size)
 
         # Split RNG keys for process noise in environment stap
-        expDecr_keys = jax.random.split(noise_key, (len(x_decrease), self.N_expectation))
+        expDecr_keys = jax.random.split(noise_key, (self.base_grid_size, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
-            perturbation = jax.random.uniform(perturbation_key, x_decrease.shape,
-                                              minval=-0.5*max_grid_perturb,
-                                              maxval=0.5*max_grid_perturb)
-        else:
-            perturbation = 0
+            perturbation = jax.random.uniform(perturbation_key, samples_decrease.shape,
+                                              minval=-0.5 * self.base_grid_cell_width,
+                                              maxval=0.5 * self.base_grid_cell_width)
+            samples_decrease = samples_decrease + perturbation
 
         def loss_fun(certificate_params, policy_params):
 
@@ -133,25 +140,29 @@ class Learner:
             lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
             # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, x_decrease + perturbation)
+            actions = Policy_state.apply_fn(policy_params, samples_decrease)
 
             # Loss in initial state set
-            # loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, x_init))
-            #                         + lip_certificate * mesh_loss - 1)
+            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, samples_init))
+                                    + lip_certificate * mesh_loss - 1)
 
-            losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, x_init) + lip_certificate * mesh_loss - 1)
-            loss_init = jnp.max(losses_init)
-            loss_init_counterx = jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
+            loss_init_counterx = 0
+
+            # losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, samples_init) + lip_certificate * mesh_loss - 1)
+            # loss_init = jnp.max(losses_init)
+            # loss_init_counterx = jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
 
             # Loss in unsafe state set
-            # loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
-            #                           jnp.min(V_state.apply_fn(certificate_params, x_unsafe))
-            #                           + lip_certificate * mesh_loss)
+            loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
+                                      jnp.min(V_state.apply_fn(certificate_params, samples_unsafe))
+                                      + lip_certificate * mesh_loss)
 
-            losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
-                                            + lip_certificate * mesh_loss)
-            loss_unsafe = jnp.max(losses_unsafe)
-            loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
+            loss_unsafe_counterx = 0
+
+            # losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
+            #                                 + lip_certificate * mesh_loss)
+            # loss_unsafe = jnp.max(losses_unsafe)
+            # loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
             
             if self.linfty and self.split_lip:
                 K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy + 1)
@@ -164,10 +175,10 @@ class Learner:
 
             # Loss for expected decrease condition
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,
-                                                       x_decrease + perturbation, actions, expDecr_keys)
+                                                       samples_decrease, actions, expDecr_keys)
 
             loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
-                                                        x_decrease + perturbation, actions, expDecr_keys)
+                                                        samples_decrease, actions, expDecr_keys)
 
             if self.expected_decrease_loss == 0: # Base loss function
                 loss_exp_decrease = jnp.mean(loss_expdecr)
@@ -179,18 +190,18 @@ class Learner:
 
             elif self.expected_decrease_loss == 2: # Base + Weighted average over counterexamples
                 loss_exp_decrease = jnp.mean(loss_expdecr2)
-                loss_exp_decrease_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
+                loss_exp_decrease_counterx = 0 #expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
-            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) - self.glob_min)
-            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) -
-                                        jnp.min(V_state.apply_fn(certificate_params, x_init)))
-            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) -
-                                          jnp.min(V_state.apply_fn(certificate_params, x_unsafe)))
+            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) - self.glob_min)
+            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) -
+                                        jnp.min(V_state.apply_fn(certificate_params, samples_init)))
+            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) -
+                                          jnp.min(V_state.apply_fn(certificate_params, samples_unsafe)))
 
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
@@ -216,52 +227,6 @@ class Learner:
         (loss_val, (infos, loss_expdecr)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
         return V_grads, Policy_grads, infos, key, loss_expdecr
-
-
-
-    @partial(jax.jit, static_argnums=(0, 2))
-    def sample_full_state_space(self, rng, n):
-        samples = jax.random.uniform(rng, (n, len(self.env.state)),
-                                     minval=self.env.observation_space.low,
-                                     maxval=self.env.observation_space.high)
-        return samples
-
-
-
-    @partial(jax.jit, static_argnums=(0, 2))
-    def sample_stabilize_set(self, rng, n):
-        samples = jax.random.uniform(rng, (n, len(self.env.state)),
-            minval=self.env.stabilize_space.low,
-            maxval=self.env.stabilize_space.high)
-        return samples
-
-
-
-    @partial(jax.jit, static_argnums=(0, 2))
-    def sample_nonstabilize_set(self, rng, n):
-
-        samples = jnp.vstack([self.sample_nongoal_states() for i in range(n)])
-        return samples
-
-
-
-    @partial(jax.jit, static_argnums=(0))
-    def sample_nongoal_states(self):
-        i = 0
-        iMax = 1000
-        while i < iMax:
-            # Sample state from observation space
-            state = self.env.unwrapped.observation_space.sample()
-
-            # Check if this state is indeed outside the stabilizing set
-            if not self.env.unwrapped.stabilize_space.contains(state):
-                return state
-
-            i += 1
-
-        print(f'Error, no state sampled after {iMax} attempts.')
-        assert False
-
 
 
 class MLP(nn.Module):

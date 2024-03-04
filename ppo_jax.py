@@ -331,7 +331,7 @@ def update_ppo_jit(
         key: jax.Array,
 ):
     # Flatten collected experiences
-    b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
+    b_obs = storage.obs.reshape((-1,) + env.state_space.gymspace.shape)
     b_logprobs = storage.logprobs.reshape(-1)
     b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
     b_advantages = storage.advantages.reshape(-1)
@@ -485,7 +485,7 @@ def update_ppo(
     key: jax.Array,
 ):
     # Flatten collected experiences
-    b_obs = storage.obs.reshape((-1,) + env.observation_space.shape)
+    b_obs = storage.obs.reshape((-1,) + env.state_space.gymspace.shape)
     b_logprobs = storage.logprobs.reshape(-1)
     b_actions = storage.actions.reshape((-1,) + env.action_space.shape)
     b_advantages = storage.advantages.reshape(-1)
@@ -618,7 +618,7 @@ def PPO(environment_function,
 
     # ALGO Logic: Storage setup
     storage = Storage(
-        obs=jnp.zeros((args.num_steps, args.num_envs) + env.observation_space.shape),
+        obs=jnp.zeros((args.num_steps, args.num_envs) + env.state_space.gymspace.shape),
         actions=jnp.zeros((args.num_steps, args.num_envs) + env.action_space.shape),
         logprobs=jnp.zeros((args.num_steps, args.num_envs)),
         dones=jnp.zeros((args.num_steps, args.num_envs)),
@@ -706,7 +706,7 @@ def PPO(environment_function,
     next_obs = np.array(next_obs)
     next_done = np.zeros(args.num_envs)
 
-    obs_plot = np.zeros((len_traces, args.num_envs) + env.observation_space.shape)
+    obs_plot = np.zeros((len_traces, args.num_envs) + env.state_space.gymspace.shape)
     action_hist = np.zeros((len_traces, args.num_envs) + env.action_space.shape)
 
     for step in range(0, len_traces):
@@ -740,8 +740,8 @@ def PPO(environment_function,
             print('\n====\n')
 
     # Goal x-y limits
-    low = env.observation_space.low
-    high = env.observation_space.high
+    low = env.state_space.low
+    high = env.state_space.high
     ax.set_xlim(low[0] - 0.1, high[0] + 0.1)
     ax.set_ylim(low[1] - 0.1, high[1] + 0.1)
 
@@ -756,9 +756,9 @@ def PPO(environment_function,
 
     vectors_per_dim = 10
 
-    sizes = [vectors_per_dim]*2 + [1]*(len(env.observation_space.low)-2)
+    sizes = [vectors_per_dim]*2 + [1]*(len(env.state_space.low)-2)
 
-    grid = define_grid(env.observation_space.low, env.observation_space.high, size=sizes)
+    grid = define_grid(env.state_space.low, env.state_space.high, size=sizes)
 
     # Get actions
     action, _ = agent_state.actor_fn(agent_state.params['actor'], grid)
