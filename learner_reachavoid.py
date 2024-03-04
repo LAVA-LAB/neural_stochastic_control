@@ -19,6 +19,8 @@ class Learner:
         self.batch_size_base = int(args.batch_size * (1-args.counterx_fraction))
         self.batch_size_counterx = int(args.batch_size * args.counterx_fraction)
 
+
+
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
@@ -42,6 +44,13 @@ class Learner:
                                                - np.sum(self.num_samples_init)
                                                - np.sum(self.num_samples_unsafe)
                                                - np.sum(self.num_samples_target), 1).astype(int)
+
+        print(f'- Num. base train samples per batch: {self.batch_size_base}')
+        print(f'-- Initial state: {self.num_samples_init}')
+        print(f'-- Unsafe state: {self.num_samples_unsafe}')
+        print(f'-- Target state: {self.num_samples_target}')
+        print(f'-- Expected decrease: {self.num_samples_decrease}')
+        print(f'- Num. counterexamples per batch: {self.batch_size_counterx}')
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
