@@ -210,7 +210,7 @@ class Verifier:
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
         t = time.time()
         self.check_decrease = self.env.target_space.not_contains(self.buffer.data, dim=self.buffer.dim,
-                                                                 delta=0)  # Shrink target set by halfwidth of the cell
+                                                                 delta=-0.5 * verify_mesh_cell_width)  # Shrink target set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_decrease: {(time.time() - t):.4f}')
 
@@ -377,7 +377,7 @@ class Verifier:
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + 10)) #tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
