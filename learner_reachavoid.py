@@ -14,8 +14,8 @@ class Learner:
 
     def __init__(self, env, args):
 
-        self.batch_size_total = self.batch_size
         # Set batch sizes
+        self.batch_size_total = args.batch_size
         self.batch_size_base = args.batch_size * (1-args.counterx_fraction)
         self.batch_size_counterx = args.batch_size * args.counterx_fraction
 
