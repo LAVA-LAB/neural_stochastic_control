@@ -248,6 +248,9 @@ for layer in Policy_state.params['params'].keys():
 
 # Define Learner
 learn = Learner(env, args=args)
+print(f'- Number of base train samples per batch: {learn.batch_size_base}')
+print(f'- Number of counterexamples per batch: {learn.batch_size_counterx}')
+
 verify = Verifier(env)
 verify.partition_noise(env, args)
 
@@ -278,7 +281,6 @@ for i in range(args.cegis_iterations):
     else:
         # Use given number of batches
         num_batches = args.batches
-
     print(f'- Number of epochs: {args.epochs}; number of batches: {num_batches}')
 
     for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
