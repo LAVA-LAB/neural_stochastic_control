@@ -250,7 +250,7 @@ for layer in Policy_state.params['params'].keys():
 # %%
 
 # Define Learner
-learn = Learner(env, args=args)
+learn = Learner(env, args=args, num_cx_per_batch = args.num_samples_per_epoch * args.counterx_fraction)
 verify = Verifier(env)
 verify.partition_noise(env, args)
 
@@ -293,7 +293,6 @@ for i in range(args.cegis_iterations):
                 V_state = V_state,
                 Policy_state = Policy_state,
                 counterexamples = counterx_buffer.data,
-                num_cx_per_batch = args.num_samples_per_epoch * args.counterx_fraction,
                 mesh_loss = args.mesh_loss,
                 mesh_verify_grid_init = args.mesh_verify_grid_init,
                 probability_bound = args.probability_bound,

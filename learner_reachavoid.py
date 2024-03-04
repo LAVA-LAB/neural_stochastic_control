@@ -12,7 +12,7 @@ import time
 
 class Learner:
 
-    def __init__(self, env, args):
+    def __init__(self, env, args, num_cx_per_batch):
 
         # Set properties of base training grid
         self.base_grid_cell_width = args.train_cell_width
@@ -37,6 +37,9 @@ class Learner:
             self.num_samples_target = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
         else:
             self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.batch_size).astype(int)
+
+        # Set number of counterexamples per batch
+        self.num_cx_per_batch = num_cx_per_batch
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
@@ -106,7 +109,6 @@ class Learner:
                    V_state: TrainState,
                    Policy_state: TrainState,
                    counterexamples,
-                   num_cx_per_batch,
                    mesh_loss,
                    mesh_verify_grid_init,
                    probability_bound,
@@ -118,7 +120,7 @@ class Learner:
 
         # Sample from the full list of counterexamples
         if len(counterexamples) > 0:
-            cx = jax.random.choice(cx_key, counterexamples, shape=(num_cx_per_batch,), replace=False)
+            cx = jax.random.choice(cx_key, counterexamples, shape=(self.num_cx_per_batch,), replace=False)
             cx_samples = cx[:, :-1]
             cx_weights = cx[:, -1]
 
@@ -135,7 +137,7 @@ class Learner:
 
         # Split RNG keys for process noise in environment stap
         expDecr_keys = jax.random.split(noise_key, (self.batch_size, self.N_expectation))
-        expDecr_keys_cx = jax.random.split(noise_key, (num_cx_per_batch, self.N_expectation))
+        expDecr_keys_cx = jax.random.split(noise_key, (self.num_cx_per_batch, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
