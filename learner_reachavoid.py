@@ -119,10 +119,13 @@ class Learner:
         # Sample from the full list of counterexamples
         if len(counterexamples) > 0:
             cx = jax.random.choice(cx_key, counterexamples, shape=(num_cx_per_batch,), replace=False)
-            cx_init = self.env.init_space.contains(cx, dim=self.env.state_dim)
-
             cx_samples = cx[:, :-1]
             cx_weights = cx[:, -1]
+
+            # Check which counterexamples are contained in which regions
+            cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
+            cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
+            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
 
         # Sample from each region of interest
         samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
@@ -132,6 +135,7 @@ class Learner:
 
         # Split RNG keys for process noise in environment stap
         expDecr_keys = jax.random.split(noise_key, (self.batch_size, self.N_expectation))
+        expDecr_keys_cx = jax.random.split(noise_key, (num_cx_per_batch, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
@@ -146,34 +150,16 @@ class Learner:
             lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
             lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
-            # Determine actions for every point in subgrid
-            actions = Policy_state.apply_fn(policy_params, samples_decrease)
-
             # Loss in initial state set
             loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, samples_init))
                                     + lip_certificate * mesh_loss - 1)
-
-            if len(counterexamples) > 0:
-                loss_init_counterx = 0
-            else:
-                loss_init_counterx = 0
-
-            # losses_init = jnp.maximum(0, V_state.apply_fn(certificate_params, samples_init) + lip_certificate * mesh_loss - 1)
-            # loss_init = jnp.max(losses_init)
-            # loss_init_counterx = jnp.sum(jnp.multiply(w_init, jnp.ravel(losses_init))) / jnp.sum(w_init)
 
             # Loss in unsafe state set
             loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
                                       jnp.min(V_state.apply_fn(certificate_params, samples_unsafe))
                                       + lip_certificate * mesh_loss)
 
-            loss_unsafe_counterx = 0
-
-            # losses_unsafe = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, x_unsafe)
-            #                                 + lip_certificate * mesh_loss)
-            # loss_unsafe = jnp.max(losses_unsafe)
-            # loss_unsafe_counterx = jnp.sum(jnp.multiply(w_unsafe, jnp.ravel(losses_unsafe))) / jnp.sum(w_unsafe)
-            
+            # Calculate K factor
             if self.linfty and self.split_lip:
                 K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy + 1)
             elif self.split_lip:
@@ -183,24 +169,34 @@ class Learner:
             else:
                 K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
-            # Loss for expected decrease condition
-            loss_expdecr = self.loss_exp_decrease_vmap(mesh_verify_grid_init * K, V_state, certificate_params,
-                                                       samples_decrease, actions, expDecr_keys)
+            # Determine actions for every sampled point
+            actions = Policy_state.apply_fn(policy_params, samples_decrease)
 
-            loss_expdecr2 = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
+            # Expected decrease loss
+            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
+            loss_exp_decrease = jnp.mean(loss_expdecr)
 
-            if self.expected_decrease_loss == 0: # Base loss function
-                loss_exp_decrease = jnp.mean(loss_expdecr)
-                loss_exp_decrease_counterx = 0
+            # Counterexample losses
+            if len(counterexamples) > 0:
+                # Initial states
+                L = jnp.maximum(0, V_state.apply_fn(certificate_params, cx_samples) + lip_certificate * mesh_loss - 1)
+                loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(L)) / jnp.sum(cx_weights)
 
-            elif self.expected_decrease_loss == 1: # Loss function Wietze
-                loss_exp_decrease = jnp.mean(loss_expdecr)
-                loss_exp_decrease_counterx = 10 * jnp.mean(loss_expdecr2)
+                # Unsafe states
+                L = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, cx_samples)
+                                            + lip_certificate * mesh_loss)
+                loss_unsafe_counterx = jnp.sum(cx_weights * cx_bool_unsafe * jnp.ravel(L)) / jnp.sum(cx_weights)
 
-            elif self.expected_decrease_loss == 2: # Base + Weighted average over counterexamples
-                loss_exp_decrease = jnp.mean(loss_expdecr2)
-                loss_exp_decrease_counterx = 0 #expDecr_multiplier * jnp.sum(jnp.multiply(w_decrease, jnp.ravel(loss_expdecr2))) / jnp.sum(w_decrease)
+                # Expected decrease
+                actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
+                L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
+                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(cx_weights, jnp.ravel(L))) / jnp.sum(cx_weights)
+
+            else:
+                loss_init_counterx = 0
+                loss_unsafe_counterx = 0
+                loss_expdecr_counterx = 0
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
@@ -217,7 +213,7 @@ class Learner:
 
             # Define total loss
             loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx +
-                          loss_exp_decrease + loss_exp_decrease_counterx + loss_lipschitz + loss_aux)
+                          loss_exp_decrease + loss_expdecr_counterx + loss_lipschitz + loss_aux)
             infos = {
                 '0. total': loss_total,
                 '1. init': loss_init,
@@ -225,7 +221,7 @@ class Learner:
                 '3. unsafe': loss_unsafe,
                 '4. unsafe counterx': loss_unsafe_counterx,
                 '5. expDecrease': loss_exp_decrease,
-                '6. expDecrease counterx': loss_exp_decrease_counterx,
+                '6. expDecrease counterx': loss_expdecr_counterx,
                 '7. loss_lipschitz': loss_lipschitz,
                 '8. loss_aux': loss_aux,
             }

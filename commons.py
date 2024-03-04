@@ -17,7 +17,6 @@ class MultiRectangularSet:
         self.sets = sets
         self.dimension = sets[0].dimension
 
-    @partial(jax.jit, static_argnums=(0, 2, 4))
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
 
         # Remove the extra columns from the data (storing additional data beyond the grid points)
@@ -27,17 +26,27 @@ class MultiRectangularSet:
             xvector_trim = xvector
 
         # bools[x] = 1 if x is contained in set
-        bools = jnp.array([set.contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
 
         # Point is contained if it is contained in any of the sets
-        bools = jnp.any(bools, axis=0)
+        bools = np.any(bools, axis=0)
 
         if return_indices:
             return bools
         else:
             return xvector[bools]
 
-    @partial(jax.jit, static_argnums=(0, 2, 4))
+    @partial(jax.jit, static_argnums=(0, 2))
+    def jax_contains(self, xvector):
+
+        # bools[x] = 1 if x is contained in set
+        bools = jnp.array([set.jax_contains(xvector) for set in self.sets])
+
+        # Point is contained if it is contained in any of the sets
+        bools = jnp.any(bools, axis=0)
+
+        return bools
+
     def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
 
         # Remove the extra columns from the data (storing additional data beyond the grid points)
@@ -47,15 +56,26 @@ class MultiRectangularSet:
             xvector_trim = xvector
 
         # bools[x] = 1 if x is *not* contained in set
-        bools = jnp.array([set.contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
+        bools = np.array([set.not_contains(xvector_trim, delta=delta, return_indices=True) for set in self.sets])
 
         # Point is not contained if it is contained in none of the sets
-        bools = jnp.all(bools, axis=0)
+        bools = np.all(bools, axis=0)
 
         if return_indices:
             return bools
         else:
             return xvector[bools]
+
+    @partial(jax.jit, static_argnums=(0))
+    def jax_not_contains(self, xvector):
+
+        # bools[x] = 1 if x is *not* contained in set
+        bools = jnp.array([set.jax_not_contains(xvector) for set in self.sets])
+
+        # Point is not contained if it is contained in none of the sets
+        bools = jnp.all(bools, axis=0)
+
+        return bools
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample(self, rng, N):
@@ -79,7 +99,6 @@ class RectangularSet:
         self.dimension = len(self.low)
         self.volume = np.prod(self.high - self.low)
 
-    @partial(jax.jit, static_argnums=(0, 2, 4))
     def contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is contained in the rectangular set, expanded by a value of delta.
@@ -96,14 +115,23 @@ class RectangularSet:
 
         # Note: we actually want to check that x >= low - delta, but we rewrite this to avoid issues with dimensions
         # caused by numpy (same for the other expression).
-        bools = jnp.all((xvector_trim.T + delta).T >= self.low, axis=1) * jnp.all((xvector_trim.T - delta).T <= self.high, axis=1)
+        bools = np.all((xvector_trim.T + delta).T >= self.low, axis=1) * np.all((xvector_trim.T - delta).T <= self.high, axis=1)
 
         if return_indices:
             return bools
         else:
             return xvector[bools]
 
-    @partial(jax.jit, static_argnums=(0, 2, 4))
+    @partial(jax.jit, static_argnums=(0,))
+    def jax_contains(self, xvector):
+        '''
+        Check if a vector of points is contained in the rectangular set.
+        :param xvector: vector of points
+        '''
+
+        bools = jnp.all(xvector.T >= self.low, axis=1) * jnp.all(xvector <= self.high, axis=1)
+        return bools
+
     def not_contains(self, xvector, dim=-1, delta=0, return_indices=False):
         '''
         Check if a vector of points is *not* contained in the rectangular set, expanded by a value of delta.
@@ -120,12 +148,24 @@ class RectangularSet:
 
         # Note: we actually want to check that x < low - delta, but we rewrite this to avoid issues with dimensions
         # caused by numpy (same for the other expression).
-        bools = jnp.any((xvector_trim.T + delta).T < self.low, axis=1) + jnp.any((xvector_trim.T - delta).T > self.high, axis=1)
+        bools = np.any((xvector_trim.T + delta).T < self.low, axis=1) + np.any((xvector_trim.T - delta).T > self.high, axis=1)
 
         if return_indices:
             return bools
         else:
             return xvector[bools]
+
+    @partial(jax.jit, static_argnums=(0,))
+    def jax_not_contains(self, xvector):
+        '''
+        Check if a vector of points is *not* contained in the rectangular set.
+        :param xvector: vector of points
+        '''
+
+        # Note: we actually want to check that x < low - delta, but we rewrite this to avoid issues with dimensions
+        # caused by numpy (same for the other expression).
+        bools = jnp.any(xvector < self.low, axis=1) + jnp.any(xvector > self.high, axis=1)
+        return bools
 
     @partial(jax.jit, static_argnums=(0, 2))
     def sample(self, rng, N):

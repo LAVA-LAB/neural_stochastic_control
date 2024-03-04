@@ -205,7 +205,7 @@ class Verifier:
             print('- Stacking took:', time.time() - t)
 
         # Store in the buffer
-        self.buffer = Buffer(dim=env.state_space.dimension, extra_dims=1)
+        self.buffer = Buffer(dim=env.observation_space.shape[0], extra_dims=1)
         self.buffer.append(stacked_grid_plus)
 
         # Format the verification grid into the relevant regions of the state space
@@ -219,8 +219,10 @@ class Verifier:
         # the target, initial, and unsafe regions of the state spaces. The following lines compute these grid points,
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
         t = time.time()
-        self.check_decrease = self.env.target_space.not_contains(self.buffer.data, dim=self.buffer.dim,
-                                                                 delta=-0.5 * verify_mesh_cell_width, return_indices=True)  # Shrink target set by halfwidth of the cell
+        idxs = self.env.target_space.not_contains(self.buffer.data, dim=self.buffer.dim, delta=-0.5 * verify_mesh_cell_width)
+        self.check_decrease = self.buffer.data[idxs]
+
+              # Shrink target set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_decrease: {(time.time() - t):.4f}')
 
