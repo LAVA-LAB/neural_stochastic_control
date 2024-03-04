@@ -14,29 +14,29 @@ class Learner:
 
     def __init__(self, env, args):
 
-        # Set properties of base training grid
-        self.samples_per_dimension = np.array(np.ceil((env.state_space.high -
-                                                    env.state_space.low) / args.train_cell_width), dtype=int)
-        self.base_grid_size = np.prod(self.samples_per_dimension).astype(int)
+        # Set cell width of training grid
         self.base_grid_cell_width = args.train_cell_width
+
+        # Set batch size
+        self.batch_size = args.batch_size
 
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.init_space.sets]
-            self.num_samples_init = tuple(np.ceil(rel_vols * self.base_grid_size).astype(int))
+            self.num_samples_init = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
         else:
-            self.num_samples_init = np.ceil(env.init_space.volume / totvol * self.base_grid_size).astype(int)
+            self.num_samples_init = np.ceil(env.init_space.volume / totvol * self.batch_size).astype(int)
         if isinstance(env.unsafe_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.unsafe_space.sets]
-            self.num_samples_unsafe = tuple(np.ceil(rel_vols * self.base_grid_size).astype(int))
+            self.num_samples_unsafe = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
         else:
-            self.num_samples_unsafe = np.ceil(env.unsafe_space.volume / totvol * self.base_grid_size).astype(int)
+            self.num_samples_unsafe = np.ceil(env.unsafe_space.volume / totvol * self.batch_size).astype(int)
         if isinstance(env.target_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.target_space.sets]
-            self.num_samples_target = tuple(np.ceil(rel_vols * self.base_grid_size).astype(int))
+            self.num_samples_target = tuple(np.ceil(rel_vols * self.batch_size).astype(int))
         else:
-            self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.base_grid_size).astype(int)
+            self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.batch_size).astype(int)
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
@@ -124,10 +124,10 @@ class Learner:
         samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
         samples_unsafe = self.env.unsafe_space.sample(rng=unsafe_key, N=self.num_samples_unsafe)
         samples_target = self.env.target_space.sample(rng=target_key, N=self.num_samples_target)
-        samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.base_grid_size)
+        samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.batch_size)
 
         # Split RNG keys for process noise in environment stap
-        expDecr_keys = jax.random.split(noise_key, (self.base_grid_size, self.N_expectation))
+        expDecr_keys = jax.random.split(noise_key, (self.batch_size, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples:
