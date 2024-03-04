@@ -131,6 +131,8 @@ class Verifier:
         # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
 
+        print(unique_num)
+
         # Compute average number of copies per counterexample
         if len(points) / len(unique_num) > vmap_threshold:
             # Above threshold, use vmap batches version
