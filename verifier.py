@@ -210,7 +210,7 @@ class Verifier:
         # by expanding/shrinking these regions by 0.5 times the width of the cells.
         t = time.time()
         self.check_decrease = self.env.target_space.not_contains(self.buffer.data, dim=self.buffer.dim,
-                                                                 delta=-0.5 * verify_mesh_cell_width)  # Shrink target set by halfwidth of the cell
+                                                                 delta=0)  # Shrink target set by halfwidth of the cell
         if verbose:
             print(f'- Time to define check_decrease: {(time.time() - t):.4f}')
 
