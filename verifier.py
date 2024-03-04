@@ -348,7 +348,7 @@ class Verifier:
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
         # Print 100 most violating points
-        most_violating_idxs = np.argsort(Vdiff)[::-1]
+        most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
         print('Most violating states:')
         print(check_expDecr_at[most_violating_idxs])
 
