@@ -44,14 +44,7 @@ parser.add_argument('--ppo_num_steps', type=int, default=2048,
 parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
 
-### MESH SIZES
-parser.add_argument('--num_samples_per_epoch', type=int, default=90000,
-                    help="Total number of samples to train over in each epoch")
-parser.add_argument('--num_counterexamples_in_buffer', type=int, default=30000,
-                    help="Total number of samples to train over in each epoch")
-
-parser.add_argument('--train_cell_width', type=float, default=0.01,
-                    help="Cell width (same in every dimension) for the base train grid")
+### VERIFY MESH SIZES
 parser.add_argument('--mesh_loss', type=float, default=0.001,
                     help="Mesh size used in the loss function")
 parser.add_argument('--mesh_verify_grid_init', type=float, default=0.01,
@@ -86,6 +79,10 @@ parser.add_argument('--loss_lipschitz_policy', type=float, default=4,
                     help="When the policy Lipschitz coefficient is below this value, then the loss is zero")
 parser.add_argument('--expDecr_multiplier', type=float, default=1,
                     help="Multiply the weight on counterexamples by this value.")
+parser.add_argument('--num_samples_per_epoch', type=int, default=90000,
+                    help="Total number of samples to train over in each epoch")
+parser.add_argument('--num_counterexamples_in_buffer', type=int, default=30000,
+                    help="Total number of samples to train over in each epoch")
 
 ### VERIFIER ARGUMENTS
 parser.add_argument('--verify_batch_size', type=int, default=10000,

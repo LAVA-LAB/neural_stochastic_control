@@ -14,9 +14,6 @@ class Learner:
 
     def __init__(self, env, args, num_cx_per_batch):
 
-        # Set properties of base training grid
-        self.base_grid_cell_width = args.train_cell_width
-
         # Set batch size
         self.batch_size = args.batch_size
 
@@ -140,10 +137,10 @@ class Learner:
         expDecr_keys_cx = jax.random.split(noise_key, (self.num_cx_per_batch, self.N_expectation))
 
         # Random perturbation to samples (for expected decrease condition)
-        if self.perturb_samples:
+        if self.perturb_samples > 0:
             perturbation = jax.random.uniform(perturbation_key, samples_decrease.shape,
-                                              minval=-0.5 * self.base_grid_cell_width,
-                                              maxval=0.5 * self.base_grid_cell_width)
+                                              minval=-0.5 * self.perturb_samples,
+                                              maxval=0.5 * self.perturb_samples)
             samples_decrease = samples_decrease + perturbation
 
         def loss_fun(certificate_params, policy_params):

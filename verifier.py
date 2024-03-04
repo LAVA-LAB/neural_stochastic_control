@@ -379,6 +379,7 @@ class Verifier:
         assert len(tau) == len(Vdiff)
         violation_idxs = (Vdiff >= -tau * (K * softpus_lip_factor))
         counterx_expDecr = check_expDecr_at[violation_idxs]
+
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
         weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
@@ -390,10 +391,6 @@ class Verifier:
 
         if len(counterx_expDecr) > 0:
             print(f'-- Smallest suggested mesh based on expected decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
-
-            mesh_min = np.maximum(np.min(suggested_mesh_expDecr), args.mesh_refine_min)
-        else:
-            mesh_min = args.mesh_refine_min
 
         #####
 
@@ -419,7 +416,7 @@ class Verifier:
                   f"mean={np.mean(V):.5f}; max={np.max(V):.5f}")
 
         # Compute suggested mesh
-        suggested_mesh_init = np.minimum(mesh_min, 0.25 * cell_width2mesh(counterx_init[:,-1], env.state_dim, args.linfty))
+        suggested_mesh_init = 0.5 * cell_width2mesh(counterx_init[:,-1], env.state_dim, args.linfty)
 
         # V_counterx_init = V[V > 0]
         # suggested_mesh_init = np.maximum(1.01 * args.mesh_refine_min,
@@ -477,7 +474,7 @@ class Verifier:
                   f"mean={np.mean(V):.5f}; max={np.max(V):.5f}")
 
         # Compute suggested mesh
-        suggested_mesh_unsafe = np.minimum(mesh_min, 0.25 * cell_width2mesh(counterx_unsafe[:, -1], env.state_dim, args.linfty))
+        suggested_mesh_unsafe = 0.5 * cell_width2mesh(counterx_unsafe[:, -1], env.state_dim, args.linfty)
 
         # V_counterx_unsafe = V[V < 0]
         # suggested_mesh_unsafe = np.maximum(1.01 * args.mesh_refine_min,
