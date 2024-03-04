@@ -130,7 +130,7 @@ class Learner:
 
         # Sample from the full list of counterexamples
         if len(counterexamples) > 0:
-            cx = jax.random.choice(cx_key, counterexamples, shape=(self.num_cx_per_batch,), replace=False)
+            cx = jax.random.choice(cx_key, counterexamples, shape=(self.batch_size_counterx,), replace=False)
             cx_samples = cx[:, :-1]
             cx_weights = cx[:, -1]
 
@@ -154,7 +154,7 @@ class Learner:
                                               minval=-0.5 * self.perturb_samples,
                                               maxval=0.5 * self.perturb_samples)
             samples_decrease = samples_decrease + perturbation
-            expDecr_keys_cx = jax.random.split(noise_key, (self.num_cx_per_batch, self.N_expectation))
+            expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
 
         def loss_fun(certificate_params, policy_params):
 
