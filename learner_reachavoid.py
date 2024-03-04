@@ -268,65 +268,65 @@ class MLP(nn.Module):
 
 
 
-# def batch_training_data(env, key, buffer, epochs, batch_size):
-#
-#     data = buffer.data
-#     dim = buffer.dim
-#     total_samples = len(buffer.data)
-#
-#     samples = {
-#         'init': env.init_space.contains(data, dim=dim),
-#         'unsafe': env.unsafe_space.contains(data, dim=dim),
-#         'decrease': env.target_space.not_contains(data, dim=dim),
-#         'target': env.target_space.contains(data, dim=dim)
-#     }
-#
-#     # Convert train dataset into batches
-#     key, permutation_key = jax.random.split(key)
-#     permutation_keys = jax.random.split(permutation_key, 4)
-#
-#     # If the length of a specific array is nonzero, then select at least one element (otherwise errors can be caused in
-#     # the learner). However, if the length of an array is zero, then we set the batch size for that array to zero, as
-#     # there is nothing to select.
-#     if len(samples['init']) == 0:
-#         num_init = 0
-#     else:
-#         num_init = int(max(2, len(samples['init']) * batch_size / total_samples))
-#
-#     if len(samples['unsafe']) == 0:
-#         num_unsafe = 0
-#     else:
-#         num_unsafe = int(max(2, len(samples['unsafe']) * batch_size / total_samples))
-#
-#     if len(samples['target']) == 0:
-#         num_target = 0
-#     else:
-#         num_target = int(max(2, len(samples['target']) * batch_size / total_samples))
-#
-#     num_decrease = int(batch_size - num_init - num_unsafe - num_target)
-#
-#     print('- Exp. decrease samples:', num_decrease)
-#     print('- Init. samples:', num_init)
-#     print('- Unsafe samples:', num_unsafe)
-#     print('- Target samples:', num_target)
-#
-#     # For each respective element
-#
-#     idxs_decrease = jax.random.choice(permutation_keys[0], len(samples['decrease']),
-#                                         shape=(epochs, num_decrease),
-#                                         replace=True)
-#     batched_decrease = [samples['decrease'][idx] for idx in idxs_decrease]
-#
-#     idxs_init = jax.random.choice(permutation_keys[1], len(samples['init']), shape=(epochs, num_init),
-#                                     replace=True)
-#     batched_init = [samples['init'][idx] for idx in idxs_init]
-#
-#     idxs_unsafe = jax.random.choice(permutation_keys[2], len(samples['unsafe']), shape=(epochs, num_unsafe),
-#                                       replace=True)
-#     batched_unsafe = [samples['unsafe'][idx] for idx in idxs_unsafe]
-#
-#     idxs_target = jax.random.choice(permutation_keys[3], len(samples['target']), shape=(epochs, num_target),
-#                                       replace=True)
-#     batched_target = [samples['target'][idx] for idx in idxs_target]
-#
-#     return key, batched_decrease, batched_init, batched_unsafe, batched_target
+def batch_training_data(env, key, buffer, epochs, batch_size):
+
+    data = buffer.data
+    dim = buffer.dim
+    total_samples = len(buffer.data)
+
+    samples = {
+        'init': env.init_space.contains(data, dim=dim),
+        'unsafe': env.unsafe_space.contains(data, dim=dim),
+        'decrease': env.target_space.not_contains(data, dim=dim),
+        'target': env.target_space.contains(data, dim=dim)
+    }
+
+    # Convert train dataset into batches
+    key, permutation_key = jax.random.split(key)
+    permutation_keys = jax.random.split(permutation_key, 4)
+
+    # If the length of a specific array is nonzero, then select at least one element (otherwise errors can be caused in
+    # the learner). However, if the length of an array is zero, then we set the batch size for that array to zero, as
+    # there is nothing to select.
+    if len(samples['init']) == 0:
+        num_init = 0
+    else:
+        num_init = int(max(2, len(samples['init']) * batch_size / total_samples))
+
+    if len(samples['unsafe']) == 0:
+        num_unsafe = 0
+    else:
+        num_unsafe = int(max(2, len(samples['unsafe']) * batch_size / total_samples))
+
+    if len(samples['target']) == 0:
+        num_target = 0
+    else:
+        num_target = int(max(2, len(samples['target']) * batch_size / total_samples))
+
+    num_decrease = int(batch_size - num_init - num_unsafe - num_target)
+
+    print('- Exp. decrease samples:', num_decrease)
+    print('- Init. samples:', num_init)
+    print('- Unsafe samples:', num_unsafe)
+    print('- Target samples:', num_target)
+
+    # For each respective element
+
+    idxs_decrease = jax.random.choice(permutation_keys[0], len(samples['decrease']),
+                                        shape=(epochs, num_decrease),
+                                        replace=True)
+    batched_decrease = [samples['decrease'][idx] for idx in idxs_decrease]
+
+    idxs_init = jax.random.choice(permutation_keys[1], len(samples['init']), shape=(epochs, num_init),
+                                    replace=True)
+    batched_init = [samples['init'][idx] for idx in idxs_init]
+
+    idxs_unsafe = jax.random.choice(permutation_keys[2], len(samples['unsafe']), shape=(epochs, num_unsafe),
+                                      replace=True)
+    batched_unsafe = [samples['unsafe'][idx] for idx in idxs_unsafe]
+
+    idxs_target = jax.random.choice(permutation_keys[3], len(samples['target']), shape=(epochs, num_target),
+                                      replace=True)
+    batched_target = [samples['target'][idx] for idx in idxs_target]
+
+    return key, batched_decrease, batched_init, batched_unsafe, batched_target
