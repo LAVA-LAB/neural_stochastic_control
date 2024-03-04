@@ -50,7 +50,7 @@ class Learner:
         print(f'-- Unsafe state: {self.num_samples_unsafe}')
         print(f'-- Target state: {self.num_samples_target}')
         print(f'-- Expected decrease: {self.num_samples_decrease}')
-        print(f'- Num. counterexamples per batch: {self.batch_size_counterx}')
+        print(f'- Num. counterexamples per batch: {self.batch_size_counterx}\n')
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
