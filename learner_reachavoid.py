@@ -23,9 +23,6 @@ class Learner:
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
             rel_vols = np.array([Set.volume / totvol for Set in env.init_space.sets])
-            print(rel_vols)
-            print(np.ceil(rel_vols * self.batch_size_base))
-            print(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
             self.num_samples_init = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
             self.num_samples_init = np.minimum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
@@ -41,7 +38,10 @@ class Learner:
             self.num_samples_target = np.minimum(1, np.ceil(env.target_space.volume / totvol * self.batch_size_base)).astype(int)
 
         # Infer the number of expected decrease samples based on the other batch sizes
-        self.num_samples_decrease = np.minimum(self.num_samples_init - self.num_samples_unsafe - self.num_samples_target, 1).astype(int)
+        self.num_samples_decrease = np.minimum(self.batch_size_base
+                                               - np.sum(self.num_samples_init)
+                                               - np.sum(self.num_samples_unsafe)
+                                               - np.sum(self.num_samples_target), 1).astype(int)
 
         self.expected_decrease_loss = args.expdecrease_loss_type
         self.perturb_samples = args.perturb_train_samples
