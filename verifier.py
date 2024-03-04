@@ -420,7 +420,7 @@ class Verifier:
 
         # Compute suggested mesh
         # suggested_mesh_init = np.full(shape=len(counterx_init), fill_value=mesh_min)
-        suggested_mesh_init = 0.5 * cell_width2mesh(counterx_init[:,-1])
+        suggested_mesh_init = 0.5 * cell_width2mesh(counterx_init[:,-1], env.state_dim, args.linfty)
 
         # V_counterx_init = V[V > 0]
         # suggested_mesh_init = np.maximum(1.01 * args.mesh_refine_min,
@@ -479,7 +479,7 @@ class Verifier:
 
         # Compute suggested mesh
         # suggested_mesh_unsafe = np.full(shape=len(counterx_unsafe), fill_value=mesh_min)
-        suggested_mesh_unsafe = 0.5 * cell_width2mesh(counterx_unsafe[:, -1])
+        suggested_mesh_unsafe = 0.5 * cell_width2mesh(counterx_unsafe[:, -1], env.state_dim, args.linfty)
 
         # V_counterx_unsafe = V[V < 0]
         # suggested_mesh_unsafe = np.maximum(1.01 * args.mesh_refine_min,
