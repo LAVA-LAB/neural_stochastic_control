@@ -347,15 +347,6 @@ class Verifier:
                 print("Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - V_old),
                       '; Min diff:', np.min(Vdiff[i:j] - V_old))
 
-        # Print 100 most violating points
-        most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
-        print('Most violating states:')
-        print(check_expDecr_at[most_violating_idxs])
-
-        print('Corresponding V values are:')
-        print(V_lb[check_idxs][most_violating_idxs])
-        print(V_ub[check_idxs][most_violating_idxs])
-
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
             print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
@@ -378,6 +369,18 @@ class Verifier:
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
         weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + 10) #tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
+
+        # Print 100 most violating points
+        most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
+        print('Most violating states:')
+        print(check_expDecr_at[most_violating_idxs])
+
+        print('Corresponding V values are:')
+        print(V_lb[check_idxs][most_violating_idxs])
+        print(V_ub[check_idxs][most_violating_idxs])
+
+        print('Softplus factor for those samples:')
+        print(softpus_lip_factor[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
