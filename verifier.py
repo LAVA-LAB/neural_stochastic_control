@@ -121,6 +121,8 @@ class Verifier:
         # Width of each cell in the partition. The grid points are the centers of the cells.
         new_cell_widths = mesh2cell_width(new_mesh_sizes, env.state_dim, Linfty)
 
+        print('diff:\n', new_cell_widths - cell_widths)
+
         # Retrieve bounding box of cell in old grid
         points_lb = (points.T - 0.5 * cell_widths).T
         points_ub = (points.T + 0.5 * cell_widths).T
