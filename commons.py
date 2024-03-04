@@ -36,7 +36,7 @@ class MultiRectangularSet:
         else:
             return xvector[bools]
 
-    @partial(jax.jit, static_argnums=(0, 2))
+    @partial(jax.jit, static_argnums=(0))
     def jax_contains(self, xvector):
 
         # bools[x] = 1 if x is contained in set
