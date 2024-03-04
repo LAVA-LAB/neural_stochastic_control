@@ -14,7 +14,10 @@ class Learner:
 
     def __init__(self, env, args):
 
-        # Set cell width of training grid
+        # Set properties of base training grid
+        self.samples_per_dimension = np.array(np.ceil((env.state_space.high -
+                                                    env.state_space.low) / args.train_cell_width), dtype=int)
+        self.base_grid_size = np.prod(self.samples_per_dimension).astype(int)
         self.base_grid_cell_width = args.train_cell_width
 
         # Set batch size
