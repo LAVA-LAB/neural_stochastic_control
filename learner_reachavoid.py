@@ -23,6 +23,9 @@ class Learner:
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
             rel_vols = [Set.volume / totvol for Set in env.init_space.sets]
+            print(rel_vols)
+            print(np.ceil(rel_vols * self.batch_size_base))
+            print(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
             self.num_samples_init = tuple(np.minimum(np.ceil(rel_vols * self.batch_size_base), 1).astype(int))
         else:
             self.num_samples_init = np.minimum(1, np.ceil(env.init_space.volume / totvol * self.batch_size_base)).astype(int)
