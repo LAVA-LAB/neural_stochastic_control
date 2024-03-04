@@ -124,7 +124,7 @@ class Learner:
         samples_init =  self.env.init_space.sample(rng=init_key, N=self.num_samples_init)
         samples_unsafe = self.env.unsafe_space.sample(rng=unsafe_key, N=self.num_samples_unsafe)
         samples_target = self.env.target_space.sample(rng=target_key, N=self.num_samples_target)
-        samples_decrease = self.env.init_space.sample(rng=decrease_key, N=self.base_grid_size)
+        samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.base_grid_size)
 
         # Split RNG keys for process noise in environment stap
         expDecr_keys = jax.random.split(noise_key, (self.base_grid_size, self.N_expectation))
