@@ -23,15 +23,15 @@ class Learner:
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
-            self.num_samples_init = tuple(np.ceil(Set.volume / totvol * self.base_grid_size for Set in env.init_space.sets))
+            self.num_samples_init = tuple(np.ceil(Set.volume / totvol * self.base_grid_size) for Set in env.init_space.sets)
         else:
             self.num_samples_init = np.ceil(env.init_space.volume / totvol * self.base_grid_size)
         if isinstance(env.unsafe_space, MultiRectangularSet):
-            self.num_samples_unsafe = tuple(np.ceil(Set.volume / totvol * self.base_grid_size for Set in env.unsafe_space.sets))
+            self.num_samples_unsafe = tuple(np.ceil(Set.volume / totvol * self.base_grid_size) for Set in env.unsafe_space.sets)
         else:
             self.num_samples_unsafe = np.ceil(env.unsafe_space.volume / totvol * self.base_grid_size)
         if isinstance(env.target_space, MultiRectangularSet):
-            self.num_samples_target = tuple(np.ceil(Set.volume / totvol * self.base_grid_size for Set in env.target_space.sets))
+            self.num_samples_target = tuple(np.ceil(Set.volume / totvol * self.base_grid_size) for Set in env.target_space.sets)
         else:
             self.num_samples_target = np.ceil(env.target_space.volume / totvol * self.base_grid_size)
 
