@@ -132,6 +132,8 @@ class Verifier:
         # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
 
+        print(unique_num)
+
         # Compute average number of copies per counterexample
         ratio = len(points) / len(unique_num)
         THRESHOLD = 10000
@@ -377,8 +379,6 @@ class Verifier:
         counterx_expDecr = check_expDecr_at[violation_idxs]
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
-        print(suggested_mesh_expDecr)
-
         weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
@@ -484,7 +484,6 @@ class Verifier:
         #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
-
         try:
             V_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), counterx_unsafe[:, :self.buffer.dim])
         except:
