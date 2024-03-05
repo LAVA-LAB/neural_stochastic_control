@@ -252,7 +252,7 @@ class Learner:
             'init': samples_init,
             'target': samples_target,
             'unsafe': samples_unsafe,
-            'decrease': samples_decrease,
+            'decrease': samples_decrease[samples_decrease_not_target],
             'counterx': cx_samples,
             'counterx_weights': cx_weights,
             'cx_bool_init': cx_bool_init,
