@@ -190,7 +190,7 @@ class Learner:
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
-            loss_exp_decrease = jnp.sum(samples_decrease_bool_not_target * loss_expdecr) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
+            loss_exp_decrease = jnp.sum(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr)) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
 
             # Counterexample losses
             if len(counterexamples) > 0:
