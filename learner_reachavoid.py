@@ -278,7 +278,8 @@ class Learner:
 
         for s in ['cx_bool_init', 'cx_bool_unsafe', 'cx_bool_decrease']:
             filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
-            plot_dataset(self.env, additional_data=np.array(samples_in_batch['counterx'])[s], folder=args.cwd, filename=filename)
+            idxs = samples_in_batch[s]
+            plot_dataset(self.env, additional_data=np.array(samples_in_batch['counterx'])[idxs], folder=args.cwd, filename=filename)
 
 
 class MLP(nn.Module):
