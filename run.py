@@ -61,7 +61,7 @@ parser.add_argument('--max_refine_samples', type=float, default=1_000_000_000,
                     help="Maximum number of samples to allow in the refinement step (if there are more, stop the refinement)")
 
 ### LEARNER ARGUMENTS
-parser.add_argument('--cegis_iterations', type=int, default=100,
+parser.add_argument('--cegis_iterations', type=int, default=1000,
                     help="Number of CEGIS iteration to run")
 parser.add_argument('--epochs', type=int, default=25,
                     help="Number of epochs to run in each iteration")
