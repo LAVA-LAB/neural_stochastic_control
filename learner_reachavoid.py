@@ -114,6 +114,8 @@ class Learner:
         # Cap at zero
         loss = jnp.maximum(0, diff.flatten() + delta.flatten())
 
+        assert len(loss) < 5000
+
         return loss
 
     
