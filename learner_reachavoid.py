@@ -280,6 +280,11 @@ class Learner:
         print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
         print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
 
+        print(f"- Counterexample weights:")
+        print(f"-- # init: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_init']]}")
+        print(f"-- # unsafe: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_unsafe']]}")
+        print(f"-- # decrease: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_decrease']]}")
+
         # Plot samples used in batch
         for s in ['init', 'unsafe', 'target', 'decrease', 'counterx']:
             filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
