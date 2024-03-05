@@ -249,7 +249,7 @@ class Learner:
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
             loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
-            loss_min_decrease = 100 * jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
+            loss_min_decrease = 100000 * jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
             loss_aux = loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
