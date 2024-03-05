@@ -111,7 +111,7 @@ class Learner:
         assert len((jnp.ravel(diff) + delta).shape) == 1
 
         # Cap at zero
-        loss = jnp.maximum(0, jnp.ravel(diff) + delta)
+        loss = jnp.maximum(0, diff.flatten() + delta.flatten())
 
         return loss
 
