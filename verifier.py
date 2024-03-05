@@ -356,7 +356,7 @@ class Verifier:
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
                 print(f'-- Number of factors below {i}: {np.sum(softpus_lip_factor <= i)}')
         else:
-            softpus_lip_factor = 1
+            softpus_lip_factor = np.ones(len(V_ub.flatten()[check_idx]))
 
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
@@ -368,7 +368,7 @@ class Verifier:
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + 10) #tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
