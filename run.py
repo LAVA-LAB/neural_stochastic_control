@@ -285,7 +285,7 @@ for i in range(args.cegis_iterations):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
-            V_grads, Policy_grads, infos, key, loss_expdecr = learn.train_step(
+            V_grads, Policy_grads, infos, key, loss_expdecr, samples_in_batch = learn.train_step(
                 key = key,
                 V_state = V_state,
                 Policy_state = Policy_state,
@@ -304,6 +304,16 @@ for i in range(args.cegis_iterations):
                     V_state = V_state.apply_gradients(grads=V_grads)
                 if args.update_policy and i >= update_policy_after_iteration:
                     Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
+
+    print('Samples used in last train steps:')
+    print(f"- # init samples: {len(samples_in_batch['init'])}")
+    print(f"- # unsafe samples: {len(samples_in_batch['unsafe'])}")
+    print(f"- # target samples: {len(samples_in_batch['target'])}")
+    print(f"- # decrease samples: {len(samples_in_batch['decrease'])}")
+    print(f"- # counterexamples: {len(samples_in_batch['counterx'])}")
+    print(f"-- # cx init: {sum(samples_in_batch['cx_bool_init'])}")
+    print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
+    print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')

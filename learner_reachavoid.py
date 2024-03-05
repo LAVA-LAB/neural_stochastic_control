@@ -242,7 +242,19 @@ class Learner:
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
         (loss_val, (infos, loss_expdecr)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
-        return V_grads, Policy_grads, infos, key, loss_expdecr
+        samples_in_batch = {
+            'init': samples_init,
+            'target': samples_target,
+            'unsafe': samples_unsafe,
+            'decrease': samples_decrease,
+            'counterx': cx_samples,
+            'counterx_weights': cx_weights,
+            'cx_bool_init': cx_bool_init,
+            'cx_bool_unsafe': cx_bool_unsafe,
+            'cx_bool_decrease': cx_bool_decrease
+        }
+
+        return V_grads, Policy_grads, infos, key, loss_expdecr, samples_in_batch
 
 
 class MLP(nn.Module):
