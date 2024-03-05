@@ -8,6 +8,7 @@ from flax.training.train_state import TrainState
 import flax.linen as nn
 from jax_utils import lipschitz_coeff
 from commons import MultiRectangularSet, RectangularSet
+from plot import plot_dataset
 import time
 
 class Learner:
@@ -255,6 +256,27 @@ class Learner:
         }
 
         return V_grads, Policy_grads, infos, key, loss_expdecr, samples_in_batch
+
+    def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
+
+        print('Samples used in last train steps:')
+        print(f"- # init samples: {len(samples_in_batch['init'])}")
+        print(f"- # unsafe samples: {len(samples_in_batch['unsafe'])}")
+        print(f"- # target samples: {len(samples_in_batch['target'])}")
+        print(f"- # decrease samples: {len(samples_in_batch['decrease'])}")
+        print(f"- # counterexamples: {len(samples_in_batch['counterx'])}")
+        print(f"-- # cx init: {sum(samples_in_batch['cx_bool_init'])}")
+        print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
+        print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
+
+        # Plot samples used in batch
+        for s in ['init', 'unsafe', 'target', 'decrease', 'counterx']:
+            filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
+            plot_dataset(self.env, additional_data=samples_in_batch[s], folder=args.cwd, filename=filename)
+
+        for s in ['cx_bool_init', 'cx_bool_unsafe', 'cx_bool_decrease']:
+            filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
+            plot_dataset(self.env, additional_data=samples_in_batch['counterx'][s], folder=args.cwd, filename=filename)
 
 
 class MLP(nn.Module):

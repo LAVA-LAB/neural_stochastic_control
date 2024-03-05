@@ -305,15 +305,8 @@ for i in range(args.cegis_iterations):
                 if args.update_policy and i >= update_policy_after_iteration:
                     Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-    print('Samples used in last train steps:')
-    print(f"- # init samples: {len(samples_in_batch['init'])}")
-    print(f"- # unsafe samples: {len(samples_in_batch['unsafe'])}")
-    print(f"- # target samples: {len(samples_in_batch['target'])}")
-    print(f"- # decrease samples: {len(samples_in_batch['decrease'])}")
-    print(f"- # counterexamples: {len(samples_in_batch['counterx'])}")
-    print(f"-- # cx init: {sum(samples_in_batch['cx_bool_init'])}")
-    print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
-    print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
+    learn.debug_train_step(args, samples_in_batch, start_datetime, iteration=i)
+
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
     print(f'\nLoss components in last train step:')
