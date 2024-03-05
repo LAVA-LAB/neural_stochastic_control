@@ -384,8 +384,9 @@ class Verifier:
         print(V_lb.flatten()[check_idxs][most_violating_idxs])
         print(V_ub.flatten()[check_idxs][most_violating_idxs])
 
-        print('Softplus factor for those samples:')
-        print(softplus_lip_factor[most_violating_idxs])
+        if args.improved_softplus_lip:
+            print('Softplus factor for those samples:')
+            print(softplus_lip_factor[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
