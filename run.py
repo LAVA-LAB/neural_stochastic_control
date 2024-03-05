@@ -275,7 +275,7 @@ for i in range(args.cegis_iterations):
 
     if args.batches == -1:
         # Automatically determine number of batches
-        num_batches = int(np.ceil(args.num_samples_per_epoch / args.batch_size))
+        num_batches = int(np.ceil((args.num_samples_per_epoch + args.num_counterexamples_in_buffer) / args.batch_size))
     else:
         # Use given number of batches
         num_batches = args.batches
