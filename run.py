@@ -149,8 +149,10 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
-neurons_per_layer = [128, 128]
-act_funcs = [nn.relu, nn.relu]
+pi_neurons_per_layer = [128, 128]
+pi_act_funcs = [nn.relu, nn.relu]
+V_neurons_per_layer = [128, 128, 128]
+V_act_funcs = [nn.relu, nn.relu, nn.relu]
 
 if args.ppo_load_file == '':
     print(f'Run PPO for model `{args.model}`')
@@ -183,8 +185,8 @@ if args.ppo_load_file == '':
     ppo_state = PPO(envfun,
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
-                    neurons_per_layer=neurons_per_layer,
-                    activation_functions=act_funcs,
+                    neurons_per_layer=pi_neurons_per_layer,
+                    activation_functions=pi_act_funcs,
                     verbose=False)
 
     # Save checkpoint of PPO state
@@ -214,10 +216,10 @@ ppo_state = raw_restored['model']
 # Create gym environment (jax/flax version)
 env = envfun()
 
-V_neurons_per_layer = neurons_per_layer + [1]
-V_act_funcs = act_funcs + [nn.softplus]
-Policy_neurons_per_layer = neurons_per_layer + [len(env.action_space.low)]
-Policy_act_funcs = act_funcs + [None]
+V_neurons_per_layer = V_neurons_per_layer + [1]
+V_act_funcs = V_act_funcs + [nn.softplus]
+Policy_neurons_per_layer = pi_neurons_per_layer + [len(env.action_space.low)]
+Policy_act_funcs = pi_act_funcs + [None]
 
 # Initialize certificate network
 certificate_model = MLP(V_neurons_per_layer, V_act_funcs)
