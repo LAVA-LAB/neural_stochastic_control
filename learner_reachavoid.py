@@ -165,13 +165,14 @@ class Learner:
             lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
             # Loss in initial state set
-            loss_init = jnp.maximum(0, jnp.max(V_state.apply_fn(certificate_params, samples_init))
-                                    + lip_certificate * mesh_loss - 1)
+            V_init = V_state.apply_fn(certificate_params, samples_init)
+            losses_init = jnp.maximum(0, V_init + lip_certificate * (1-jnp.exp(V_init)) * mesh_loss - 1)
+            loss_init = jnp.max(losses_init)
 
             # Loss in unsafe state set
-            loss_unsafe = jnp.maximum(0, 1/(1-probability_bound) -
-                                      jnp.min(V_state.apply_fn(certificate_params, samples_unsafe))
-                                      + lip_certificate * mesh_loss)
+            V_unsafe = V_state.apply_fn(certificate_params, samples_unsafe)
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * (1-jnp.exp(V_unsafe)) * mesh_loss)
+            loss_unsafe = jnp.max(losses_unsafe)
 
             # Calculate K factor
             if self.linfty and self.split_lip:
@@ -188,28 +189,32 @@ class Learner:
 
             # Expected decrease loss
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
-            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
+            V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
+
+            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
-            loss_exp_decrease = jnp.sum(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr)) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
+            loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
 
             # Counterexample losses
             if len(counterexamples) > 0:
                 # Initial states
-                L = jnp.maximum(0, V_state.apply_fn(certificate_params, cx_samples) + lip_certificate * mesh_loss - 1)
-                loss_init_counterx = jnp.sum(jnp.multiply(cx_weights, cx_bool_init) * jnp.ravel(L)) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
+                V_cx = V_state.apply_fn(certificate_params, cx_samples)
+
+                L = jnp.maximum(0, V_cx + lip_certificate * (1-jnp.exp(V_cx)) * mesh_loss - 1)
+                loss_init_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_init) * jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
 
                 # Unsafe states
-                L = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, cx_samples)
-                                            + lip_certificate * mesh_loss)
-                loss_unsafe_counterx = jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe) * jnp.ravel(L)) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe)) + 1e-6)
+                L = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, V_cx)
+                                            + lip_certificate * (1-jnp.exp(V_cx)) * mesh_loss)
+                loss_unsafe_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_unsafe) * jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe)) + 1e-6)
 
                 # Determine actions for counterexamples
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
 
                 # Expected decrease
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
-                L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
-                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(cx_weights, cx_bool_decrease) * jnp.ravel(L)) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_decrease)) + 1e-6)
+                L = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_cx)), V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
+                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_decrease) * jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_decrease)) + 1e-6)
 
             else:
                 loss_init_counterx = 0

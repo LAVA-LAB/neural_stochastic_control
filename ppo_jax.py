@@ -7,7 +7,6 @@ import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import numpy as np
-np.set_printoptions(threshold=np.inf)
 import optax
 from flax.training.train_state import TrainState
 
