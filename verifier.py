@@ -373,6 +373,9 @@ class Verifier:
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         weights_expDecr = np.ones(len(violation_idxs))
         hard_violation_idxs = Vdiff[violation_idxs] > 0
+
+        print(hard_violation_idxs.shape)
+        print(weights_expDecr.shape)
         weights_expDecr[hard_violation_idxs] = 10
 
         # Print 100 most violating points
