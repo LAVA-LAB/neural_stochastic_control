@@ -265,7 +265,7 @@ class Learner:
 
     def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
 
-        samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['samples_decrease_not_target']]
+        samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['decrease_not_in_target']]
 
         print('Samples used in last train steps:')
         print(f"- # init samples: {len(samples_in_batch['init'])}")
