@@ -243,8 +243,8 @@ class Learner:
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
-            V_target = V_state.apply_fn(certificate_params, samples_target)
-            V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
+            V_target = V_state.apply_fn(certificate_params, samples_target).flatten()
+            V_decrease = V_state.apply_fn(certificate_params, samples_decrease).flatten()
 
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
             loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
