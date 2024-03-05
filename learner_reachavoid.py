@@ -109,7 +109,7 @@ class Learner:
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
         # Cap at zero
-        loss = jnp.maximum(0, diff.flatten() + delta)
+        loss = jnp.maximum(0, jnp.ravel(diff) + delta)
 
         return loss
 
@@ -189,10 +189,7 @@ class Learner:
 
             # Expected decrease loss
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
-            V_decrease = V_state.apply_fn(certificate_params, samples_decrease).flatten()
-
-            print(V_decrease)
-
+            V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
             loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
