@@ -224,7 +224,7 @@ class Learner:
                 # Add weighted expected decrease counterexample loss
                 loss_expdecr_counterx = expDecr_multiplier * jnp.sum(
                     cx_weights * cx_bool_decrease * jnp.ravel(Vdiffs_cx), axis=0) / (
-                        jnp.sum(cx_weights, cx_bool_decrease, axis=0) + 1e-6)
+                        jnp.sum(cx_weights * cx_bool_decrease, axis=0) + 1e-6)
 
             else:
                 loss_init = jnp.max(losses_init, axis=0)
