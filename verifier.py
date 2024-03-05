@@ -371,7 +371,7 @@ class Verifier:
         weights_expDecr = np.maximum(0, 1 + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
         # Print 100 most violating points
-        most_violating_idxs = np.argsort(Vdiff)[::-1][:10`]
+        most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
         print('Most violating states:')
         print(check_expDecr_at[most_violating_idxs])
 
