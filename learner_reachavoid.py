@@ -274,11 +274,11 @@ class Learner:
         # Plot samples used in batch
         for s in ['init', 'unsafe', 'target', 'decrease', 'counterx']:
             filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
-            plot_dataset(self.env, additional_data=samples_in_batch[s], folder=args.cwd, filename=filename)
+            plot_dataset(self.env, additional_data=np.array(samples_in_batch[s]), folder=args.cwd, filename=filename)
 
         for s in ['cx_bool_init', 'cx_bool_unsafe', 'cx_bool_decrease']:
             filename = f"plots/{start_datetime}_train_debug_iteration={iteration}_"+str(s)
-            plot_dataset(self.env, additional_data=samples_in_batch['counterx'][s], folder=args.cwd, filename=filename)
+            plot_dataset(self.env, additional_data=np.array(samples_in_batch['counterx'])[s], folder=args.cwd, filename=filename)
 
 
 class MLP(nn.Module):

@@ -1,0 +1,884 @@
+=== Start CEGIS iteration 14 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 982
+- Init. samples: 42
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.6447248458862305 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 14): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:15<00:00,  1.59it/s]
+Number of times the learn.train_step function was compiled: 14
+
+Loss components in last train step:
+ - 0. total: 0.4973972
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.003002832
+ - 6. expDecrease counterx: 0.4943944
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.21304554, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10017584, dtype=float32), Array([1.       , 0.9997798], dtype=float32)), (Array(0.31447455, dtype=float32), Array([1.], dtype=float32)), (Array(0.15725459, dtype=float32), Array([1.       , 0.9997798], dtype=float32)), (Array(1.9256035, dtype=float32), None), (Array(1.7898746, dtype=float32), None), (Array(2.196855, dtype=float32), None), (Array(5.920374, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2622.436, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1165.0469, dtype=float32), Array([1.0000001 , 0.81054974], dtype=float32)), (Array(4045.6052, dtype=float32), Array([1.], dtype=float32)), (Array(2234.4624, dtype=float32), Array([1.0000001 , 0.81054974], dtype=float32)), (Array(17601.176, dtype=float32), None), (Array(7578.5513, dtype=float32), None), (Array(17737.564, dtype=float32), None), (Array(23812.967, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2440.968 (L1)
+-- Lipschitz coefficient of certificate: 1165.047 (L1)
+-- Lipschitz coefficient of policy: 0.100 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.16it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70336
+-- Number of factors below 0.75: 179
+-- Number of factors below 0.5: 171
+-- Number of factors below 0.25: 164
+-- Number of factors below 0.1: 129
+-- Number of factors below 0.05: 121
+-- Number of factors below 0.01: 107
+
+- 5370 expected decrease violations (out of 70336 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-136.43524; mean=-62.82099; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000288
+
+- 97 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.64479; max=17.34882
+-- 0 hard violations (out of 42)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=6.20459; mean=424.04816; max=948.16748
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 15 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 981
+- Init. samples: 43
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.06375908851623535 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 15): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:12<00:00,  1.96it/s]
+Number of times the learn.train_step function was compiled: 14
+
+Loss components in last train step:
+ - 0. total: 0.40855125
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0030120169
+ - 6. expDecrease counterx: 0.4055392
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.21126352, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10019968, dtype=float32), Array([1.       , 0.9988642], dtype=float32)), (Array(0.30869108, dtype=float32), Array([1.], dtype=float32)), (Array(0.15443325, dtype=float32), Array([1.       , 0.9988642], dtype=float32)), (Array(1.9392518, dtype=float32), None), (Array(1.7809489, dtype=float32), None), (Array(2.191975, dtype=float32), None), (Array(5.871856, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2611.0613, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1158.6698, dtype=float32), Array([1.       , 0.8094249], dtype=float32)), (Array(4063.9468, dtype=float32), Array([1.], dtype=float32)), (Array(2245.9878, dtype=float32), Array([1.       , 0.8094249], dtype=float32)), (Array(18020.906, dtype=float32), None), (Array(8010.6045, dtype=float32), None), (Array(17820.688, dtype=float32), None), (Array(25372.95, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2427.633 (L1)
+-- Lipschitz coefficient of certificate: 1158.670 (L1)
+-- Lipschitz coefficient of policy: 0.100 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.13it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70045
+-- Number of factors below 0.75: 174
+-- Number of factors below 0.5: 167
+-- Number of factors below 0.25: 145
+-- Number of factors below 0.1: 129
+-- Number of factors below 0.05: 118
+-- Number of factors below 0.01: 96
+
+- 5197 expected decrease violations (out of 70045 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-138.57355; mean=-63.47198; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000275
+
+- 98 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.82575; max=15.66970
+-- 0 hard violations (out of 42)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=26.70679; mean=430.51965; max=921.50281
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 16 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 979
+- Init. samples: 45
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.5598318576812744 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 16): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:16<00:00,  1.55it/s]
+Number of times the learn.train_step function was compiled: 15
+
+Loss components in last train step:
+ - 0. total: 0.24196683
+ - 1. init: 0.061913252
+ - 2. init counterx: 0.00027566453
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0018786258
+ - 6. expDecrease counterx: 0.17789929
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.22091222, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10587806, dtype=float32), Array([1.        , 0.99885696], dtype=float32)), (Array(0.3168178, dtype=float32), Array([1.], dtype=float32)), (Array(0.1584995, dtype=float32), Array([1.        , 0.99885696], dtype=float32)), (Array(2.0598767, dtype=float32), None), (Array(1.8196886, dtype=float32), None), (Array(2.2570417, dtype=float32), None), (Array(5.9545164, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2531.538, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1112.6053, dtype=float32), Array([1.        , 0.81466275], dtype=float32)), (Array(3957.622, dtype=float32), Array([1.], dtype=float32)), (Array(2180.913, dtype=float32), Array([1.        , 0.81466275], dtype=float32)), (Array(17541.955, dtype=float32), None), (Array(8458.4, dtype=float32), None), (Array(17486.4, dtype=float32), None), (Array(27145.352, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2337.121 (L1)
+-- Lipschitz coefficient of certificate: 1112.605 (L1)
+-- Lipschitz coefficient of policy: 0.106 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.09it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 71827
+-- Number of factors below 0.75: 173
+-- Number of factors below 0.5: 164
+-- Number of factors below 0.25: 131
+-- Number of factors below 0.1: 120
+-- Number of factors below 0.05: 112
+-- Number of factors below 0.01: 86
+
+- 4907 expected decrease violations (out of 71827 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-140.26074; mean=-64.38646; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000324
+
+- 99 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.82492; max=14.22197
+-- 0 hard violations (out of 43)
+
+- 8 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=-17.79053; mean=380.10089; max=853.51294
+-- 0 hard violations (out of 2)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 17 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 976
+- Init. samples: 46
+- Unsafe samples: 2
+- Target samples: 0
+- Initializing iteration took 0.6384029388427734 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 17): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:15<00:00,  1.57it/s]
+Number of times the learn.train_step function was compiled: 16
+
+Loss components in last train step:
+ - 0. total: 0.50773454
+ - 1. init: 0.16662097
+ - 2. init counterx: 0.014364623
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0031057624
+ - 6. expDecrease counterx: 0.32364318
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.21141584, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10161413, dtype=float32), Array([1.       , 0.9991477], dtype=float32)), (Array(0.29972798, dtype=float32), Array([1.], dtype=float32)), (Array(0.14992791, dtype=float32), Array([1.       , 0.9991477], dtype=float32)), (Array(2.0055656, dtype=float32), None), (Array(1.7728896, dtype=float32), None), (Array(2.1909552, dtype=float32), None), (Array(5.7845206, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2596.1375, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1140.2548, dtype=float32), Array([1.        , 0.81302285], dtype=float32)), (Array(4019.929, dtype=float32), Array([1.], dtype=float32)), (Array(2217.252, dtype=float32), Array([1.        , 0.81302285], dtype=float32)), (Array(16861.441, dtype=float32), None), (Array(8994.593, dtype=float32), None), (Array(17693.793, dtype=float32), None), (Array(29154.889, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2390.582 (L1)
+-- Lipschitz coefficient of certificate: 1140.255 (L1)
+-- Lipschitz coefficient of policy: 0.102 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.11it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70685
+-- Number of factors below 0.75: 170
+-- Number of factors below 0.5: 154
+-- Number of factors below 0.25: 140
+-- Number of factors below 0.1: 117
+-- Number of factors below 0.05: 113
+-- Number of factors below 0.01: 89
+
+- 5027 expected decrease violations (out of 70685 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-141.32843; mean=-64.34551; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000328
+
+- 100 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.81600; max=18.08404
+-- 0 hard violations (out of 43)
+
+- 1 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=-2.13281; mean=410.94836; max=930.19067
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 18 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 974
+- Init. samples: 48
+- Unsafe samples: 2
+- Target samples: 0
+- Initializing iteration took 0.6060483455657959 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 18): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:15<00:00,  1.60it/s]
+Number of times the learn.train_step function was compiled: 17
+
+Loss components in last train step:
+ - 0. total: 0.3747681
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.002913072
+ - 6. expDecrease counterx: 0.37185505
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.20892617, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10053813, dtype=float32), Array([1.        , 0.99860275], dtype=float32)), (Array(0.29275298, dtype=float32), Array([1.], dtype=float32)), (Array(0.14647883, dtype=float32), Array([1.        , 0.99860275], dtype=float32)), (Array(1.9992617, dtype=float32), None), (Array(1.747961, dtype=float32), None), (Array(2.167442, dtype=float32), None), (Array(5.6828465, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2572.3525, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1128.1598, dtype=float32), Array([0.99999994, 0.8087082 ], dtype=float32)), (Array(4015.8174, dtype=float32), Array([1.], dtype=float32)), (Array(2220.2683, dtype=float32), Array([0.99999994, 0.8087082 ], dtype=float32)), (Array(17082.014, dtype=float32), None), (Array(9489.841, dtype=float32), None), (Array(17746.154, dtype=float32), None), (Array(31007.146, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2364.072 (L1)
+-- Lipschitz coefficient of certificate: 1128.160 (L1)
+-- Lipschitz coefficient of policy: 0.101 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.17it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70692
+-- Number of factors below 0.75: 172
+-- Number of factors below 0.5: 163
+-- Number of factors below 0.25: 136
+-- Number of factors below 0.1: 117
+-- Number of factors below 0.05: 113
+-- Number of factors below 0.01: 87
+
+- 4958 expected decrease violations (out of 70692 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-140.73798; mean=-64.26230; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000336
+
+- 100 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.83536; max=17.56903
+-- 0 hard violations (out of 43)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=19.06342; mean=412.57474; max=906.02808
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 19 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 974
+- Init. samples: 48
+- Unsafe samples: 2
+- Target samples: 0
+- Initializing iteration took 0.06720161437988281 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 19): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:12<00:00,  1.96it/s]
+Number of times the learn.train_step function was compiled: 17
+
+Loss components in last train step:
+ - 0. total: 0.38177302
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0018056864
+ - 6. expDecrease counterx: 0.37996733
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.21120766, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.1016343, dtype=float32), Array([1.       , 0.9998477], dtype=float32)), (Array(0.29171315, dtype=float32), Array([1.], dtype=float32)), (Array(0.1458677, dtype=float32), Array([1.       , 0.9998477], dtype=float32)), (Array(2.0094635, dtype=float32), None), (Array(1.7338667, dtype=float32), None), (Array(2.1578076, dtype=float32), None), (Array(5.619004, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2581.3125, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1135.7133, dtype=float32), Array([0.99999994, 0.805642  ], dtype=float32)), (Array(4025.7322, dtype=float32), Array([1.], dtype=float32)), (Array(2229.5293, dtype=float32), Array([0.99999994, 0.805642  ], dtype=float32)), (Array(16706.105, dtype=float32), None), (Array(10059.307, dtype=float32), None), (Array(17835.072, dtype=float32), None), (Array(33168.355, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2381.083 (L1)
+-- Lipschitz coefficient of certificate: 1135.713 (L1)
+-- Lipschitz coefficient of policy: 0.102 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.14it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70668
+-- Number of factors below 0.75: 170
+-- Number of factors below 0.5: 162
+-- Number of factors below 0.25: 139
+-- Number of factors below 0.1: 116
+-- Number of factors below 0.05: 113
+-- Number of factors below 0.01: 88
+
+- 4999 expected decrease violations (out of 70668 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-142.53351; mean=-64.77021; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000344
+
+- 99 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.75339; max=15.02707
+-- 0 hard violations (out of 42)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=5.78107; mean=411.72403; max=918.19849
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 20 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 973
+- Init. samples: 49
+- Unsafe samples: 2
+- Target samples: 0
+- Initializing iteration took 0.6302576065063477 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 20): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:15<00:00,  1.58it/s]
+Number of times the learn.train_step function was compiled: 18
+
+Loss components in last train step:
+ - 0. total: 0.6964513
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0026832973
+ - 6. expDecrease counterx: 0.693768
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.21281253, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10256645, dtype=float32), Array([1.       , 0.9997521], dtype=float32)), (Array(0.28932324, dtype=float32), Array([1.], dtype=float32)), (Array(0.14467955, dtype=float32), Array([1.       , 0.9997521], dtype=float32)), (Array(2.0207744, dtype=float32), None), (Array(1.7440889, dtype=float32), None), (Array(2.1274133, dtype=float32), None), (Array(5.626199, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2542.3953, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1117.2445, dtype=float32), Array([1.        , 0.79973996], dtype=float32)), (Array(4005.8835, dtype=float32), Array([1.], dtype=float32)), (Array(2225.8125, dtype=float32), Array([1.        , 0.79973996], dtype=float32)), (Array(16899.135, dtype=float32), None), (Array(10548.275, dtype=float32), None), (Array(17836.562, dtype=float32), None), (Array(35017.88, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2343.351 (L1)
+-- Lipschitz coefficient of certificate: 1117.245 (L1)
+-- Lipschitz coefficient of policy: 0.103 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.13it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 71106
+-- Number of factors below 0.75: 173
+-- Number of factors below 0.5: 153
+-- Number of factors below 0.25: 141
+-- Number of factors below 0.1: 120
+-- Number of factors below 0.05: 113
+-- Number of factors below 0.01: 89
+
+- 4865 expected decrease violations (out of 71106 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-144.02075; mean=-64.93074; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000334
+
+- 97 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.65420; max=13.44213
+-- 0 hard violations (out of 41)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=6.78674; mean=401.25421; max=874.38159
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 21 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 975
+- Init. samples: 49
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.32261037826538086 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 21): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:16<00:00,  1.55it/s]
+Number of times the learn.train_step function was compiled: 19
+
+Loss components in last train step:
+ - 0. total: 0.5554252
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.002574277
+ - 6. expDecrease counterx: 0.55285096
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.22074507, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10648794, dtype=float32), Array([1.       , 0.9984442], dtype=float32)), (Array(0.29593918, dtype=float32), Array([1.], dtype=float32)), (Array(0.14808477, dtype=float32), Array([1.       , 0.9984442], dtype=float32)), (Array(2.102308, dtype=float32), None), (Array(1.7662394, dtype=float32), None), (Array(2.1644719, dtype=float32), None), (Array(5.661323, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2567.167, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1126.7074, dtype=float32), Array([1.       , 0.7959079], dtype=float32)), (Array(4024.1133, dtype=float32), Array([0.99999994], dtype=float32)), (Array(2240.7124, dtype=float32), Array([1.       , 0.7959079], dtype=float32)), (Array(16230.659, dtype=float32), None), (Array(10914.287, dtype=float32), None), (Array(17940.08, dtype=float32), None), (Array(36508.61, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2367.396 (L1)
+-- Lipschitz coefficient of certificate: 1126.707 (L1)
+-- Lipschitz coefficient of policy: 0.106 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.13it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70843
+-- Number of factors below 0.75: 172
+-- Number of factors below 0.5: 148
+-- Number of factors below 0.25: 140
+-- Number of factors below 0.1: 118
+-- Number of factors below 0.05: 97
+-- Number of factors below 0.01: 86
+
+- 4745 expected decrease violations (out of 70843 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-146.38965; mean=-65.94833; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000405
+
+- 99 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.80422; max=15.88015
+-- 0 hard violations (out of 43)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=9.44800; mean=408.61728; max=906.87781
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 22 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 974
+- Init. samples: 50
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.3193836212158203 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 22): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:14<00:00,  1.68it/s]
+Number of times the learn.train_step function was compiled: 20
+
+Loss components in last train step:
+ - 0. total: 0.31431538
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0029676154
+ - 6. expDecrease counterx: 0.31134775
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.22804603, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10935506, dtype=float32), Array([1.       , 0.9986344], dtype=float32)), (Array(0.29978502, dtype=float32), Array([1.], dtype=float32)), (Array(0.14999492, dtype=float32), Array([1.       , 0.9986344], dtype=float32)), (Array(2.1577318, dtype=float32), None), (Array(1.7951609, dtype=float32), None), (Array(2.1773863, dtype=float32), None), (Array(5.7265596, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2545.285, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1115.7535, dtype=float32), Array([1.      , 0.794719], dtype=float32)), (Array(4021.768, dtype=float32), Array([1.], dtype=float32)), (Array(2240.8904, dtype=float32), Array([1.      , 0.794719], dtype=float32)), (Array(16534.32, dtype=float32), None), (Array(11319.133, dtype=float32), None), (Array(17975.354, dtype=float32), None), (Array(38016.19, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2347.420 (L1)
+-- Lipschitz coefficient of certificate: 1115.754 (L1)
+-- Lipschitz coefficient of policy: 0.109 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.13it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70889
+-- Number of factors below 0.75: 170
+-- Number of factors below 0.5: 148
+-- Number of factors below 0.25: 122
+-- Number of factors below 0.1: 114
+-- Number of factors below 0.05: 110
+-- Number of factors below 0.01: 72
+
+- 4541 expected decrease violations (out of 70889 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-148.76105; mean=-67.00090; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000374
+
+- 102 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.89120; max=15.42772
+-- 0 hard violations (out of 45)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=9.63281; mean=406.56448; max=873.33142
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 23 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 974
+- Init. samples: 50
+- Unsafe samples: 0
+- Target samples: 0
+- Initializing iteration took 0.06378531455993652 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 23): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:12<00:00,  2.04it/s]
+Number of times the learn.train_step function was compiled: 20
+
+Loss components in last train step:
+ - 0. total: 0.5345361
+ - 1. init: 0.09145033
+ - 2. init counterx: 0.00053158257
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.0024486694
+ - 6. expDecrease counterx: 0.44010556
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.2232967, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.1063782, dtype=float32), Array([1.        , 0.99907523], dtype=float32)), (Array(0.2897578, dtype=float32), Array([1.], dtype=float32)), (Array(0.14494592, dtype=float32), Array([1.        , 0.99907523], dtype=float32)), (Array(2.1061487, dtype=float32), None), (Array(1.7579582, dtype=float32), None), (Array(2.1201985, dtype=float32), None), (Array(5.5944014, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2567.4714, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1126.168, dtype=float32), Array([1.       , 0.7896963], dtype=float32)), (Array(4036.1655, dtype=float32), Array([1.], dtype=float32)), (Array(2255.2239, dtype=float32), Array([1.       , 0.7896963], dtype=float32)), (Array(16152.734, dtype=float32), None), (Array(11754.754, dtype=float32), None), (Array(18052.973, dtype=float32), None), (Array(39702.164, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2366.146 (L1)
+-- Lipschitz coefficient of certificate: 1126.168 (L1)
+-- Lipschitz coefficient of policy: 0.106 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.13it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 70814
+-- Number of factors below 0.75: 168
+-- Number of factors below 0.5: 144
+-- Number of factors below 0.25: 122
+-- Number of factors below 0.1: 112
+-- Number of factors below 0.05: 94
+-- Number of factors below 0.01: 77
+
+- 4711 expected decrease violations (out of 70814 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-147.44263; mean=-66.09388; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000416
+
+- 111 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.87790; max=13.88592
+-- 0 hard violations (out of 52)
+
+- 0 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=13.59949; mean=408.19882; max=899.56897
+-- 0 hard violations (out of 0)
+Create dataset plot...
+
+- Skip refinement, because lowest suggested mesh (0.00000) is below minimum tau (0.00001)
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 24 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 972
+- Init. samples: 50
+- Unsafe samples: 0
+- Target samples: 2
+- Initializing iteration took 0.06740164756774902 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 24): 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 25/25 [00:14<00:00,  1.69it/s]
+Number of times the learn.train_step function was compiled: 21
+
+Loss components in last train step:
+ - 0. total: 0.38623974
+ - 1. init: 0.0
+ - 2. init counterx: 0.0
+ - 3. unsafe: 0.0
+ - 4. unsafe counterx: 0.0
+ - 5. expDecrease: 0.001966347
+ - 6. expDecrease counterx: 0.38427338
+ - 7. loss_lipschitz: 0.0
+ - 8. loss_aux: 0.0
+
+Lipschitz policy (all methods): [(Array(0.22503825, dtype=float32), Array([1., 1.], dtype=float32)), (Array(0.10681616, dtype=float32), Array([1.        , 0.99884367], dtype=float32)), (Array(0.28929362, dtype=float32), Array([1.], dtype=float32)), (Array(0.14473048, dtype=float32), Array([1.        , 0.99884367], dtype=float32)), (Array(2.1211917, dtype=float32), None), (Array(1.7336574, dtype=float32), None), (Array(2.1267486, dtype=float32), None), (Array(5.499837, dtype=float32), None)]
+Lipschitz certificate (all methods) [(Array(2473.5664, dtype=float32), Array([1., 1.], dtype=float32)), (Array(1073.2302, dtype=float32), Array([1.        , 0.79595435], dtype=float32)), (Array(3922.3809, dtype=float32), Array([1.], dtype=float32)), (Array(2184.009, dtype=float32), Array([1.        , 0.79595435], dtype=float32)), (Array(15240.462, dtype=float32), None), (Array(12009.026, dtype=float32), None), (Array(17674.783, dtype=float32), None), (Array(40940.54, dtype=float32), None)]
+Create trace plot...
+Create vector plot...
+Vectors shape: (100, 2)
+- 2D Quiver...
+Create dataset plot...
+Create certificate plot...
+
+Check martingale conditions...
+- Total number of samples: 90000
+- Overall Lipschitz coefficient K = 2255.367 (L1)
+-- Lipschitz coefficient of certificate: 1073.230 (L1)
+-- Lipschitz coefficient of policy: 0.107 (L1)
+Verifying exp. decrease condition: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:02<00:00,  1.06it/s]
+- Compute improved Lipschitz constant for SoftPlus activation function in certificate network
+-- Number of factors below 1: 72633
+-- Number of factors below 0.75: 168
+-- Number of factors below 0.5: 150
+-- Number of factors below 0.25: 120
+-- Number of factors below 0.1: 114
+-- Number of factors below 0.05: 96
+-- Number of factors below 0.01: 72
+
+- 4633 expected decrease violations (out of 72633 checked vertices)
+-- Stats. of E[V(x')-V(x)]: min=-142.83240; mean=-64.94628; max=-0.00000
+-- Smallest suggested mesh based on expected decrease violations: 0.00000340
+
+- 101 initial state violations (out of 308 checked vertices)
+-- Stats. of [V_init_ub-1] (>0 is violation): min=-1.00000; mean=0.68031; max=12.90120
+-- 0 hard violations (out of 43)
+
+- 17 unsafe state violations (out of 3322 checked vertices)
+-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min=-23.10413; mean=357.26727; max=834.72095
+-- 1 hard violations (out of 5)
+-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min=-14.44379; mean=0.08149; max=8.84583
+Create dataset plot...
+
+- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement
+
+Refresh 50.0% of the counterexample buffer
+low: [-1.495 -1.495]
+high: [1.495 1.495]
+size: [300 300]
+
+================
+
+
+=== Start CEGIS iteration 25 (train buffer: 90000; counterexample buffer: 30000) ===
+
+
+Create training batches from train buffer...
+- Exp. decrease samples: 2910
+- Init. samples: 6
+- Unsafe samples: 102
+- Target samples: 54
+
+Create training batches from counterexample buffer...
+- Exp. decrease samples: 970
+- Init. samples: 50
+- Unsafe samples: 2
+- Target samples: 2
+- Initializing iteration took 0.33348512649536133 sec.
+- Number of epochs: 25; number of batches: 30
+Learner epochs (iteration 25):  24%|█████████████████████████████████████████████████▏                                                                                                                                                           | 6/25 [00:06<00:13,  1.46it/s]Learner epochs (iteration 25):  24%|█████████████████████████████████████████████████▏                                                                                                                                                           | 6/25 [00:06<00:20,  1.09s/it]
+Traceback (most recent call last):
+  File "/home/tbadings/Documents/martingales/neural_stochastic_control/run.py", line 354, in <module>
+    V_state = V_state.apply_gradients(grads=V_grads)
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/flax/training/train_state.py", line 101, in apply_gradients
+    updates, new_opt_state = self.tx.update(
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/optax/_src/combine.py", line 59, in update_fn
+    updates, new_s = fn(updates, s, params, **extra_args)
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/optax/_src/base.py", line 311, in update
+    return tx.update(updates, state, params)
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/optax/_src/transform.py", line 347, in update_fn
+    updates = jax.tree_util.tree_map(
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/jax/_src/tree_util.py", line 244, in tree_map
+    return treedef.unflatten(f(*xs) for xs in zip(*all_leaves))
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/jax/_src/tree_util.py", line 244, in <genexpr>
+    return treedef.unflatten(f(*xs) for xs in zip(*all_leaves))
+  File "/home/tbadings/miniconda3/envs/flax/lib/python3.10/site-packages/optax/_src/transform.py", line 348, in <lambda>
+    lambda m, v: m / (jnp.sqrt(v + eps_root) + eps), mu_hat, nu_hat)
+KeyboardInterrupt
+^C^C^C
