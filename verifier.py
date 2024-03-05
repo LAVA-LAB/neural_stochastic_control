@@ -350,7 +350,7 @@ class Verifier:
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
             print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
-            softpus_lip_factor = np.maximum(1e-18, 1 - np.exp(-V_ub.flatten()[check_idxs]))
+            softpus_lip_factor = np.maximum(1e-30, 1 - np.exp(-V_ub.flatten()[check_idxs]))
             assert len(softpus_lip_factor) == len(Vdiff), \
                 f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
@@ -373,9 +373,6 @@ class Verifier:
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         weights_expDecr = np.ones(sum(violation_idxs))
         hard_violation_idxs = Vdiff[violation_idxs] > 0
-
-        print(hard_violation_idxs.shape)
-        print(weights_expDecr.shape)
         weights_expDecr[hard_violation_idxs] = 10
 
         # Print 100 most violating points

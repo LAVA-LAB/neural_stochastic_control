@@ -203,8 +203,10 @@ class Learner:
                                             + lip_certificate * mesh_loss)
                 loss_unsafe_counterx = jnp.sum(cx_weights * cx_bool_unsafe * jnp.ravel(L)) / (jnp.sum(cx_weights * cx_bool_unsafe) + 1e-6)
 
-                # Expected decrease
+                # Determine actions for counterexamples
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
+
+                # Expected decrease
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
                 L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
                 loss_expdecr_counterx = expDecr_multiplier * jnp.sum(cx_weights * cx_bool_decrease * jnp.ravel(L)) / (jnp.sum(cx_weights * cx_bool_decrease) + 1e-6)
@@ -267,9 +269,6 @@ class Learner:
     def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
 
         samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['decrease_not_in_target']]
-
-        print('exp decr shape:', samples_in_batch['loss_expdecr'].shape)
-        print('multiplied shape:', (samples_in_batch['loss_expdecr'] * samples_in_batch['decrease_not_in_target']).shape)
 
         print('Samples used in last train steps:')
         print(f"- # init samples: {len(samples_in_batch['init'])}")
