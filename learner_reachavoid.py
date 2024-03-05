@@ -252,7 +252,8 @@ class Learner:
             'init': samples_init,
             'target': samples_target,
             'unsafe': samples_unsafe,
-            'decrease': samples_decrease[samples_decrease_not_target],
+            'decrease': samples_decrease,
+            'decrease_not_in_target': samples_decrease_not_target,
             'counterx': cx_samples,
             'counterx_weights': cx_weights,
             'cx_bool_init': cx_bool_init,
@@ -263,6 +264,8 @@ class Learner:
         return V_grads, Policy_grads, infos, key, loss_expdecr, samples_in_batch
 
     def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
+
+        samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['samples_decrease_not_target']]
 
         print('Samples used in last train steps:')
         print(f"- # init samples: {len(samples_in_batch['init'])}")
