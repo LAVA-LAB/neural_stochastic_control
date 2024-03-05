@@ -149,7 +149,7 @@ class Learner:
         samples_decrease = self.env.state_space.sample(rng=decrease_key, N=self.num_samples_decrease)
 
         # For expected decrease, exclude samples from target region
-        samples_decrease_not_target = self.env.target_space.jax_not_contains(samples_decrease)
+        samples_decrease_bool_not_target = self.env.target_space.jax_not_contains(samples_decrease)
 
         # Random perturbation to samples (for expected decrease condition)
         if self.perturb_samples > 0:
@@ -190,7 +190,7 @@ class Learner:
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
-            loss_exp_decrease = jnp.sum(samples_decrease_not_target * loss_expdecr) / (jnp.sum(samples_decrease_not_target) + 1e-6)
+            loss_exp_decrease = jnp.sum(samples_decrease_bool_not_target * loss_expdecr) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
 
             # Counterexample losses
             if len(counterexamples) > 0:
@@ -253,7 +253,7 @@ class Learner:
             'target': samples_target,
             'unsafe': samples_unsafe,
             'decrease': samples_decrease,
-            'decrease_not_in_target': samples_decrease_not_target,
+            'decrease_not_in_target': samples_decrease_bool_not_target,
             'counterx': cx_samples,
             'counterx_weights': cx_weights,
             'cx_bool_init': cx_bool_init,

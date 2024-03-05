@@ -376,8 +376,8 @@ class Verifier:
         print(check_expDecr_at[most_violating_idxs])
 
         print('Corresponding V values are:')
-        print(V_lb[check_idxs][most_violating_idxs])
-        print(V_ub[check_idxs][most_violating_idxs])
+        print(V_lb.flatten()[check_idxs][most_violating_idxs])
+        print(V_ub.flatten()[check_idxs][most_violating_idxs])
 
         print('Softplus factor for those samples:')
         print(softpus_lip_factor[most_violating_idxs])
