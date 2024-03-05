@@ -109,7 +109,7 @@ class Learner:
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
         # Cap at zero
-        loss = jnp.maximum(0, jnp.ravel(diff) + delta)
+        loss = jnp.maximum(0, diff + delta)
 
         return loss
 
