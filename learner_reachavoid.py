@@ -83,7 +83,7 @@ class Learner:
         self.N_expectation = 16
 
         # Define vectorized functions for loss computation
-        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(0, None, None, 0, 0, 0), out_axes=0)
+        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, 0, 0, 0), out_axes=0)
 
         return
 
@@ -166,12 +166,12 @@ class Learner:
 
             # Loss in initial state set
             V_init = V_state.apply_fn(certificate_params, samples_init).flatten()
-            losses_init = jnp.maximum(0, V_init + lip_certificate * (1-jnp.exp(-V_init)) * mesh_loss - 1)
+            losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
             loss_init = jnp.max(losses_init)
 
             # Loss in unsafe state set
             V_unsafe = V_state.apply_fn(certificate_params, samples_unsafe).flatten()
-            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * (1-jnp.exp(-V_unsafe)) * mesh_loss)
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
             loss_unsafe = jnp.max(losses_unsafe)
 
             # Calculate K factor
@@ -191,7 +191,7 @@ class Learner:
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
 
-            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(-V_decrease)), V_state, certificate_params,
+            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
 
             loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target, jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
@@ -201,11 +201,13 @@ class Learner:
                 # Initial states
                 V_cx = V_state.apply_fn(certificate_params, cx_samples).flatten()
 
-                L = jnp.maximum(0, V_cx + lip_certificate * (1-jnp.exp(-V_cx)) * mesh_loss - 1)
+                L = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
+                assert len(L.shape) == 1
                 loss_init_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_init), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
 
                 # Unsafe states
-                L = jnp.maximum(0, 1/(1-probability_bound) - V_cx + lip_certificate * (1-jnp.exp(-V_cx)) * mesh_loss)
+                L = jnp.maximum(0, 1/(1-probability_bound) - V_cx + lip_certificate * mesh_loss)
+                assert len(L.shape) == 1
                 loss_unsafe_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_unsafe), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe)) + 1e-6)
 
                 # Determine actions for counterexamples
@@ -213,7 +215,8 @@ class Learner:
 
                 # Expected decrease
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
-                L = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(-V_cx)), V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
+                L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
+                assert len(L.shape) == 1
                 loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_decrease), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_decrease)) + 1e-6)
 
             else:
