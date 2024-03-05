@@ -55,7 +55,7 @@ parser.add_argument('--mesh_verify_grid_min', type=float, default=0.01,
 ### REFINE ARGUMENTS
 parser.add_argument('--mesh_refine_min', type=float, default=0.0001,
                     help="Lowest allowed verification grid mesh size in the final verification")
-parser.add_argument('--max_refine_factor', type=float, default=100,
+parser.add_argument('--max_refine_factor', type=float, default=10,
                     help="Maximum value to split each grid point into, during the (local) refinement")
 parser.add_argument('--max_refine_samples', type=float, default=1_000_000_000,
                     help="Maximum number of samples to allow in the refinement step (if there are more, stop the refinement)")
