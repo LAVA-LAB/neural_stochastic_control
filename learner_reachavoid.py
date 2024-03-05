@@ -211,7 +211,8 @@ class Learner:
                                                         expDecr_keys_cx)
                 Vdiffs_cx_trim = cx_bool_decrease * jnp.ravel(Vdiffs_cx)
                 loss_exp_decrease = (jnp.sum(Vdiffs_trim, axis=0) + jnp.sum(Vdiffs_cx_trim, axis=0)) \
-                                        / (jnp.sum(samples_decrease_bool_not_target, axis=0) + jnp.sum(cx_bool_decrease, axis=0) + 1e-6)
+                                        / (jnp.sum(samples_decrease_bool_not_target, axis=0) + jnp.sum(cx_bool_decrease, axis=0) + 1e-6) \
+                                        + jnp.max(Vdiffs_trim, axis=0)
 
                 # Add weighted initial state counterexample loss
                 loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
@@ -229,7 +230,7 @@ class Learner:
             else:
                 loss_init = jnp.max(losses_init, axis=0)
                 loss_unsafe = jnp.max(losses_unsafe, axis=0)
-                loss_exp_decrease = jnp.sum(Vdiffs_trim, axis=0) / (jnp.sum(samples_decrease_bool_not_target, axis=0) + 1e-6)
+                loss_exp_decrease = jnp.sum(Vdiffs_trim, axis=0) / (jnp.sum(samples_decrease_bool_not_target, axis=0) + 1e-6) + jnp.max(Vdiffs_trim, axis=0)
 
                 # Set counterexample losses to zero
                 loss_init_counterx = 0
