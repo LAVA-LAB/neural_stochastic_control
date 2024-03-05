@@ -280,7 +280,7 @@ for i in range(args.cegis_iterations):
         # Use given number of batches
         num_batches = args.batches
 
-    epochs = args.epochs if i >= 3 else 10*args.epochs
+    epochs = args.epochs #args.epochs if i >= 3 else 10*args.epochs
     print(f'- Number of epochs: {epochs}; number of batches: {num_batches}')
 
     for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
