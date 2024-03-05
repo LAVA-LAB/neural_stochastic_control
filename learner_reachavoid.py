@@ -191,8 +191,7 @@ class Learner:
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
 
-            print(V_decrease)
-            assert False
+            assert len(V_decrease.shape) == 2
 
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
