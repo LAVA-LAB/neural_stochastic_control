@@ -165,12 +165,12 @@ class Learner:
             lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
             # Loss in initial state set
-            V_init = V_state.apply_fn(certificate_params, samples_init)
+            V_init = V_state.apply_fn(certificate_params, samples_init).flatten()
             losses_init = jnp.maximum(0, V_init + lip_certificate * (1-jnp.exp(V_init)) * mesh_loss - 1)
             loss_init = jnp.max(losses_init)
 
             # Loss in unsafe state set
-            V_unsafe = V_state.apply_fn(certificate_params, samples_unsafe)
+            V_unsafe = V_state.apply_fn(certificate_params, samples_unsafe).flatten()
             losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * (1-jnp.exp(V_unsafe)) * mesh_loss)
             loss_unsafe = jnp.max(losses_unsafe)
 
@@ -189,8 +189,7 @@ class Learner:
 
             # Expected decrease loss
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
-            V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
-
+            V_decrease = V_state.apply_fn(certificate_params, samples_decrease).flatten()
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
             loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
@@ -198,7 +197,7 @@ class Learner:
             # Counterexample losses
             if len(counterexamples) > 0:
                 # Initial states
-                V_cx = V_state.apply_fn(certificate_params, cx_samples)
+                V_cx = V_state.apply_fn(certificate_params, cx_samples).flatten()
 
                 L = jnp.maximum(0, V_cx + lip_certificate * (1-jnp.exp(V_cx)) * mesh_loss - 1)
                 loss_init_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_init) * jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
