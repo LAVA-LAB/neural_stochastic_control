@@ -350,23 +350,23 @@ class Verifier:
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
             print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
-            softpus_lip_factor = np.maximum(1e-30, 1 - np.exp(-V_ub.flatten()[check_idxs]))
-            assert len(softpus_lip_factor) == len(Vdiff), \
-                f"Length of softpus_lip_factor: {len(softpus_lip_factor)}; Vdiff: {len(Vdiff)}"
+            softplus_lip_factor = np.maximum(1e-30, 1 - np.exp(-V_ub.flatten()[check_idxs]))
+            assert len(softplus_lip_factor) == len(Vdiff), \
+                f"Length of softpus_lip_factor: {len(softplus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
-                print(f'-- Number of factors below {i}: {np.sum(softpus_lip_factor <= i)}')
+                print(f'-- Number of factors below {i}: {np.sum(softplus_lip_factor <= i)}')
         else:
-            softpus_lip_factor = np.ones(len(V_ub.flatten()[check_idxs]))
+            softplus_lip_factor = np.ones(len(V_ub.flatten()[check_idxs]))
 
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (K * softpus_lip_factor))
+        violation_idxs = (Vdiff >= -tau * (K * softplus_lip_factor))
         counterx_expDecr = check_expDecr_at[violation_idxs]
 
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip_factor[violation_idxs]))
 
         # weights_expDecr = np.maximum(0, tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
@@ -375,6 +375,7 @@ class Verifier:
         hard_violation_idxs = Vdiff[violation_idxs] > 0
         weights_expDecr[hard_violation_idxs] = 10
 
+        '''
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
         print('Most violating states:')
@@ -385,7 +386,8 @@ class Verifier:
         print(V_ub.flatten()[check_idxs][most_violating_idxs])
 
         print('Softplus factor for those samples:')
-        print(softpus_lip_factor[most_violating_idxs])
+        print(softplus_lip_factor[most_violating_idxs])
+        '''
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
