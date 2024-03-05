@@ -108,6 +108,8 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
+        assert(len((jnp.ravel(diff) + delta).shape == 1))
+
         # Cap at zero
         loss = jnp.maximum(0, jnp.ravel(diff) + delta)
 
@@ -190,7 +192,6 @@ class Learner:
             # Expected decrease loss
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
-
             assert len((mesh_loss * K * (1-jnp.exp(V_decrease))).shape) == 1
 
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
