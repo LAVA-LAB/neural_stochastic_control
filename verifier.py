@@ -352,7 +352,7 @@ class Verifier:
             print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
             softplus_lip_factor = np.maximum(1e-6, 1 - np.exp(-V_ub.flatten()[check_idxs]))
             assert len(softplus_lip_factor) == len(Vdiff), \
-                f"Length of softpus_lip_factor: {len(softplus_lip_factor)}; Vdiff: {len(Vdiff)}"
+                f"Length of softplus_lip_factor: {len(softplus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
                 print(f'-- Number of factors below {i}: {np.sum(softplus_lip_factor <= i)}')
         else:
@@ -368,7 +368,7 @@ class Verifier:
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softplus_lip_factor[violation_idxs]))
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         # weights_expDecr = np.ones(sum(violation_idxs))
