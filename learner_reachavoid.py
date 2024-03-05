@@ -265,17 +265,17 @@ class Learner:
                 '8. loss_aux': loss_aux,
             }
 
-            return loss_total, (infos, loss_expdecr)
+            return loss_total, (infos, loss_exp_decrease)
 
         # Compute gradients
         loss_grad_fun = jax.value_and_grad(loss_fun, argnums=(0,1), has_aux=True)
-        (loss_val, (infos, loss_expdecr)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
+        (loss_val, (infos, loss_exp_decrease)), (V_grads, Policy_grads) = loss_grad_fun(V_state.params, Policy_state.params)
 
         samples_in_batch = {
             'init': samples_init,
             'target': samples_target,
             'unsafe': samples_unsafe,
-            'loss_expdecr': loss_expdecr,
+            'loss_expdecr': loss_exp_decrease,
             'decrease': samples_decrease,
             'decrease_not_in_target': samples_decrease_bool_not_target,
             'counterx': cx_samples,
@@ -285,7 +285,7 @@ class Learner:
             'cx_bool_decrease': cx_bool_decrease
         }
 
-        return V_grads, Policy_grads, infos, key, loss_expdecr, samples_in_batch
+        return V_grads, Policy_grads, infos, key, loss_exp_decrease, samples_in_batch
 
     def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
 
