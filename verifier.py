@@ -372,8 +372,8 @@ class Verifier:
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         # weights_expDecr = np.ones(sum(violation_idxs))
-        # hard_violation_idxs = Vdiff[violation_idxs] > 0
-        # weights_expDecr[hard_violation_idxs] = 10
+        hard_violation_idxs = Vdiff[violation_idxs] > 0
+        weights_expDecr[hard_violation_idxs] = weights_expDecr[hard_violation_idxs] * 10
 
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
