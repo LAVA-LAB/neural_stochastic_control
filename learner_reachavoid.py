@@ -109,8 +109,8 @@ class Learner:
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
         assert len((jnp.ravel(diff) + delta).shape) == 1
-        assert len(diff.flatten() < 2)
-        assert len(delta.flatten() < 2)
+        assert len(diff.flatten()) < 2
+        assert len(delta.flatten()) < 2
 
         # Cap at zero
         loss = jnp.maximum(0, jnp.ravel(diff.flatten()) + jnp.ravel(delta.flatten()))
