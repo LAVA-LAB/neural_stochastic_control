@@ -179,7 +179,7 @@ class Learner:
             # Loss in initial state set
             V_init = jnp.ravel(V_state.apply_fn(certificate_params, samples_init))
             losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
-            losses_init2 = jnp.maximum(0, 0.1 - V_init + lip_certificate * mesh_loss)
+            losses_init2 = jnp.maximum(0, 0.1 - V_init)
 
             # Loss in unsafe state set
             V_unsafe = jnp.ravel(V_state.apply_fn(certificate_params, samples_unsafe))
