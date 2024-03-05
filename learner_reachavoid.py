@@ -179,7 +179,6 @@ class Learner:
             # Loss in initial state set
             V_init = jnp.ravel(V_state.apply_fn(certificate_params, samples_init))
             losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
-            losses_init2 = jnp.maximum(0, 0.1 - V_init)
 
             # Loss in unsafe state set
             V_unsafe = jnp.ravel(V_state.apply_fn(certificate_params, samples_unsafe))
@@ -238,8 +237,6 @@ class Learner:
                 loss_unsafe_counterx = 0
                 loss_expdecr_counterx = 0
 
-            # loss_init += jnp.max(losses_init2)
-
             #####
 
             # Loss to promote low Lipschitz constant
@@ -257,7 +254,8 @@ class Learner:
             loss_aux = loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_expdecr_counterx)
+            loss_total = (loss_init + loss_unsafe +
+                          loss_exp_decrease + loss_expdecr_counterx + loss_lipschitz)
             infos = {
                 '0. total': loss_total,
                 '1. init': loss_init,
