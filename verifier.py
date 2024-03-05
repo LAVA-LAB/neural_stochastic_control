@@ -371,7 +371,7 @@ class Verifier:
         # weights_expDecr = np.maximum(0, tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        weights_expDecr = np.ones(len(violation_idxs))
+        weights_expDecr = np.ones(sum(violation_idxs))
         hard_violation_idxs = Vdiff[violation_idxs] > 0
 
         print(hard_violation_idxs.shape)
