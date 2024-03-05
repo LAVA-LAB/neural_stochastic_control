@@ -164,16 +164,6 @@ class Learner:
             lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
             lip_policy, _ = lipschitz_coeff(policy_params, self.weighted, self.cplip, self.linfty)
 
-            # Loss in initial state set
-            V_init = V_state.apply_fn(certificate_params, samples_init).flatten()
-            losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
-            loss_init = jnp.max(losses_init)
-
-            # Loss in unsafe state set
-            V_unsafe = V_state.apply_fn(certificate_params, samples_unsafe).flatten()
-            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
-            loss_unsafe = jnp.max(losses_unsafe)
-
             # Calculate K factor
             if self.linfty and self.split_lip:
                 K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy + 1)
@@ -184,57 +174,80 @@ class Learner:
             else:
                 K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
-            # Determine actions for every sampled point
-            actions = Policy_state.apply_fn(policy_params, samples_decrease)
+            #####
 
-            # Expected decrease loss
+            # Loss in initial state set
+            V_init = jnp.ravel(V_state.apply_fn(certificate_params, samples_init))
+            losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
+
+            # Loss in unsafe state set
+            V_unsafe = jnp.ravel(V_state.apply_fn(certificate_params, samples_unsafe))
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
+
+            # Loss for expected decrease condition
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
-            V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
+            actions = Policy_state.apply_fn(policy_params, samples_decrease)
+            Vdiffs = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
+                                                       samples_decrease, actions, expDecr_keys)
+            Vdiffs_trim = samples_decrease_bool_not_target * jnp.ravel(Vdiffs)
 
-            loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
-                                                        samples_decrease, actions, expDecr_keys)
+            #####
 
-            loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target, jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
-
-            # Counterexample losses
             if len(counterexamples) > 0:
-                # Initial states
-                V_cx = V_state.apply_fn(certificate_params, cx_samples).flatten()
+                V_cx = jnp.ravel(V_state.apply_fn(certificate_params, cx_samples))
 
-                L = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
-                assert len(L.shape) == 1
-                loss_init_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_init), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
+                # Add nonweighted initial state counterexample loss
+                losses_init_cx = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
+                loss_init = jnp.maximum(jnp.max(losses_init, axis=0), jnp.max(cx_bool_init * losses_init_cx, axis=0))
 
-                # Unsafe states
-                L = jnp.maximum(0, 1/(1-probability_bound) - V_cx + lip_certificate * mesh_loss)
-                assert len(L.shape) == 1
-                loss_unsafe_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_unsafe), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe)) + 1e-6)
+                # Add nonweighted unsafe state counterexample loss
+                losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + lip_certificate * mesh_loss)
+                loss_unsafe = jnp.maximum(jnp.max(losses_unsafe, axis=0), jnp.max(cx_bool_unsafe * losses_unsafe_cx, axis=0))
 
-                # Determine actions for counterexamples
-                actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
-
-                # Expected decrease
+                # Add nonweighted expected decrease loss
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
-                L = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx, expDecr_keys_cx)
-                # assert len(L.shape) == 1
-                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_decrease), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_decrease)) + 1e-6)
+                actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
+                Vdiffs_cx = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx,
+                                                        expDecr_keys_cx)
+                Vdiffs_cx_trim = cx_bool_decrease * jnp.ravel(Vdiffs_cx)
+                loss_exp_decrease = (jnp.sum(Vdiffs_trim, axis=0) + jnp.sum(Vdiffs_cx_trim, axis=0)) \
+                                        / (jnp.sum(samples_decrease_bool_not_target) + jnp.sum(cx_bool_decrease) + 1e-6)
+
+                # Add weighted initial state counterexample loss
+                loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
+                            jnp.sum(cx_weights * cx_bool_init, axis=0) + 1e-6)
+
+                # Add weighted unsafe state counterexample loss
+                loss_unsafe_counterx = jnp.sum(cx_weights *cx_bool_unsafe * jnp.ravel(losses_unsafe_cx), axis=0) / (
+                            jnp.sum(cx_weights * cx_bool_unsafe, axis=0) + 1e-6)
+
+                # Add weighted expected decrease counterexample loss
+                loss_expdecr_counterx = expDecr_multiplier * jnp.sum(
+                    cx_weights * cx_bool_decrease * jnp.ravel(Vdiffs_cx), axis=0) / (
+                        jnp.sum(cx_weights, cx_bool_decrease, axis=0) + 1e-6)
 
             else:
+                loss_init = jnp.max(losses_init, axis=0)
+                loss_unsafe = jnp.max(losses_unsafe, axis=0)
+                loss_exp_decrease = jnp.sum(Vdiffs_trim, axis=0) / (jnp.sum(samples_decrease_bool_not_target, axis=0) + 1e-6)
+
+                # Set counterexample losses to zero
                 loss_init_counterx = 0
                 loss_unsafe_counterx = 0
                 loss_expdecr_counterx = 0
+
+            #####
 
             # Loss to promote low Lipschitz constant
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
             # Loss to promote global minimum of certificate within stabilizing set
-            loss_min_target = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) - self.glob_min)
-            loss_min_init = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) -
-                                        jnp.min(V_state.apply_fn(certificate_params, samples_init)))
-            loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, samples_target)) -
-                                          jnp.min(V_state.apply_fn(certificate_params, samples_unsafe)))
+            V_target = jnp.ravel(V_state.apply_fn(certificate_params, samples_target))
 
+            loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
+            loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
+            loss_min_unsafe = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
             loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
