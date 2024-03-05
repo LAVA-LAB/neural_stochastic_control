@@ -196,6 +196,9 @@ class Learner:
 
             loss_expdecr = self.loss_exp_decrease_vmap(mesh_loss * K * (1-jnp.exp(V_decrease)), V_state, certificate_params,
                                                         samples_decrease, actions, expDecr_keys)
+
+            assert len(loss_expdecr.shape) == 1
+
             loss_exp_decrease = jnp.sum(jnp.multiply(samples_decrease_bool_not_target * jnp.ravel(loss_expdecr))) / (jnp.sum(samples_decrease_bool_not_target) + 1e-6)
 
             # Counterexample losses
