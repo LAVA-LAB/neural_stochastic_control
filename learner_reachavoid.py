@@ -108,7 +108,7 @@ class Learner:
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
         diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
 
-        assert(len((jnp.ravel(diff) + delta).shape == 1))
+        assert len((jnp.ravel(diff) + delta).shape) == 1
 
         # Cap at zero
         loss = jnp.maximum(0, jnp.ravel(diff) + delta)
