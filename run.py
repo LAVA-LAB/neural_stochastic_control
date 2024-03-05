@@ -303,7 +303,6 @@ for i in range(args.cegis_iterations):
                 if args.update_certificate:
                     V_state = V_state.apply_gradients(grads=V_grads)
                 if args.update_policy and i >= update_policy_after_iteration:
-                    print('Update policy state!')
                     Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
     if i >= 1:
