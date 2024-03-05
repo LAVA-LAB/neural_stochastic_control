@@ -139,6 +139,8 @@ class Learner:
             cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
             cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
             cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
+        else:
+            cx_samples = cx_weights = cx_bool_init = cx_bool_unsafe = cx_bool_decrease = False
 
         # Sample from each region of interest
         samples_init = self.env.init_space.sample(rng=init_key, N=self.num_samples_init)

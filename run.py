@@ -305,7 +305,8 @@ for i in range(args.cegis_iterations):
                 if args.update_policy and i >= update_policy_after_iteration:
                     Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-    learn.debug_train_step(args, samples_in_batch, start_datetime, iteration=i)
+    if i >= 1:
+        learn.debug_train_step(args, samples_in_batch, start_datetime, iteration=i)
 
 
     print(f'Number of times the learn.train_step function was compiled: {learn.train_step._cache_size()}')
