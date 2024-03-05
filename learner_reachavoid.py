@@ -238,7 +238,7 @@ class Learner:
                 loss_unsafe_counterx = 0
                 loss_expdecr_counterx = 0
 
-            loss_init += jnp.maximum(losses_init2)
+            loss_init += jnp.max(losses_init2)
 
             #####
 
