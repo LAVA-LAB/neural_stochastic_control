@@ -379,6 +379,15 @@ class Verifier:
 
         weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
 
+        # Print 100 most violating points
+        most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
+        print('Most violating states:')
+        print(check_expDecr_at[most_violating_idxs])
+
+        print('Corresponding V values are:')
+        print(V_lb[check_idxs][most_violating_idxs])
+        print(V_ub[check_idxs][most_violating_idxs])
+
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
             print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.8f}; "
