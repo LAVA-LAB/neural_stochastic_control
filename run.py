@@ -149,8 +149,8 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
-neurons_per_layer = [128, 128]
-act_funcs = [nn.relu, nn.relu]
+neurons_per_layer = [128, 128, 128]
+act_funcs = [nn.relu, nn.relu, nn.relu]
 
 if args.ppo_load_file == '':
     print(f'Run PPO for model `{args.model}`')
