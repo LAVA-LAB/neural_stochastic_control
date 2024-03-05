@@ -252,6 +252,7 @@ class Learner:
             'init': samples_init,
             'target': samples_target,
             'unsafe': samples_unsafe,
+            'loss_expdecr': loss_expdecr,
             'decrease': samples_decrease,
             'decrease_not_in_target': samples_decrease_bool_not_target,
             'counterx': cx_samples,
@@ -266,6 +267,9 @@ class Learner:
     def debug_train_step(self, args, samples_in_batch, start_datetime, iteration):
 
         samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['decrease_not_in_target']]
+
+        print('exp decr shape:', samples_in_batch['loss_expdecr'].shape)
+        print('multiplied shape:', (samples_in_batch['loss_expdecr'] * samples_in_batch['decrease']).shape)
 
         print('Samples used in last train steps:')
         print(f"- # init samples: {len(samples_in_batch['init'])}")
