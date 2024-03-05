@@ -269,7 +269,7 @@ class Learner:
         samples_in_batch['decrease'] = samples_in_batch['decrease'][samples_in_batch['decrease_not_in_target']]
 
         print('exp decr shape:', samples_in_batch['loss_expdecr'].shape)
-        print('multiplied shape:', (samples_in_batch['loss_expdecr'] * samples_in_batch['decrease']).shape)
+        print('multiplied shape:', (samples_in_batch['loss_expdecr'] * samples_in_batch['decrease_not_in_target']).shape)
 
         print('Samples used in last train steps:')
         print(f"- # init samples: {len(samples_in_batch['init'])}")
