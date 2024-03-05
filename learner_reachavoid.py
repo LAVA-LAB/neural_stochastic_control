@@ -205,8 +205,7 @@ class Learner:
                 loss_init_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_init), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_init)) + 1e-6)
 
                 # Unsafe states
-                L = jnp.maximum(0, 1/(1-probability_bound) - V_state.apply_fn(certificate_params, V_cx)
-                                            + lip_certificate * (1-jnp.exp(V_cx)) * mesh_loss)
+                L = jnp.maximum(0, 1/(1-probability_bound) - V_cx + lip_certificate * (1-jnp.exp(V_cx)) * mesh_loss)
                 loss_unsafe_counterx = jnp.sum(jnp.multiply(jnp.multiply(cx_weights, cx_bool_unsafe), jnp.ravel(L))) / (jnp.sum(jnp.multiply(cx_weights, cx_bool_unsafe)) + 1e-6)
 
                 # Determine actions for counterexamples
