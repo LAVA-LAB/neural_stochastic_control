@@ -244,6 +244,7 @@ class Learner:
 
             # Loss to promote global minimum of certificate within stabilizing set
             V_target = jnp.ravel(V_state.apply_fn(certificate_params, samples_target))
+            V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
 
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
             loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
