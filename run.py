@@ -279,9 +279,11 @@ for i in range(args.cegis_iterations):
     else:
         # Use given number of batches
         num_batches = args.batches
-    print(f'- Number of epochs: {args.epochs}; number of batches: {num_batches}')
 
-    for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
+    epochs = args.epochs if i > 3 else 10*args.epochs
+    print(f'- Number of epochs: {epochs}; number of batches: {num_batches}')
+
+    for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
