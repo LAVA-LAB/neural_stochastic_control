@@ -340,7 +340,6 @@ class Verifier:
             Vdiff[i:j] = X.flatten()
             V_xplus_ub[i:j] = Y.flatten()
 
-
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
                 noise_key, subkey = jax.random.split(noise_key)
@@ -373,7 +372,7 @@ class Verifier:
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K) # (K * softplus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softplus_lip_factor[violation_idxs]))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
@@ -536,7 +535,7 @@ class Verifier:
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
-    def step_noise_integrated(self, V_state, V_params, V_lb, x, u, w_lb, w_ub, prob_ub):
+    def step_noise_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
         ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
 
         # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
