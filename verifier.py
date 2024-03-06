@@ -330,11 +330,11 @@ class Verifier:
                                        x_decrease[:, :self.buffer.dim]).flatten()
 
         # np.set_printoptions(threshold=100)
-        # print('V_lb - (V_mean-Lv*tau):')
-        # arr = np.array(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
-        # print(arr)
-        # print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
-        # print('(positive means our method outperforms ibp)')
+        print('V_lb - (V_mean-Lv*tau):')
+        arr = np.array(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
+        print(arr)
+        print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
+        print('(positive means our method outperforms ibp)')
 
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
@@ -424,6 +424,13 @@ class Verifier:
 
         V = (V_init_ub - 1).flatten()
 
+        print('- Difference between IBP and using Lipschitz coefficient directly:')
+        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim]).flatten()
+        arr = np.array(V_init_ub - (V_mean + lip_certificate * tau))
+        print(arr)
+        print(f'  Max: {np.max(arr)}; Min: {np.min(arr)}')
+        print('  (positive means our method outperforms ibp)')
+
         # Set counterexamples (for initial states)
         counterx_init = self.check_init[V > 0]
 
@@ -481,6 +488,14 @@ class Verifier:
                                                            out_dim=1, batch_size=batch_size)
 
         V = (V_unsafe_lb - 1 / (1 - args.probability_bound)).flatten()
+
+        print('- Difference between IBP and using Lipschitz coefficient directly:')
+        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                       self.check_unsafe[:, :self.buffer.dim]).flatten()
+        arr = np.array(V_unsafe_lb - (V_mean - lip_certificate * tau))
+        print(arr)
+        print(f'  Max: {np.max(arr)}; Min: {np.min(arr)}')
+        print('  (negative means our method outperforms ibp)')
 
         # Set counterexamples (for unsafe states)
         counterx_unsafe = self.check_unsafe[V < 0]
