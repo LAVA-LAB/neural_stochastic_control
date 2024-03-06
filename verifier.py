@@ -373,7 +373,7 @@ class Verifier:
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K # (K * softplus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K) # (K * softplus_lip_factor[violation_idxs]))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
