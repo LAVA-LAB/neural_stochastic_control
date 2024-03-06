@@ -182,11 +182,11 @@ class Learner:
 
             # Loss in each initial state
             # losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
-            losses_init = jnp.maximum(0, V_init - 1)
+            losses_init = jnp.maximum(0, V_init - 1 + 1e-3)
 
             # Loss in each unsafe state
             # losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
-            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe)
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + 1e-3)
 
             # Loss for expected decrease condition
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
@@ -205,12 +205,12 @@ class Learner:
 
                 # Add nonweighted initial state counterexample loss
                 # losses_init_cx = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
-                losses_init_cx = jnp.maximum(0, V_cx - 1)
+                losses_init_cx = jnp.maximum(0, V_cx - 1 + 1e-3)
                 loss_init = jnp.maximum(jnp.max(losses_init, axis=0), jnp.max(cx_bool_init * losses_init_cx, axis=0))
 
                 # Add nonweighted unsafe state counterexample loss
                 # losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + lip_certificate * mesh_loss)
-                losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx)
+                losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + 1e-3)
                 loss_unsafe = jnp.maximum(jnp.max(losses_unsafe, axis=0), jnp.max(cx_bool_unsafe * losses_unsafe_cx, axis=0))
 
                 # Add nonweighted expected decrease loss
