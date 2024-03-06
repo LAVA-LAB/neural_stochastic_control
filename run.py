@@ -269,7 +269,7 @@ verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=ar
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
 
-update_policy_after_iteration = 3
+update_policy_after_iteration = 0
 
 for i in range(args.cegis_iterations):
     print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
