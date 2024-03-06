@@ -358,7 +358,7 @@ for i in range(args.cegis_iterations):
             print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
         elif np.min(suggested_mesh) < args.mesh_refine_min:
-            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.5f}) is below minimum tau ({args.mesh_refine_min:.5f})')
+            print(f'\n- Skip refinement, because lowest suggested mesh ({np.min(suggested_mesh):.8f}) is below minimum tau ({args.mesh_refine_min:.8f})')
             verify_done = True
         elif len(counterx) > args.max_refine_samples:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
