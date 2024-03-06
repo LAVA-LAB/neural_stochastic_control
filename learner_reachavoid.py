@@ -20,8 +20,6 @@ class Learner:
         self.batch_size_base = int(args.batch_size * (1-args.counterx_fraction))
         self.batch_size_counterx = int(args.batch_size * args.counterx_fraction)
 
-
-
         # Calculate the number of samples for each region type (without counterexamples)
         totvol = env.state_space.volume
         if isinstance(env.init_space, MultiRectangularSet):
@@ -79,7 +77,7 @@ class Learner:
 
         self.env = env
 
-        self.glob_min = 0.3
+        self.glob_min = 0.1
         self.N_expectation = 16
 
         # Define vectorized functions for loss computation
@@ -176,12 +174,16 @@ class Learner:
 
             #####
 
-            # Loss in initial state set
+            # Compute certificate values in each of the relevant state sets
             V_init = jnp.ravel(V_state.apply_fn(certificate_params, samples_init))
+            V_unsafe = jnp.ravel(V_state.apply_fn(certificate_params, samples_unsafe))
+            V_target = jnp.ravel(V_state.apply_fn(certificate_params, samples_target))
+            V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
+
+            # Loss in each initial state
             losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
 
-            # Loss in unsafe state set
-            V_unsafe = jnp.ravel(V_state.apply_fn(certificate_params, samples_unsafe))
+            # Loss in each unsafe state
             losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
 
             # Loss for expected decrease condition
@@ -194,7 +196,10 @@ class Learner:
             #####
 
             if len(counterexamples) > 0:
+                # Certificate values in all counterexample states
                 V_cx = jnp.ravel(V_state.apply_fn(certificate_params, cx_samples))
+
+                ### NONWEIGHTED LOSSES ###
 
                 # Add nonweighted initial state counterexample loss
                 losses_init_cx = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
@@ -211,8 +216,9 @@ class Learner:
                                                         expDecr_keys_cx)
                 Vdiffs_cx_trim = cx_bool_decrease * jnp.ravel(Vdiffs_cx)
                 loss_exp_decrease = (jnp.sum(Vdiffs_trim, axis=0) + jnp.sum(Vdiffs_cx_trim, axis=0)) \
-                                        / (jnp.sum(samples_decrease_bool_not_target, axis=0) + jnp.sum(cx_bool_decrease, axis=0) + 1e-6) \
-                                        + jnp.max(Vdiffs_trim, axis=0)
+                                        / (jnp.sum(samples_decrease_bool_not_target, axis=0) + jnp.sum(cx_bool_decrease, axis=0) + 1e-6) #+ jnp.max(Vdiffs_trim, axis=0)
+
+                ### WEIGHTED LOSSES ###
 
                 # Add weighted initial state counterexample loss
                 loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
@@ -230,7 +236,7 @@ class Learner:
             else:
                 loss_init = jnp.max(losses_init, axis=0)
                 loss_unsafe = jnp.max(losses_unsafe, axis=0)
-                loss_exp_decrease = jnp.sum(Vdiffs_trim, axis=0) / (jnp.sum(samples_decrease_bool_not_target, axis=0) + 1e-6) + jnp.max(Vdiffs_trim, axis=0)
+                loss_exp_decrease = jnp.sum(Vdiffs_trim, axis=0) / (jnp.sum(samples_decrease_bool_not_target, axis=0) + 1e-6) #+ jnp.max(Vdiffs_trim, axis=0)
 
                 # Set counterexample losses to zero
                 loss_init_counterx = 0
@@ -243,18 +249,17 @@ class Learner:
             loss_lipschitz = self.lambda_lipschitz * (jnp.maximum(lip_certificate - self.max_lip_certificate, 0) +
                                                       jnp.maximum(lip_policy - self.max_lip_policy, 0))
 
-            # Loss to promote global minimum of certificate within stabilizing set
-            V_target = V_state.apply_fn(certificate_params, samples_target).flatten()
-            V_decrease = V_state.apply_fn(certificate_params, samples_decrease).flatten()
-
+            # Auxiliary losses
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
             loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
-            loss_min_decrease = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
+            loss_min_decrease = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
             loss_aux = loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_unsafe + loss_exp_decrease + loss_expdecr_counterx)
+            loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
+                          + loss_expdecr_counterx + loss_lipschitz + loss_aux)
+
             infos = {
                 '0. total': loss_total,
                 '1. init': loss_init,
