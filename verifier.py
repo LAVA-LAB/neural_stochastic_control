@@ -41,7 +41,7 @@ class Verifier:
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
-        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=(0,0))
 
         self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
@@ -324,6 +324,7 @@ class Verifier:
                                             env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
+        V_xplus_ub = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
@@ -332,9 +333,9 @@ class Verifier:
             x = check_expDecr_at[i:j, :self.buffer.dim]
             u = actions[i:j]
 
-            #
-            Vdiff[i:j] = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                                     self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
+            # Compute an upper bound on E(V(x_{k+1}))-V(x_k), and an upper bound on max(V(x_{k+1})).
+            Vdiff[i:j], V_xplus_ub[i:j] = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params),
+                                               x, u, self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
 
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
@@ -350,7 +351,7 @@ class Verifier:
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
             print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
-            softplus_lip_factor = np.maximum(1e-6, 1 - np.exp(-V_ub.flatten()[check_idxs]))
+            softplus_lip_factor = np.maximum(1e-6, 1 - np.exp(-V_xplus_ub.flatten()))
             assert len(softplus_lip_factor) == len(Vdiff), \
                 f"Length of softplus_lip_factor: {len(softplus_lip_factor)}; Vdiff: {len(Vdiff)}"
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
@@ -545,7 +546,7 @@ class Verifier:
 
         V_old = jit(V_state.apply_fn)(V_state.params, x)
 
-        return V_expected_ub - V_old
+        return V_expected_ub - V_old, jnp.max(V_new_ub)
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
