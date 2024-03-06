@@ -366,16 +366,16 @@ class Verifier:
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (K * softplus_lip))
+        violation_idxs = (Vdiff >= -tau * (K * softplus_lip) + lip_certificate)
         counterx_expDecr = x_decrease[violation_idxs]
 
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip[violation_idxs]))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * (softplus_lip[violation_idxs] + lip_certificate)))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K)
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K + lip_certificate))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * K
+        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (K * (softplus_lip[violation_idxs] + lip_certificate))
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
@@ -548,7 +548,7 @@ class Verifier:
         V_old = jit(V_state.apply_fn)(V_state.params, x)
         softplus_lip = (1-jnp.exp(-V_old))
 
-        return V_expected_ub - V_old_lb, softplus_lip
+        return V_expected_ub - V_old, softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
