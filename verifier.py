@@ -318,25 +318,29 @@ class Verifier:
                                                 0.5 * self.check_decrease[:, -1], 1)
         V_lb = V_lb.flatten()
         check_idxs = (V_lb < 1 / (1 - args.probability_bound))
-        check_expDecr_at = self.check_decrease[check_idxs]
+
+        # Get the samples
+        x_decrease = self.check_decrease[check_idxs]
+        Vx_lb_decrease = V_lb[check_idxs]
 
         # Determine actions for every point in subgrid
-        actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, check_expDecr_at[:, :self.buffer.dim],
+        actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
                                             env.action_space.shape[0])
 
-        Vdiff = np.zeros(len(check_expDecr_at))
-        softplus_lip = np.ones(len(check_expDecr_at))
+        Vdiff = np.zeros(len(x_decrease))
+        softplus_lip = np.ones(len(x_decrease))
 
-        num_batches = np.ceil(len(check_expDecr_at) / args.verify_batch_size).astype(int)
+        num_batches = np.ceil(len(x_decrease) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
-        ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
+        ends = np.minimum(starts + args.verify_batch_size, len(x_decrease))
 
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Verifying exp. decrease condition'):
-            x = check_expDecr_at[i:j, :self.buffer.dim]
+            x = x_decrease[i:j, :self.buffer.dim]
             u = actions[i:j]
+            Vx_lb = Vx_lb_decrease[i:j]
 
             #
-            A, B = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), V_lb[i:j], x, u,
+            A, B = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), Vx_lb, x, u,
                                                      self.noise_lb, self.noise_ub, self.noise_int_ub)
             Vdiff[i:j] = A.flatten()
             if args.improved_softplus_lip:
@@ -359,12 +363,12 @@ class Verifier:
                 print(f'-- Number of factors below {i}: {np.sum(softplus_lip <= i)}')
 
         # Compute mesh size for every cell that is checked
-        tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
+        tau = cell_width2mesh(x_decrease[:, -1], env.state_dim, args.linfty)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
         violation_idxs = (Vdiff >= -tau * (K * softplus_lip))
-        counterx_expDecr = check_expDecr_at[violation_idxs]
+        counterx_expDecr = x_decrease[violation_idxs]
 
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip[violation_idxs]))
 
@@ -379,7 +383,7 @@ class Verifier:
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
         print('Most violating states:')
-        print(check_expDecr_at[most_violating_idxs])
+        print(x_decrease[most_violating_idxs])
 
         print('Corresponding V values are:')
         print(V_lb.flatten()[check_idxs][most_violating_idxs])
@@ -388,7 +392,7 @@ class Verifier:
             print('Softplus factor for those samples:')
             print(softplus_lip[most_violating_idxs])
 
-        print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
+        print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
         if len(Vdiff) > 0:
             print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.8f}; "
                   f"mean={np.mean(Vdiff):.8f}; max={np.max(Vdiff):.8f}")
