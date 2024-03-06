@@ -269,7 +269,7 @@ verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=ar
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
 
-update_policy_after_iteration = 0
+update_policy_after_iteration = 1
 
 for i in range(args.cegis_iterations):
     print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
@@ -282,7 +282,7 @@ for i in range(args.cegis_iterations):
         # Use given number of batches
         num_batches = args.batches
 
-    epochs = args.epochs if i >= 3 else 4*args.epochs
+    epochs = args.epochs if i >= 1 else args.epochs
     print(f'- Number of epochs: {epochs}; number of batches: {num_batches}')
 
     for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
