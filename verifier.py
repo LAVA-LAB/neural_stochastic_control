@@ -329,8 +329,12 @@ class Verifier:
         V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        x_decrease[:, :self.buffer.dim]).flatten()
 
-        print('V_lb - (V_mean-Lv*tau:')
-        print(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
+        np.set_printoptions(threshold=100)
+        print('V_lb - (V_mean-Lv*tau):')
+        arr = V_lb[check_idxs] - (V_mean - lip_certificate * tau)
+        print(arr)
+        print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
+        print('(positive means our method outperforms ibp)')
 
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
