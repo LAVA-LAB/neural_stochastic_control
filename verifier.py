@@ -323,6 +323,8 @@ class Verifier:
                                                 epsilon = 0.5 * self.check_decrease[:, -1], out_dim = 1)
         check_idxs = (V_lb < 1 / (1 - args.probability_bound))
 
+        print(check_idxs.shape)
+
         # Get the samples
         x_decrease = self.check_decrease[check_idxs]
         Vx_lb_decrease = V_lb[check_idxs]
