@@ -374,6 +374,7 @@ class Verifier:
         weights_expDecr = np.ones(sum(violation_idxs))
         hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * K
         weights_expDecr[hard_violation_idxs] = 10
+        print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
