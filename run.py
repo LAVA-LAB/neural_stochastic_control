@@ -301,7 +301,6 @@ for i in range(args.cegis_iterations):
 
             if np.isnan(infos['0. total']):
                 print('(!!!) Severe warning: The learned losses contained NaN values, which indicates most probably at an error in the learner module.')
-
             else:
                 # Update parameters
                 if args.update_certificate:

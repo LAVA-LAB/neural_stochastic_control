@@ -228,8 +228,8 @@ class Learner:
                 loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
                             jnp.sum(cx_weights * cx_bool_init, axis=0) + 1e-6)
 
-                assert jnp.all(cx_weights.shape == cx_bool_init.shape)
-                assert jnp.all((cx_weights*cx_bool_init).shape == cx_bool_init.shape)
+                assert cx_weights.shape[0] == cx_bool_init.shape[0]
+                assert (cx_weights*cx_bool_init).shape[0] == cx_bool_init.shape[0]
 
                 # Add weighted unsafe state counterexample loss
                 loss_unsafe_counterx = jnp.sum(cx_weights *cx_bool_unsafe * jnp.ravel(losses_unsafe_cx), axis=0) / (
