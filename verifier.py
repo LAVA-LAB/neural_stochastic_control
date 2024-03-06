@@ -325,8 +325,6 @@ class Verifier:
                                                 epsilon = 0.5 * self.check_decrease[:, -1], out_dim = 1)
         check_idxs = (V_lb < 1 / (1 - args.probability_bound))
 
-        print(check_idxs.shape)
-
         # Get the samples
         x_decrease = self.check_decrease[check_idxs]
         Vx_lb_decrease = V_lb[check_idxs]
@@ -336,7 +334,7 @@ class Verifier:
 
         V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        x_decrease[:, :self.buffer.dim]).flatten()
-        bools = (V_mean - lip_certificate * mesh_decrease < V_lb)
+        bools = (V_mean - lip_certificate * mesh_decrease < V_lb[check_idxs])
         print(f'- V(x)-tau*Lv < V_lb in fraction {sum(bools)/len(bools)} of samples')
 
         # Determine actions for every point where we need to check the expected decrease condition
@@ -429,12 +427,11 @@ class Verifier:
         V = (V_init_ub - 1)
         x_init_vio_IBP = self.check_init[V > 0]
         print(f'\n- [IBP] {len(x_init_vio_IBP)} initial state violations (out of {len(self.check_init)} checked vertices)')
+        x_init_vio_lip = self.check_init[V_mean + mesh_init * lip_certificate > 1]
+        print(f'\n- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
-
-        x_init_vio_lip = self.check_init[V_mean + mesh_init * lip_certificate > 1]
-        print(f'\n- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} checked vertices)')
 
         # Compute suggested mesh
         suggested_mesh_init = 0.1 * cell_width2mesh(x_init_vio_IBP[:, -1], env.state_dim, args.linfty)
@@ -496,12 +493,11 @@ class Verifier:
         # Set counterexamples (for unsafe states)
         x_unsafe_vio_IBP = self.check_unsafe[V < 0]
         print(f'\n- [IBP] {len(x_unsafe_vio_IBP)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
+        x_unsafe_vio_lip = self.check_unsafe[V - mesh_unsafe * lip_certificate < 1 / (1 - args.probability_bound)]
+        print(f'\n- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
-
-        x_unsafe_vio_lip = self.check_unsafe[V - mesh_unsafe*lip_certificate < 1/(1-args.probability_bound)]
-        print(f'\n- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
 
         # Compute suggested mesh
         suggested_mesh_unsafe = 0.1 * cell_width2mesh(x_unsafe_vio_IBP[:, -1], env.state_dim, args.linfty)
