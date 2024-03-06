@@ -334,8 +334,11 @@ class Verifier:
             u = actions[i:j]
 
             # Compute an upper bound on E(V(x_{k+1}))-V(x_k), and an upper bound on max(V(x_{k+1})).
-            Vdiff[i:j], V_xplus_ub[i:j] = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params),
-                                               x, u, self.noise_lb, self.noise_ub, self.noise_int_ub).flatten()
+            X, Y = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params),
+                                               x, u, self.noise_lb, self.noise_ub, self.noise_int_ub)
+
+            Vdiff[i:j] = X.flatten()
+            V_xplus_ub[i:j] = Y.flatten()
 
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
