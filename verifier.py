@@ -428,7 +428,7 @@ class Verifier:
         x_init_vio_IBP = self.check_init[V > 0]
         print(f'\n- [IBP] {len(x_init_vio_IBP)} initial state violations (out of {len(self.check_init)} checked vertices)')
         x_init_vio_lip = self.check_init[V_mean + mesh_init * lip_certificate > 1]
-        print(f'\n- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} checked vertices)')
+        print(f'- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
@@ -494,7 +494,7 @@ class Verifier:
         x_unsafe_vio_IBP = self.check_unsafe[V < 0]
         print(f'\n- [IBP] {len(x_unsafe_vio_IBP)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         x_unsafe_vio_lip = self.check_unsafe[V - mesh_unsafe * lip_certificate < 1 / (1 - args.probability_bound)]
-        print(f'\n- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
+        print(f'- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
@@ -565,10 +565,10 @@ class Verifier:
         # Compute expectation by multiplying each V_new by the respective probability
         V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
 
-        V_old = jit(V_state.apply_fn)(V_state.params, x)
-        softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old)))
+        # V_old = jit(V_state.apply_fn)(V_state.params, x)
+        softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old_lb)))
 
-        return V_expected_ub - V_old, softplus_lip
+        return V_expected_ub - V_old_lb, softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
