@@ -297,16 +297,16 @@ class Verifier:
 
         if args.linfty and args.split_lip:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy + 1)
+            K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy) # + 1)
         elif args.split_lip:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy + 1)
+            K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy) # + 1)
         elif args.linfty:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+            K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1)) # + 1)
         else:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+            K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1)) # + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
         print(f'- Overall Lipschitz coefficient K = {K:.3f} ({norm})')
