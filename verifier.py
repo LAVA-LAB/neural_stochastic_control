@@ -329,12 +329,12 @@ class Verifier:
         V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        x_decrease[:, :self.buffer.dim]).flatten()
 
-        np.set_printoptions(threshold=100)
-        print('V_lb - (V_mean-Lv*tau):')
-        arr = np.array(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
-        print(arr)
-        print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
-        print('(positive means our method outperforms ibp)')
+        # np.set_printoptions(threshold=100)
+        # print('V_lb - (V_mean-Lv*tau):')
+        # arr = np.array(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
+        # print(arr)
+        # print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
+        # print('(positive means our method outperforms ibp)')
 
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
@@ -390,16 +390,16 @@ class Verifier:
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         # # Print 100 most violating points
-        # most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
+        most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
         # print('Most violating states:')
         # print(x_decrease[most_violating_idxs])
         #
-        # print('Corresponding V values are:')
-        # print(V_lb.flatten()[check_idxs][most_violating_idxs])
-        #
-        # if args.improved_softplus_lip:
-        #     print('Softplus factor for those samples:')
-        #     print(softplus_lip[most_violating_idxs])
+        print('V(x) values of 10 most violating samples:')
+        print(V_lb.flatten()[check_idxs][most_violating_idxs])
+
+        if args.improved_softplus_lip:
+            print('Softplus factor for those samples:')
+            print(softplus_lip[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
         if len(Vdiff) > 0:
