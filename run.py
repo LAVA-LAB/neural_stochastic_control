@@ -228,7 +228,7 @@ V_state = create_train_state(
     act_funcs=V_act_funcs,
     rng=jax.random.PRNGKey(1),
     in_dim=env.state_dim,
-    learning_rate=5e-4,
+    learning_rate=1e-3,
 )
 
 # Initialize policy network
