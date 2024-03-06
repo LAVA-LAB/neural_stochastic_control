@@ -339,15 +339,14 @@ class Verifier:
             u = actions[i:j]
             Vx_lb = Vx_lb_decrease[i:j]
 
-            #
             A, B = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), Vx_lb, x, u,
                                                      self.noise_lb, self.noise_ub, self.noise_int_ub)
             Vdiff[i:j] = A.flatten()
             if args.improved_softplus_lip:
                 softplus_lip[i:j] = B.flatten()
 
+            # If debugging is enabled, approximate decrease in V (by sampling noise, instead of numerical integration)
             if debug_noise_integration:
-                # Approximate decrease in V (by sampling the noise, instead of numerical integration)
                 noise_key, subkey = jax.random.split(noise_key)
                 noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
 
