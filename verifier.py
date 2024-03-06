@@ -426,7 +426,10 @@ class Verifier:
 
         print('- Difference between IBP and using Lipschitz coefficient directly:')
         V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim]).flatten()
-        tau_part = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty)
+        tau_part = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
+        print(V_init_ub.shape)
+        print(V_mean.shape)
+        print(tau_part.shape)
         arr = np.array(V_init_ub - (V_mean + lip_certificate * tau_part))
         print(arr)
         print(f'  Max: {np.max(arr)}; Min: {np.min(arr)}')
@@ -493,7 +496,7 @@ class Verifier:
         print('- Difference between IBP and using Lipschitz coefficient directly:')
         V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        self.check_unsafe[:, :self.buffer.dim]).flatten()
-        tau_part = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty)
+        tau_part = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty).flatten()
         arr = np.array(V_unsafe_lb - (V_mean - lip_certificate * tau_part))
         print(arr)
         print(f'  Max: {np.max(arr)}; Min: {np.min(arr)}')
