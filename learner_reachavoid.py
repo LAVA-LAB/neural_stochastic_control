@@ -213,6 +213,8 @@ class Learner:
                 losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx)
                 loss_unsafe = jnp.maximum(jnp.max(losses_unsafe, axis=0), jnp.max(cx_bool_unsafe * losses_unsafe_cx, axis=0))
 
+                assert len((cx_bool_unsafe * losses_unsafe_cx).shape) == 1
+
                 # Add nonweighted expected decrease loss
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
@@ -255,9 +257,9 @@ class Learner:
 
             # Auxiliary losses
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
-            loss_min_init = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
-            loss_min_unsafe = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
-            loss_min_decrease = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
+            loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
+            loss_min_unsafe = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
+            loss_min_decrease = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
             loss_aux = 0 #loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
@@ -312,10 +314,10 @@ class Learner:
         print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
         print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
 
-        print(f"- Counterexample weights:")
-        print(f"-- # init: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_init']]}")
-        print(f"-- # unsafe: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_unsafe']]}")
-        print(f"-- # decrease: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_decrease']]}")
+        # print(f"- Counterexample weights:")
+        # print(f"-- # init: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_init']]}")
+        # print(f"-- # unsafe: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_unsafe']]}")
+        # print(f"-- # decrease: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_decrease']]}")
 
         # Plot samples used in batch
         for s in ['init', 'unsafe', 'target', 'decrease', 'counterx']:
