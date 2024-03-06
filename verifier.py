@@ -331,7 +331,7 @@ class Verifier:
 
         np.set_printoptions(threshold=100)
         print('V_lb - (V_mean-Lv*tau):')
-        arr = V_lb[check_idxs] - (V_mean - lip_certificate * tau)
+        arr = np.array(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
         print(arr)
         print(f'Max: {np.max(arr)}; Min: {np.min(arr)}')
         print('(positive means our method outperforms ibp)')
