@@ -251,14 +251,14 @@ class Learner:
 
             # Auxiliary losses
             loss_min_target = jnp.maximum(0, jnp.min(V_target, axis=0) - self.glob_min)
-            loss_min_init = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
-            loss_min_unsafe = jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
+            loss_min_init = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
+            loss_min_unsafe = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
             loss_min_decrease = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
             loss_aux = loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
             loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
-                          + loss_expdecr_counterx + loss_lipschitz)
+                          + loss_expdecr_counterx + loss_lipschitz + loss_aux)
 
             infos = {
                 '0. total': loss_total,
