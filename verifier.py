@@ -406,7 +406,8 @@ class Verifier:
         # Condition check on initial states (i.e., check if V(x) <= 1 for all x in X_init)
         try:
             _, V_init_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params), self.check_init[:, :self.buffer.dim],
-                                          0.5 * self.check_init[:, [-1]]).flatten()
+                                          0.5 * self.check_init[:, [-1]])
+            V_init_ub = V_init_ub.flatten()
         except:
             print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
             _, V_init_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params,
@@ -471,7 +472,8 @@ class Verifier:
         try:
             V_unsafe_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_state.params),
                                             self.check_unsafe[:, :self.buffer.dim],
-                                            0.5 * self.check_unsafe[:, [-1]]).flatten()
+                                            0.5 * self.check_unsafe[:, [-1]])
+            V_unsafe_lb = V_unsafe_lb.flatten()
         except:
             print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
             V_unsafe_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params,
