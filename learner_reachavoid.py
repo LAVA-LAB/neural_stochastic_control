@@ -258,7 +258,7 @@ class Learner:
 
             # Define total loss
             loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
-                          + loss_expdecr_counterx + loss_lipschitz + loss_aux)
+                          + loss_expdecr_counterx + loss_lipschitz)
 
             infos = {
                 '0. total': loss_total,
