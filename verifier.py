@@ -376,30 +376,30 @@ class Verifier:
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (Kprime * softplus_lip) + lip_certificate)
+        violation_idxs = (Vdiff >= -tau * (Kprime * softplus_lip + lip_certificate))
         counterx_expDecr = x_decrease[violation_idxs]
 
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * (softplus_lip[violation_idxs] + lip_certificate)))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs] + lip_certificate))
 
         weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (Kprime + lip_certificate))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * (softplus_lip[violation_idxs] + lip_certificate))
+        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate)
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
-        # Print 100 most violating points
-        most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
-        print('Most violating states:')
-        print(x_decrease[most_violating_idxs])
-
-        print('Corresponding V values are:')
-        print(V_lb.flatten()[check_idxs][most_violating_idxs])
-
-        if args.improved_softplus_lip:
-            print('Softplus factor for those samples:')
-            print(softplus_lip[most_violating_idxs])
+        # # Print 100 most violating points
+        # most_violating_idxs = np.argsort(Vdiff)[::-1][:10]
+        # print('Most violating states:')
+        # print(x_decrease[most_violating_idxs])
+        #
+        # print('Corresponding V values are:')
+        # print(V_lb.flatten()[check_idxs][most_violating_idxs])
+        #
+        # if args.improved_softplus_lip:
+        #     print('Softplus factor for those samples:')
+        #     print(softplus_lip[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
         if len(Vdiff) > 0:
