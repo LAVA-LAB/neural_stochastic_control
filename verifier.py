@@ -373,11 +373,11 @@ class Verifier:
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (K * softpus_lip_factor))
+        violation_idxs = (Vdiff >= -tau * K) #(K * softpus_lip_factor))
         counterx_expDecr = check_expDecr_at[violation_idxs]
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softpus_lip_factor[violation_idxs]))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / K) # (K * softpus_lip_factor[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softpus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * K) # (K * softpus_lip_factor[violation_idxs]))
 
         # Print 100 most violating points
         most_violating_idxs = np.argsort(Vdiff)[::-1][:100]
@@ -388,8 +388,8 @@ class Verifier:
         print(V_lb[check_idxs][most_violating_idxs])
         print(V_ub[check_idxs][most_violating_idxs])
 
-        print('Softplus factor for those samples:')
-        print(softpus_lip_factor[most_violating_idxs])
+        # print('Softplus factor for those samples:')
+        # print(softpus_lip_factor[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
