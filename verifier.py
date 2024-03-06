@@ -379,7 +379,7 @@ class Verifier:
                 print(f'-- Below value of {i}: {np.sum(softplus_lip <= i)}')
 
         # Negative is violation
-        violation_idxs = (Vdiff >= -mesh_decrease * (Kprime * softplus_lip + lip_certificate))
+        violation_idxs = (Vdiff >= -mesh_decrease * (Kprime * softplus_lip))
         x_decrease_vio = x_decrease[violation_idxs]
 
         print(f'\n- {len(x_decrease_vio)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
@@ -388,17 +388,15 @@ class Verifier:
                   f"mean={np.mean(Vdiff):.8f}; max={np.max(Vdiff):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs]
-                                                                                + lip_certificate))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
         if len(x_decrease_vio) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime
-                                                                                                 + lip_certificate))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate)
+        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs])
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
