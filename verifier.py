@@ -340,7 +340,7 @@ class Verifier:
                                                      self.noise_lb, self.noise_ub, self.noise_int_ub)
             Vdiff[i:j] = A.flatten()
             if args.improved_softplus_lip:
-                softplus_lip = B.flatten()
+                softplus_lip[i:j] = B.flatten()
 
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
