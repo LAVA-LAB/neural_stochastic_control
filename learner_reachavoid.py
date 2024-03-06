@@ -181,10 +181,12 @@ class Learner:
             V_decrease = jnp.ravel(V_state.apply_fn(certificate_params, samples_decrease))
 
             # Loss in each initial state
-            losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
+            # losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
+            losses_init = jnp.maximum(0, V_init - 1)
 
             # Loss in each unsafe state
-            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
+            # losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe)
 
             # Loss for expected decrease condition
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
@@ -254,7 +256,7 @@ class Learner:
             loss_min_init = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_init, axis=0))
             loss_min_unsafe = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_unsafe, axis=0))
             loss_min_decrease = 0 #jnp.maximum(0, jnp.min(V_target, axis=0) - jnp.min(V_decrease, axis=0) + mesh_loss * K)
-            loss_aux = loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
+            loss_aux = 0 #loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
             loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
