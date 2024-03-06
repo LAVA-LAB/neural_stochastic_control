@@ -213,8 +213,6 @@ class Learner:
                 losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx)
                 loss_unsafe = jnp.maximum(jnp.max(losses_unsafe, axis=0), jnp.max(cx_bool_unsafe * losses_unsafe_cx, axis=0))
 
-                assert len((cx_bool_unsafe * losses_unsafe_cx).shape) == 1
-
                 # Add nonweighted expected decrease loss
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
@@ -263,7 +261,7 @@ class Learner:
             loss_aux = 0 #loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease
                           + loss_expdecr_counterx + loss_lipschitz + loss_aux)
 
             infos = {
