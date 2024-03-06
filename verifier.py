@@ -297,24 +297,28 @@ class Verifier:
 
         if args.linfty and args.split_lip:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy + 1)
+            # K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy)
         elif args.split_lip:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy + 1)
+            # K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy + 1)
         elif args.linfty:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+            # K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1) + 1)
         else:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+            # K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1) + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
-        print(f'- Overall Lipschitz coefficient K = {K:.3f} ({norm})')
+        print(f'- Overall Lipschitz coefficient K = {Kprime:.3f} ({norm})')
         print(f'-- Lipschitz coefficient of certificate: {lip_certificate:.3f} ({norm})')
         print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
 
         # Expected decrease condition check on all states outside target set
-        V_lb, V_ub = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
+        V_lb, _ = self.batched_forward_pass_ibp(V_state.ibp_fn, V_state.params, self.check_decrease[:, :self.buffer.dim],
                                                 0.5 * self.check_decrease[:, -1], 1)
         check_idxs = (V_lb < 1 / (1 - args.probability_bound)).flatten()
         check_expDecr_at = self.check_decrease[check_idxs]
@@ -324,7 +328,7 @@ class Verifier:
                                             env.action_space.shape[0])
 
         Vdiff = np.zeros(len(check_expDecr_at))
-        V_xplus_ub = np.zeros(len(check_expDecr_at))
+        softplus_lip = np.zeros(len(check_expDecr_at))
         num_batches = np.ceil(len(check_expDecr_at) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(check_expDecr_at))
@@ -334,11 +338,8 @@ class Verifier:
             u = actions[i:j]
 
             # Compute an upper bound on E(V(x_{k+1}))-V(x_k), and an upper bound on max(V(x_{k+1})).
-            X, Y = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params),
-                                               x, u, self.noise_lb, self.noise_ub, self.noise_int_ub)
-
-            Vdiff[i:j] = X.flatten()
-            V_xplus_ub[i:j] = Y.flatten()
+            Vdiff[i:j], softplus_lip[i:j] = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params),
+                                               V_lb[i:j], x, u, self.noise_lb, self.noise_ub, self.noise_int_ub)
 
             if debug_noise_integration:
                 # Approximate decrease in V (by sampling the noise, instead of numerical integration)
@@ -353,30 +354,27 @@ class Verifier:
 
         # Compute a better Lipschitz constant for the softplus activation function, based on the V_ub in each cell
         if args.improved_softplus_lip:
-            print('- Compute improved Lipschitz constant for SoftPlus activation function in certificate network')
-            softplus_lip_factor = np.maximum(1e-6, 1 - np.exp(-V_xplus_ub.flatten()))
-            assert len(softplus_lip_factor) == len(Vdiff), \
-                f"Length of softplus_lip_factor: {len(softplus_lip_factor)}; Vdiff: {len(Vdiff)}"
+            print('- Use improved Lipschitz constant for SoftPlus activation function in certificate network')
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
-                print(f'-- Number of factors below {i}: {np.sum(softplus_lip_factor <= i)}')
+                print(f'-- Number of factors below {i}: {np.sum(softplus_lip <= i)}')
         else:
-            softplus_lip_factor = np.ones(len(V_ub.flatten()[check_idxs]))
+            softplus_lip[:] = np.ones(len(check_expDecr_at))
 
         # Compute mesh size for every cell that is checked
         tau = cell_width2mesh(check_expDecr_at[:, -1], env.state_dim, args.linfty)
 
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (K * softplus_lip_factor))
+        violation_idxs = (Vdiff >= -tau * (Kprime * softplus_lip))
         counterx_expDecr = check_expDecr_at[violation_idxs]
 
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * softplus_lip_factor[violation_idxs]))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K * softplus_lip_factor[violation_idxs]))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * Kprime) # (K * softplus_lip_factor[violation_idxs]))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * K
+        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * Kprime
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
@@ -385,13 +383,12 @@ class Verifier:
         print('Most violating states:')
         print(check_expDecr_at[most_violating_idxs])
 
-        print('Corresponding V values are:')
+        print('Corresponding V_lb values are:')
         print(V_lb.flatten()[check_idxs][most_violating_idxs])
-        print(V_ub.flatten()[check_idxs][most_violating_idxs])
 
         if args.improved_softplus_lip:
             print('Softplus factor for those samples:')
-            print(softplus_lip_factor[most_violating_idxs])
+            print(softplus_lip[most_violating_idxs])
 
         print(f'\n- {len(counterx_expDecr)} expected decrease violations (out of {len(check_expDecr_at)} checked vertices)')
         if len(Vdiff) > 0:
@@ -535,7 +532,7 @@ class Verifier:
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
-    def step_noise_integrated(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+    def step_noise_integrated(self, V_state, V_params, V_lb, x, u, w_lb, w_ub, prob_ub):
         ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
 
         # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
@@ -548,8 +545,9 @@ class Verifier:
         V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
 
         V_old = jit(V_state.apply_fn)(V_state.params, x)
+        softplus_lip = 1 - jnp.exp(-V_old)
 
-        return V_expected_ub - V_old, jnp.max(V_new_ub)
+        return V_expected_ub - V_lb, softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
