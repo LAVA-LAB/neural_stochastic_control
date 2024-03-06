@@ -297,19 +297,19 @@ class Verifier:
 
         if args.linfty and args.split_lip:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy) # + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_linfty_A + env.lipschitz_f_linfty_B * lip_policy) # + 1)
         elif args.split_lip:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy) # + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_l1_A + env.lipschitz_f_l1_B * lip_policy) # + 1)
         elif args.linfty:
             norm = 'L_infty'
-            K = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1)) # + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_linfty * (lip_policy + 1)) # + 1)
         else:
             norm = 'L1'
-            K = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1)) # + 1)
+            Kprime = lip_certificate * (env.lipschitz_f_l1 * (lip_policy + 1)) # + 1)
 
         print(f'- Total number of samples: {len(self.buffer.data)}')
-        print(f'- Overall Lipschitz coefficient K = {K:.3f} ({norm})')
+        print(f'- Overall Lipschitz coefficient K = {Kprime:.3f} ({norm})')
         print(f'-- Lipschitz coefficient of certificate: {lip_certificate:.3f} ({norm})')
         print(f'-- Lipschitz coefficient of policy: {lip_policy:.3f} ({norm})')
 
@@ -322,6 +322,15 @@ class Verifier:
         # Get the samples
         x_decrease = self.check_decrease[check_idxs]
         Vx_lb_decrease = V_lb[check_idxs]
+
+        # Compute mesh size for every cell that is checked
+        tau = cell_width2mesh(x_decrease[:, -1], env.state_dim, args.linfty)
+
+        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                       x_decrease[:, :self.buffer.dim]).flatten()
+
+        print('V_lb - (V_mean-Lv*tau:')
+        print(V_lb[check_idxs] - (V_mean - lip_certificate * tau))
 
         # Determine actions for every point in subgrid
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
@@ -361,21 +370,18 @@ class Verifier:
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
                 print(f'-- Number of factors below {i}: {np.sum(softplus_lip <= i)}')
 
-        # Compute mesh size for every cell that is checked
-        tau = cell_width2mesh(x_decrease[:, -1], env.state_dim, args.linfty)
-
         # Negative is violation
         assert len(tau) == len(Vdiff)
-        violation_idxs = (Vdiff >= -tau * (K * softplus_lip) + lip_certificate)
+        violation_idxs = (Vdiff >= -tau * (Kprime * softplus_lip) + lip_certificate)
         counterx_expDecr = x_decrease[violation_idxs]
 
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (K * (softplus_lip[violation_idxs] + lip_certificate)))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * (softplus_lip[violation_idxs] + lip_certificate)))
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (K + lip_certificate))
+        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + tau[violation_idxs] * (Kprime + lip_certificate))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (K * (softplus_lip[violation_idxs] + lip_certificate))
+        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * (softplus_lip[violation_idxs] + lip_certificate))
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
