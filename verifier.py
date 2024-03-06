@@ -349,7 +349,6 @@ class Verifier:
         num_batches = np.ceil(len(x_decrease) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(x_decrease))
-
         assert len(x_decrease) == len(Vx_lb_decrease) == len(actions)
 
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]-V(x_k)'):
@@ -398,9 +397,9 @@ class Verifier:
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs])
-        weights_expDecr[hard_violation_idxs] *= 10
-        print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
+        # hard_violation_idxs = Vdiff[violation_idxs] > - args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs])
+        # weights_expDecr[hard_violation_idxs] *= 10
+        # print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         #################################
         print('\nCheck initial states condition...')
