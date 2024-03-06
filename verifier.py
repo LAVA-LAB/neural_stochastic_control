@@ -350,6 +350,8 @@ class Verifier:
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(x_decrease))
 
+        assert len(x_decrease) == len(Vx_lb_decrease) == len(actions)
+
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]-V(x_k)'):
             x = x_decrease[i:j, :self.buffer.dim]
             u = actions[i:j]
