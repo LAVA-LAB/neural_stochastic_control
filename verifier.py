@@ -546,7 +546,7 @@ class Verifier:
         V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
 
         V_old = jit(V_state.apply_fn)(V_state.params, x)
-        softplus_lip = (1-jnp.exp(-V_old))
+        softplus_lip = jnp.maximum(1e-6, (1-jnp.exp(-V_old)))
 
         return V_expected_ub - V_old, softplus_lip
 
