@@ -41,7 +41,7 @@ class Verifier:
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
-        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, None, None, None), out_axes=(0,0))
+        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, 0, None, None, None), out_axes=(0,0))
 
         self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
