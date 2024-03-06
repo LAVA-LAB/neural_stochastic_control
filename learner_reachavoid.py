@@ -192,7 +192,7 @@ class Learner:
             loss_min_unsafe = jnp.maximum(0, jnp.min(V_state.apply_fn(certificate_params, x_target)) -
                                           jnp.min(V_state.apply_fn(certificate_params, x_unsafe)))
 
-            loss_aux = loss_min_target + loss_min_init + loss_min_unsafe
+            loss_aux = 0 #loss_min_target + loss_min_init + loss_min_unsafe
 
             # Define total loss
             loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx +
