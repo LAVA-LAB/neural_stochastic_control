@@ -261,6 +261,7 @@ class Verifier:
         '''
         Do a forward pass for the given network, split into batches of given size (can be needed to avoid OOM errors).
         This version of the function uses IBP.
+        Also flattens the output automatically
 
         :param out_dim:
         :param epsilon:
@@ -273,7 +274,8 @@ class Verifier:
 
         if len(samples) <= batch_size:
             # If the number of samples is below the maximum batch size, then just do one pass
-            return apply_fn(jax.lax.stop_gradient(params), samples, np.atleast_2d(epsilon).T).flatten()
+            lb, ub = apply_fn(jax.lax.stop_gradient(params), samples, np.atleast_2d(epsilon).T)
+            return lb.flatten(), ub.flatten()
 
         else:
             # Otherwise, split into batches
