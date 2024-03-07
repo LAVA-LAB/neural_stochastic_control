@@ -414,7 +414,7 @@ class Verifier:
             print("-- Value of E[V(x_{k+1}) - V(x_k) over all points where exp. decrease is checked:\n" 
                   f"min={np.min(Vdiff_mean):.8f}; mean={np.mean(Vdiff_mean):.8f}; max={np.max(Vdiff_mean):.8f}")
 
-        weights_expDecr = np.maximum(0, Vdiff_ibp + mesh_decrease[violation_idxs] * Kprime * softplus_lip[violation_idxs])
+        weights_expDecr = np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime * softplus_lip[violation_idxs] + lip_certificate))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
