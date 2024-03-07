@@ -472,7 +472,6 @@ class Verifier:
         if compare_with_lip:
             # Compare IBP with method based on Lipschitz coefficient
             mesh_init = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
-
             Vx_init_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                                  self.check_init[:, :self.buffer.dim]).flatten()
 
@@ -531,7 +530,6 @@ class Verifier:
         if compare_with_lip:
             # Compare IBP with method based on Lipschitz coefficient
             mesh_unsafe = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty).flatten()
-
             Vx_init_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                            self.check_unsafe[:, :self.buffer.dim]).flatten()
 
