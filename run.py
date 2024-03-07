@@ -113,6 +113,9 @@ parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAc
                     help="If True, samples are (slightly) perturbed by the learner")
 parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")
+parser.add_argument('--improved_expdecrease_loss', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, use the differentiable version of the new expected decrease condition in the learner")
+
 
 ## Lipschitz coefficient arguments
 parser.add_argument('--linfty', action=argparse.BooleanOptionalAction, default=False,

@@ -52,6 +52,7 @@ class Learner:
         print(f'- Num. counterexamples per batch: {self.batch_size_counterx}\n')
 
         self.expected_decrease_loss = args.expdecrease_loss_type
+        self.improved_expdecrease_loss = args.improved_expdecrease_loss
         self.perturb_samples = args.perturb_train_samples
 
         # Lipschitz factor
@@ -81,13 +82,13 @@ class Learner:
         self.N_expectation = 16
 
         # Define vectorized functions for loss computation
-        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, None, 0, 0, 0), out_axes=0)
+        self.loss_exp_decrease_vmap = jax.vmap(self.loss_exp_decrease, in_axes=(None, None, 0, 0, 0), out_axes=0)
 
         return
 
 
 
-    def loss_exp_decrease(self, delta, V_state, V_params, x, u, noise_key):
+    def loss_exp_decrease(self, V_state, V_params, x, u, noise_key):
         '''
         Compute loss related to martingale condition 2 (expected decrease).
         :param V_state:
@@ -104,12 +105,9 @@ class Learner:
         # Function apply_fn does a forward pass in the certificate network for all successor states in state_new,
         # which approximates the value of the certificate for the successor state (using different noise values).
         # Then, the loss term is zero if the expected decrease in certificate value is at least tau*K.
-        diff = jnp.mean(V_state.apply_fn(V_params, state_new)) - V_state.apply_fn(V_params, x)
+        V_expected = jnp.mean(V_state.apply_fn(V_params, state_new))
 
-        # Cap at zero
-        loss = jnp.maximum(0, diff + delta)
-
-        return loss
+        return V_expected
 
     
 
@@ -159,7 +157,7 @@ class Learner:
         def loss_fun(certificate_params, policy_params):
 
             # Small epsilon used in the initial/unsafe loss terms
-            EPS = 1e-2
+            EPS = 1e-3
 
             # Compute Lipschitz coefficients.
             lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
@@ -167,13 +165,13 @@ class Learner:
 
             # Calculate K factor
             if self.linfty and self.split_lip:
-                K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy + 1)
+                K = lip_certificate * (self.env.lipschitz_f_linfty_A + self.env.lipschitz_f_linfty_B * lip_policy) # + 1)
             elif self.split_lip:
-                K = lip_certificate * (self.env.lipschitz_f_l1_A + self.env.lipschitz_f_l1_B * lip_policy + 1)
+                K = lip_certificate * (self.env.lipschitz_f_l1_A + self.env.lipschitz_f_l1_B * lip_policy) # + 1)
             elif self.linfty:
-                K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1) + 1)
+                K = lip_certificate * (self.env.lipschitz_f_linfty * (lip_policy + 1)) # + 1)
             else:
-                K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1) + 1)
+                K = lip_certificate * (self.env.lipschitz_f_l1 * (lip_policy + 1)) # + 1)
 
             #####
 
@@ -194,8 +192,19 @@ class Learner:
             # Loss for expected decrease condition
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
             actions = Policy_state.apply_fn(policy_params, samples_decrease)
-            Vdiffs = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params,
-                                                       samples_decrease, actions, expDecr_keys)
+            V_expected = self.loss_exp_decrease_vmap(V_state, certificate_params, samples_decrease, actions,
+                                                     expDecr_keys)
+
+            if self.improved_expdecrease_loss:
+                V_decrease_lb, _ = V_state.ibp_fn(certificate_params, samples_decrease, mesh_loss)
+
+                Vdiffs = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
+                                        + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb)))
+            else:
+                V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
+                Vdiffs = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
+
+            # Restrict to the expected decrease samples only
             Vdiffs_trim = samples_decrease_bool_not_target * jnp.ravel(Vdiffs)
 
             #####
@@ -219,8 +228,18 @@ class Learner:
                 # Add nonweighted expected decrease loss
                 expDecr_keys_cx = jax.random.split(noise_key, (self.batch_size_counterx, self.N_expectation))
                 actions_cx = Policy_state.apply_fn(policy_params, cx_samples)
-                Vdiffs_cx = self.loss_exp_decrease_vmap(mesh_loss * K, V_state, certificate_params, cx_samples, actions_cx,
-                                                        expDecr_keys_cx)
+                V_expected = self.loss_exp_decrease_vmap(V_state, certificate_params, cx_samples, actions_cx,
+                                                         expDecr_keys_cx)
+
+                if self.improved_expdecrease_loss:
+                    V_decrease_lb, _ = V_state.ibp_fn(certificate_params, cx_samples, mesh_loss)
+
+                    Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
+                                         + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb)))
+                else:
+                    V_decrease = V_state.apply_fn(certificate_params, cx_samples)
+                    Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
+
                 Vdiffs_cx_trim = cx_bool_decrease * jnp.ravel(Vdiffs_cx)
                 loss_exp_decrease = (jnp.sum(Vdiffs_trim, axis=0) + jnp.sum(Vdiffs_cx_trim, axis=0)) \
                                         / (jnp.sum(samples_decrease_bool_not_target, axis=0) + jnp.sum(cx_bool_decrease, axis=0) + 1e-6) #+ jnp.max(Vdiffs_trim, axis=0)
