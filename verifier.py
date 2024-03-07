@@ -340,7 +340,8 @@ class Verifier:
         Vx_mean_decrease = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        x_decrease[:, :self.buffer.dim]).flatten()
         bools = (Vx_mean_decrease - lip_certificate * mesh_decrease < V_lb[check_idxs])
-        print(f'- V(x)-tau*Lv < V_lb in fraction {sum(bools)/len(bools)} of samples')
+        if len(bools) > 0:
+            print(f'- V(x)-tau*Lv < V_lb in fraction {sum(bools)/len(bools)} of samples')
 
         # Determine actions for every point where we need to check the expected decrease condition
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
@@ -437,7 +438,8 @@ class Verifier:
                                        self.check_init[:, :self.buffer.dim]).flatten()
         mesh_init = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
         bools = (V_init_ub < V_mean + mesh_init * lip_certificate)
-        print(f'- V_init_ub(x) < V(x) + tau*Lv in fraction {sum(bools) / len(bools)} of samples')
+        if len(bools) > 0:
+            print(f'- V_init_ub(x) < V(x) + tau*Lv in fraction {sum(bools) / len(bools)} of samples')
 
         # Set counterexamples (for initial states)
         V = (V_init_ub - 1)
@@ -503,7 +505,8 @@ class Verifier:
                                        self.check_unsafe[:, :self.buffer.dim]).flatten()
         mesh_unsafe = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty).flatten()
         bools = (V_unsafe_lb > V_mean - mesh_unsafe * lip_certificate)
-        print(f'- V_unsafe_ub(x) > V(x) - tau*Lv in fraction {sum(bools) / len(bools)} of samples')
+        if len(bools) > 0:
+            print(f'- V_unsafe_ub(x) > V(x) - tau*Lv in fraction {sum(bools) / len(bools)} of samples')
 
         V = (V_unsafe_lb - 1 / (1 - args.probability_bound))
 
