@@ -467,7 +467,7 @@ class Verifier:
         # weights_init[V_mean > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
-        print(f'-- {len(x_init_vioNumHard)} hard violations (out of {len(out_of)})')
+        print(f'-- {x_init_vioNumHard} hard violations (out of {len(out_of)})')
 
         if compare_with_lip:
             # Compare IBP with method based on Lipschitz coefficient
@@ -518,15 +518,15 @@ class Verifier:
                                                  out_dim=1, batch_size=batch_size).flatten()
 
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
-        x_unsafe_vioHard = self.env.unsafe_space.contains(x_unsafe_vio_IBP[(V_unsafe - 1 /
-                                                    (1 - args.probability_bound)) < 0], dim=self.buffer.dim, delta=0)
+        x_unsafe_vioHard = len(self.env.unsafe_space.contains(x_unsafe_vio_IBP[(V_unsafe - 1 /
+                                                    (1 - args.probability_bound)) < 0], dim=self.buffer.dim, delta=0))
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
         # weights_unsafe[V_mean < 0] = hard_violation_weight
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
-        print(f'-- {len(x_unsafe_vioHard)} hard violations (out of {len(out_of)})')
+        print(f'-- {x_unsafe_vioHard} hard violations (out of {len(out_of)})')
 
         if compare_with_lip:
             # Compare IBP with method based on Lipschitz coefficient
