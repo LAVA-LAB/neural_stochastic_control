@@ -45,8 +45,8 @@ class Verifier:
         self.vmap_expectation_Vx_plus = jax.vmap(self.expectation_Vx_plus,
                                                  in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
 
-        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated,
-                                               in_axes=(None, None, 0, 0, 0, None, None, None), out_axes=(0, 0))
+        # self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated,
+        #                                        in_axes=(None, None, 0, 0, 0, None, None, None), out_axes=(0, 0))
 
         self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
@@ -379,7 +379,7 @@ class Verifier:
 
         Vdiff_ibp = ExpV_xPlus - Vx_lb_decrease
         Vdiff_center = ExpV_xPlus - Vx_mean_decrease
-        softplus_lip = (1 - np.exp(-Vx_lb_decrease))
+        softplus_lip = (1 - np.exp(-Vx_mean_decrease))
 
         # Print for how many points the softplus Lipschitz coefficient improves upon the default of 1
         if args.improved_softplus_lip:
@@ -408,8 +408,8 @@ class Verifier:
 
         weights_expDecr = np.ones(len(Vdiff_center[violation_idxs]))  # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        # hard_violation_idxs = (Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
-        # weights_expDecr[hard_violation_idxs] *= 10
+        hard_violation_idxs = (Vdiff_center[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
+        weights_expDecr[hard_violation_idxs] *= 10
         # print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         if compare_with_lip:
@@ -464,7 +464,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
-        # weights_init[V_mean > 0] = hard_violation_weight
+        weights_init[V_init > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_init_vioNumHard} hard violations (out of {len(out_of)})')
@@ -522,7 +522,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
-        # weights_unsafe[V_mean < 0] = hard_violation_weight
+        weights_unsafe[V_unsafe < 0] = hard_violation_weight
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_unsafe_vioHard} hard violations (out of {len(out_of)})')
@@ -572,23 +572,23 @@ class Verifier:
 
         return V_expected_ub
 
-    def step_noise_integrated(self, V_state, V_params, V_old_lb, x, u, w_lb, w_ub, prob_ub):
-        ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
-
-        # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
-        state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
-        V_old_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_params), x, epsilon)
-
-        # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
-        _, V_new_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
-
-        # Compute expectation by multiplying each V_new by the respective probability
-        V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
-
-        # V_old = jit(V_state.apply_fn)(V_state.params, x)
-        softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old_lb)))
-
-        return V_expected_ub - V_old_lb.flatten(), softplus_lip
+    # def step_noise_integrated(self, V_state, V_params, V_old_lb, x, u, w_lb, w_ub, prob_ub):
+    #     ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
+    #
+    #     # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
+    #     state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
+    #     V_old_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_params), x, epsilon)
+    #
+    #     # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
+    #     _, V_new_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
+    #
+    #     # Compute expectation by multiplying each V_new by the respective probability
+    #     V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
+    #
+    #     # V_old = jit(V_state.apply_fn)(V_state.params, x)
+    #     softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old_lb)))
+    #
+    #     return V_expected_ub - V_old_lb.flatten(), softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):

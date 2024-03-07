@@ -158,7 +158,7 @@ class Learner:
 
             # Small epsilon used in the initial/unsafe loss terms
             EPS = 1e-3
-            softplus_lip_min = 0.1
+            softplus_lip_min = 1
 
             # Compute Lipschitz coefficients.
             lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
@@ -200,7 +200,7 @@ class Learner:
                 V_decrease_lb, _ = V_state.ibp_fn(certificate_params, samples_decrease, mesh_loss)
                 softplus_lip = jnp.maximum(softplus_lip_min, (1 - jnp.exp(-V_decrease_lb.flatten())))
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
-                                        + mesh_loss * K * 1)
+                                        + mesh_loss * K * softplus_lip_cx)
             else:
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
 
@@ -233,9 +233,10 @@ class Learner:
 
                 if self.improved_expdecrease_loss:
                     V_decrease_lb, _ = V_state.ibp_fn(certificate_params, cx_samples, mesh_loss)
-                    softplus_lip_cx = jnp.maximum(softplus_lip_min, (1 - jnp.exp(-V_decrease_lb.flatten())))
+                    V_decrease_cx = jnp.ravel(V_state.apply_fn(certificate_params, cx_samples))
+                    softplus_lip_cx = jnp.maximum(softplus_lip_min, (1 - jnp.exp(-V_decrease_cx)))
                     Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
-                                         + mesh_loss * K * 1)
+                                         + mesh_loss * K * softplus_lip_cx)
                 else:
                     V_decrease_cx = jnp.ravel(V_state.apply_fn(certificate_params, cx_samples))
                     Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_cx + mesh_loss * (K + lip_certificate))
