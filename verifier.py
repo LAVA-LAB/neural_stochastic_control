@@ -411,13 +411,13 @@ class Verifier:
             print("-- Value of E[V(x_{k+1}) - V(x_k): " 
                   f"min={np.min(Vdiff_mean):.8f}; mean={np.mean(Vdiff_mean):.8f}; max={np.max(Vdiff_mean):.8f}")
 
-        weights_expDecr = np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
+        weights_expDecr = np.ones(len(Vdiff_mean[violation_idxs])) # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = (Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
-        weights_expDecr[hard_violation_idxs] *= 10
-        print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
+        # hard_violation_idxs = (Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
+        # weights_expDecr[hard_violation_idxs] *= 10
+        # print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         #################################
         print('\nCheck initial states condition...')
@@ -474,7 +474,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
-        weights_init[V_mean > 0] = hard_violation_weight
+        # weights_init[V_mean > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {len(x_init_vioHard)} hard violations (out of {len(out_of)})')
@@ -539,7 +539,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
-        weights_unsafe[V_mean < 0] = hard_violation_weight
+        # weights_unsafe[V_mean < 0] = hard_violation_weight
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {len(x_unsafe_vioHard)} hard violations (out of {len(out_of)})')
