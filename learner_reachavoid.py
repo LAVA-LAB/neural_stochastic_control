@@ -264,7 +264,7 @@ class Learner:
             loss_aux = 0 # loss_min_target + loss_min_init + loss_min_decrease + loss_min_unsafe
 
             # Define total loss
-            loss_total = (loss_init + loss_init_counterx + loss_unsafe + loss_unsafe_counterx + loss_exp_decrease
+            loss_total = (loss_init + loss_unsafe + loss_exp_decrease
                           + loss_expdecr_counterx + loss_lipschitz + loss_aux)
 
             infos = {
