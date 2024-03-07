@@ -136,7 +136,7 @@ class Learner:
             # Check which counterexamples are contained in which regions
             cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
             cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
-            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1]) * ~cx_bool_unsafe
+            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
         else:
             cx_samples = cx_weights = cx_bool_init = cx_bool_unsafe = cx_bool_decrease = False
 
