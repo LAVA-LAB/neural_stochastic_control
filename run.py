@@ -272,6 +272,15 @@ key = jax.random.PRNGKey(args.seed)
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
+    if i == 0:
+        args.probability_bound = 0.9
+    elif i == 1:
+        args.probability_bound = 0.99
+    elif i == 2:
+        args.probability_bound = 0.995
+    else:
+        args.probability_bound =0.999
+
     print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
     iteration_init = time.time()
 
