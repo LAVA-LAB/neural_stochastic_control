@@ -349,8 +349,6 @@ for i in range(args.cegis_iterations):
     verify_done = False
     refine_nr = 0
 
-    if i <= 2:
-        verify_done = True
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
@@ -374,6 +372,8 @@ for i in range(args.cegis_iterations):
             verify_done = True
         elif len(counterx) > args.max_refine_samples:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
+            verify_done = True
+        elif i <= 2:
             verify_done = True
         else:
             # Clip the suggested mesh at the lowest allowed value
