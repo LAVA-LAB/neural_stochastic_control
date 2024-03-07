@@ -41,7 +41,12 @@ class Verifier:
 
         # Vectorized function to take step for vector of states, and under vector of noises for each state
         self.vstep_noise_batch = jax.vmap(self.step_noise_batch, in_axes=(None, None, 0, 0, 0), out_axes=0)
-        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated, in_axes=(None, None, 0, 0, 0, None, None, None), out_axes=(0, 0))
+
+        self.vmap_expectation_Vx_plus = jax.vmap(self.expectation_Vx_plus,
+                                                 in_axes=(None, None, 0, 0, None, None, None), out_axes=0)
+
+        self.vstep_noise_integrated = jax.vmap(self.step_noise_integrated,
+                                               in_axes=(None, None, 0, 0, 0, None, None, None), out_axes=(0, 0))
 
         self.vmap_grid_multiply_shift = jax.jit(jax.vmap(grid_multiply_shift, in_axes=(None, 0, 0, None), out_axes=0))
         self.refine_cache = {}
@@ -332,18 +337,17 @@ class Verifier:
         # Compute mesh size for every cell that is checked
         mesh_decrease = cell_width2mesh(x_decrease[:, -1], env.state_dim, args.linfty)
 
-        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+        Vx_mean_decrease = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
                                        x_decrease[:, :self.buffer.dim]).flatten()
-        bools = (V_mean - lip_certificate * mesh_decrease < V_lb[check_idxs])
+        bools = (Vx_mean_decrease - lip_certificate * mesh_decrease < V_lb[check_idxs])
         print(f'- V(x)-tau*Lv < V_lb in fraction {sum(bools)/len(bools)} of samples')
 
         # Determine actions for every point where we need to check the expected decrease condition
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
                                             env.action_space.shape[0])
 
-        # Initialize arrays
-        Vdiff = np.zeros(len(x_decrease))
-        softplus_lip = np.ones(len(x_decrease))
+        # Initialize array
+        ExpV_xPlus = np.zeros(len(x_decrease))
 
         # Create batches
         num_batches = np.ceil(len(x_decrease) / args.verify_batch_size).astype(int)
@@ -354,24 +358,26 @@ class Verifier:
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]-V(x_k)'):
             x = x_decrease[i:j, :self.buffer.dim]
             u = actions[i:j]
-            Vx_lb = Vx_lb_decrease[i:j]
 
-            A, B = self.vstep_noise_integrated(V_state, jax.lax.stop_gradient(V_state.params), Vx_lb, x, u,
-                                               self.noise_lb, self.noise_ub, self.noise_int_ub)
-            Vdiff[i:j] = A.flatten()
-            if args.improved_softplus_lip:
-                softplus_lip[i:j] = B.flatten()
+            ExpV_xPlus[i:j] = self.vmap_expectation_Vx_plus(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+                                                            self.noise_lb, self.noise_ub, self.noise_int_ub)
 
-            # If debugging is enabled, approximate decrease in V (by sampling noise, instead of numerical integration)
-            if debug_noise_integration:
-                noise_key, subkey = jax.random.split(noise_key)
-                noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
+            # # If debugging is enabled, approximate decrease in V (by sampling noise, instead of numerical integration)
+            # if debug_noise_integration:
+            #     noise_key, subkey = jax.random.split(noise_key)
+            #     noise_keys = jax.random.split(subkey, (len(x), args.noise_partition_cells))
+            #
+            #     Vdiff_approx = self.vstep_noise_batch(V_state, jax.lax.stop_gradient(V_state.params), x, u,
+            #                                    noise_keys).flatten()
+            #
+            #     print("- Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - Vdiff_approx),
+            #           '; Min diff:', np.min(Vdiff[i:j] - Vdiff_approx))
 
-                Vdiff_approx = self.vstep_noise_batch(V_state, jax.lax.stop_gradient(V_state.params), x, u,
-                                               noise_keys).flatten()
-
-                print("- Comparing V[x']-V[x] with estimated value. Max diff:", np.max(Vdiff[i:j] - Vdiff_approx),
-                      '; Min diff:', np.min(Vdiff[i:j] - Vdiff_approx))
+        Vdiff_ibp = ExpV_xPlus - Vx_lb_decrease
+        Vdiff_lip = ExpV_xPlus - (Vx_mean_decrease - lip_certificate * mesh_decrease)
+        softplus_lip = (1 - np.exp(-Vx_lb_decrease))
+        assert Vdiff_ibp.shape == Vdiff_lip.shape
+        assert len(softplus_lip) == len(Vdiff_ibp) == len(Vdiff_lip)
 
         # Print for how many points the softplus Lipschitz coefficient improves upon the default of 1
         if args.improved_softplus_lip:
@@ -379,22 +385,32 @@ class Verifier:
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
                 print(f'-- Below value of {i}: {np.sum(softplus_lip <= i)}')
 
-        # Negative is violation
-        violation_degree = Vdiff + mesh_decrease * Kprime * softplus_lip
-        violation_idxs = (violation_degree >= 0)
-        x_decrease_vio = x_decrease[violation_idxs]
 
-        print(f'\n- {len(x_decrease_vio)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
-        if len(Vdiff) > 0:
-            print(f"-- Degree of violation over all points: min={np.min(violation_degree):.8f}; "
-                  f"mean={np.mean(violation_degree):.8f}; max={np.max(violation_degree):.8f}")
+
+        # Negative is violation
+        V_ibp = Vdiff_ibp + mesh_decrease * Kprime * softplus_lip
+        V_lip = Vdiff_lip + mesh_decrease * Kprime * softplus_lip
+
+        violation_idxs = V_ibp >= 0
+        x_decrease_vio_IBP = x_decrease[violation_idxs]
+        x_decrease_vio_LIP = x_decrease[V_lip >= 0]
+
+        print(f'\n- [IBP] {len(x_decrease_vio_IBP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
+        if len(V_ibp) > 0:
+            print(f"-- Degree of violation over all points: min={np.min(V_ibp):.8f}; "
+                  f"mean={np.mean(V_ibp):.8f}; max={np.max(V_ibp):.8f}")
+
+        print(f'\n- [LIP] {len(x_decrease_vio_LIP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
+        if len(V_lip) > 0:
+            print(f"-- Degree of violation over all points: min={np.min(V_lip):.8f}; "
+                  f"mean={np.mean(V_lip):.8f}; max={np.max(V_lip):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
-        if len(x_decrease_vio) > 0:
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff_lip[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
+        if len(x_decrease_vio_IBP) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
-        weights_expDecr = np.ones(len(x_decrease_vio)) #np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
+        weights_expDecr = np.ones(len(x_decrease_vio_IBP)) #np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
@@ -537,7 +553,7 @@ class Verifier:
         #################################
         print('\nPut together verification results...')
 
-        counterx = np.vstack([x_decrease_vio, x_init_vio_IBP, x_unsafe_vio_IBP])
+        counterx = np.vstack([x_decrease_vio_IBP, x_init_vio_IBP, x_unsafe_vio_IBP])
         counterx_hard = np.vstack([x_init_vioHard, x_unsafe_vioHard])
 
         counterx_weights = np.concatenate([
@@ -555,6 +571,20 @@ class Verifier:
         return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
+    def expectation_Vx_plus(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
+        ''' Compute expecation over V(x_{k+1}). '''
+
+        # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
+        state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
+
+        # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
+        _, V_new_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
+
+        # Compute expectation by multiplying each V_new by the respective probability
+        V_expected_ub = jnp.dot(V_new_ub.flatten(), prob_ub)
+
+        return V_expected_ub
+
     def step_noise_integrated(self, V_state, V_params, V_old_lb, x, u, w_lb, w_ub, prob_ub):
         ''' Compute upper bound on V(x_{k+1}) by integration of the stochastic noise '''
 
