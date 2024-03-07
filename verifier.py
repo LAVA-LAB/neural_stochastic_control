@@ -571,7 +571,7 @@ class Verifier:
         # V_old = jit(V_state.apply_fn)(V_state.params, x)
         softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old_lb)))
 
-        return V_expected_ub - V_old_lb.flatten(), softplus_lip
+        return V_expected_ub - jnp.ravel(V_old_lb), softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
