@@ -199,7 +199,7 @@ class Learner:
                 V_decrease_lb, _ = V_state.ibp_fn(certificate_params, samples_decrease, mesh_loss)
 
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
-                                        + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb)))
+                                        + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb.flatten())))
             else:
                 V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
@@ -235,7 +235,7 @@ class Learner:
                     V_decrease_lb, _ = V_state.ibp_fn(certificate_params, cx_samples, mesh_loss)
 
                     Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
-                                         + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb)))
+                                         + mesh_loss * K * (1 - jnp.exp(-V_decrease_lb.flatten())))
                 else:
                     V_decrease = V_state.apply_fn(certificate_params, cx_samples)
                     Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
