@@ -272,15 +272,6 @@ key = jax.random.PRNGKey(args.seed)
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
-    if i == 0:
-        args.probability_bound = 0.9
-    elif i == 1:
-        args.probability_bound = 0.99
-    elif i == 2:
-        args.probability_bound = 0.995
-    else:
-        args.probability_bound = 0.999
-
     print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
     iteration_init = time.time()
 
@@ -348,7 +339,6 @@ for i in range(args.cegis_iterations):
 
     verify_done = False
     refine_nr = 0
-
     while not verify_done:
         print(f'\nCheck martingale conditions...')
         counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
@@ -372,8 +362,6 @@ for i in range(args.cegis_iterations):
             verify_done = True
         elif len(counterx) > args.max_refine_samples:
             print(f'\n- Skip refinement, the number of counterexamples is still too high')
-            verify_done = True
-        elif i <= 2:
             verify_done = True
         else:
             # Clip the suggested mesh at the lowest allowed value
