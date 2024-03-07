@@ -201,7 +201,6 @@ class Learner:
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
                                         + mesh_loss * K * softplus_lip)
             else:
-                V_decrease = V_state.apply_fn(certificate_params, samples_decrease)
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
 
             # Restrict to the expected decrease samples only
@@ -237,8 +236,8 @@ class Learner:
                     Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
                                          + mesh_loss * K * softplus_lip_cx)
                 else:
-                    V_decrease = V_state.apply_fn(certificate_params, cx_samples)
-                    Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease + mesh_loss * (K + lip_certificate))
+                    V_decrease_cx = jnp.ravel(V_state.apply_fn(certificate_params, cx_samples))
+                    Vdiffs_cx = jnp.maximum(0, V_expected - V_decrease_cx + mesh_loss * (K + lip_certificate))
 
                 Vdiffs_cx_trim = cx_bool_decrease * jnp.ravel(Vdiffs_cx)
                 loss_exp_decrease = (jnp.sum(Vdiffs_trim, axis=0) + jnp.sum(Vdiffs_cx_trim, axis=0)) \
