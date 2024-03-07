@@ -355,7 +355,7 @@ class Verifier:
         ends = np.minimum(starts + args.verify_batch_size, len(x_decrease))
         assert len(x_decrease) == len(Vx_lb_decrease) == len(actions)
 
-        for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]-V(x_k)'):
+        for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]'):
             x = x_decrease[i:j, :self.buffer.dim]
             u = actions[i:j]
 
@@ -385,8 +385,6 @@ class Verifier:
             for i in [1, 0.75, 0.5, 0.25, 0.1, 0.05, 0.01]:
                 print(f'-- Below value of {i}: {np.sum(softplus_lip <= i)}')
 
-
-
         # Negative is violation
         V_ibp = Vdiff_ibp + mesh_decrease * Kprime * softplus_lip
         V_lip = Vdiff_lip + mesh_decrease * Kprime * softplus_lip
@@ -400,17 +398,18 @@ class Verifier:
             print(f"-- Degree of violation over all points: min={np.min(V_ibp):.8f}; "
                   f"mean={np.mean(V_ibp):.8f}; max={np.max(V_ibp):.8f}")
 
-        print(f'\n- [LIP] {len(x_decrease_vio_LIP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
+        print(f'- [LIP] {len(x_decrease_vio_LIP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
         if len(V_lip) > 0:
             print(f"-- Degree of violation over all points: min={np.min(V_lip):.8f}; "
                   f"mean={np.mean(V_lip):.8f}; max={np.max(V_lip):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff_lip[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -(ExpV_xPlus[violation_idxs]-Vx_mean_decrease[violation_idxs])
+                                               / (Kprime * softplus_lip[violation_idxs] + lip_certificate))
         if len(x_decrease_vio_IBP) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
-        weights_expDecr = np.ones(len(x_decrease_vio_IBP)) #np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
+        weights_expDecr = np.maximum(0, Vdiff_ibp + mesh_decrease[violation_idxs] * Kprime * softplus_lip[violation_idxs])
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
