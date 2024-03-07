@@ -380,20 +380,21 @@ class Verifier:
                 print(f'-- Below value of {i}: {np.sum(softplus_lip <= i)}')
 
         # Negative is violation
-        violation_idxs = (Vdiff >= -mesh_decrease * (Kprime * softplus_lip))
+        violation_degree = Vdiff + mesh_decrease * Kprime * softplus_lip
+        violation_idxs = (violation_degree >= 0)
         x_decrease_vio = x_decrease[violation_idxs]
 
         print(f'\n- {len(x_decrease_vio)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
         if len(Vdiff) > 0:
-            print(f"-- Stats. of E[V(x')-V(x)]: min={np.min(Vdiff):.8f}; "
-                  f"mean={np.mean(Vdiff):.8f}; max={np.max(Vdiff):.8f}")
+            print(f"-- Degree of violation over all points: min={np.min(violation_degree):.8f}; "
+                  f"mean={np.mean(violation_degree):.8f}; max={np.max(violation_degree):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
         suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff[violation_idxs] / (Kprime * softplus_lip[violation_idxs]))
         if len(x_decrease_vio) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
-        weights_expDecr = np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
+        weights_expDecr = np.ones(len(x_decrease_vio)) #np.maximum(0, Vdiff[violation_idxs] + mesh_decrease[violation_idxs] * Kprime)
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
