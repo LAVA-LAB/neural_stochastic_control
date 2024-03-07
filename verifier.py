@@ -379,6 +379,8 @@ class Verifier:
 
         Vdiff_ibp = ExpV_xPlus - Vx_lb_decrease
         Vdiff_center = ExpV_xPlus - Vx_mean_decrease
+
+        #TODO: If K' * tau < 1, then we can also use V_lb for the softplus_lip.
         softplus_lip = (1 - np.exp(-Vx_mean_decrease))
 
         # Print for how many points the softplus Lipschitz coefficient improves upon the default of 1
@@ -408,8 +410,8 @@ class Verifier:
 
         weights_expDecr = np.ones(len(Vdiff_center[violation_idxs]))  # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = (Vdiff_center[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
-        weights_expDecr[hard_violation_idxs] *= 10
+        # hard_violation_idxs = (Vdiff_center[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
+        # weights_expDecr[hard_violation_idxs] *= 10
         # print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         if compare_with_lip:
@@ -464,7 +466,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
-        weights_init[V_init > 0] = hard_violation_weight
+        # weights_init[V_init > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_init_vioNumHard} hard violations (out of {len(out_of)})')
@@ -522,7 +524,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
-        weights_unsafe[V_unsafe < 0] = hard_violation_weight
+        # weights_unsafe[V_unsafe < 0] = hard_violation_weight
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_unsafe_vioHard} hard violations (out of {len(out_of)})')
