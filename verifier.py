@@ -418,7 +418,7 @@ class Verifier:
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
-        hard_violation_idxs = Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate)
+        hard_violation_idxs = (Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
         weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
