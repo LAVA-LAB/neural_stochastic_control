@@ -560,6 +560,7 @@ class Verifier:
 
         # Next function makes a step for one (x,u) pair and a whole list of (w_lb, w_ub) pairs
         state_mean, epsilon = self.env.vstep_noise_set(x, u, w_lb, w_ub)
+        V_old_lb, _ = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
 
         # Propagate the box [state_mean ± epsilon] for every pair (w_lb, w_ub) through IBP
         _, V_new_ub = V_state.ibp_fn(jax.lax.stop_gradient(V_params), state_mean, epsilon)
@@ -570,7 +571,7 @@ class Verifier:
         # V_old = jit(V_state.apply_fn)(V_state.params, x)
         softplus_lip = jnp.maximum(1e-12, (1-jnp.exp(-V_old_lb)))
 
-        return V_expected_ub - V_old_lb, softplus_lip
+        return V_expected_ub - V_old_lb.flatten(), softplus_lip
 
     @partial(jax.jit, static_argnums=(0,))
     def step_noise_batch(self, V_state, V_params, x, u, noise_key):
