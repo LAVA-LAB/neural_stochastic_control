@@ -136,7 +136,7 @@ class Learner:
             # Check which counterexamples are contained in which regions
             cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
             cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
-            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
+            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1]) * cx_bool_unsafe
         else:
             cx_samples = cx_weights = cx_bool_init = cx_bool_unsafe = cx_bool_decrease = False
 
@@ -157,6 +157,9 @@ class Learner:
             samples_decrease = samples_decrease + perturbation
 
         def loss_fun(certificate_params, policy_params):
+
+            # Small epsilon used in the initial/unsafe loss terms
+            EPS = 1e-3
 
             # Compute Lipschitz coefficients.
             lip_certificate, _ = lipschitz_coeff(certificate_params, self.weighted, self.cplip, self.linfty)
@@ -182,11 +185,11 @@ class Learner:
 
             # Loss in each initial state
             # losses_init = jnp.maximum(0, V_init + lip_certificate * mesh_loss - 1)
-            losses_init = jnp.maximum(0, V_init - 1 + 1e-2)
+            losses_init = jnp.maximum(0, V_init - 1 + EPS)
 
             # Loss in each unsafe state
             # losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + lip_certificate * mesh_loss)
-            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + 1e-2)
+            losses_unsafe = jnp.maximum(0, 1 / (1 - probability_bound) - V_unsafe + EPS)
 
             # Loss for expected decrease condition
             expDecr_keys = jax.random.split(noise_key, (self.num_samples_decrease, self.N_expectation))
@@ -205,12 +208,12 @@ class Learner:
 
                 # Add nonweighted initial state counterexample loss
                 # losses_init_cx = jnp.maximum(0, V_cx + lip_certificate * mesh_loss - 1)
-                losses_init_cx = jnp.maximum(0, V_cx - 1 + 1e-2)
+                losses_init_cx = jnp.maximum(0, V_cx - 1 + EPS)
                 loss_init = jnp.maximum(jnp.max(losses_init, axis=0), jnp.max(cx_bool_init * losses_init_cx, axis=0))
 
                 # Add nonweighted unsafe state counterexample loss
                 # losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + lip_certificate * mesh_loss)
-                losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + 1e-2)
+                losses_unsafe_cx = jnp.maximum(0, 1 / (1 - probability_bound) - V_cx + EPS)
                 loss_unsafe = (1-probability_bound) * jnp.maximum(jnp.max(losses_unsafe, axis=0), jnp.max(cx_bool_unsafe * losses_unsafe_cx, axis=0))
 
                 # Add nonweighted expected decrease loss
@@ -311,9 +314,9 @@ class Learner:
         print(f"- # target samples: {len(samples_in_batch['target'])}")
         print(f"- # decrease samples: {len(samples_in_batch['decrease'])}")
         print(f"- # counterexamples: {len(samples_in_batch['counterx'])}")
-        print(f"-- # cx init: {sum(samples_in_batch['cx_bool_init'])}")
-        print(f"-- # cx unsafe: {sum(samples_in_batch['cx_bool_unsafe'])}")
-        print(f"-- # cx decrease: {sum(samples_in_batch['cx_bool_decrease'])}")
+        print(f"-- # cx init: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_init']])}")
+        print(f"-- # cx unsafe: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_unsafe']])}")
+        print(f"-- # cx decrease: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_decrease']])}")
 
         # print(f"- Counterexample weights:")
         # print(f"-- # init: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_init']]}")

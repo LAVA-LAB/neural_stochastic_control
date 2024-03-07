@@ -83,6 +83,8 @@ parser.add_argument('--num_samples_per_epoch', type=int, default=90000,
                     help="Total number of samples to train over in each epoch")
 parser.add_argument('--num_counterexamples_in_buffer', type=int, default=30000,
                     help="Total number of samples to train over in each epoch")
+parser.add_argument('--debug_train_step', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, generate additional plots for the samples used in the last train step of an iteration")
 
 ### VERIFIER ARGUMENTS
 parser.add_argument('--verify_batch_size', type=int, default=10000,
@@ -268,12 +270,10 @@ verify.set_uniform_grid(env=env, mesh_size=args.mesh_verify_grid_init, Linfty=ar
 
 # Main Learner-Verifier loop
 key = jax.random.PRNGKey(args.seed)
-
 update_policy_after_iteration = 3
 
 for i in range(args.cegis_iterations):
     print(f'\n=== Iter. {i} (num. counterexamples: {len(counterx_buffer.data)}) ===\n')
-    iteration_init = time.time()
 
     if args.batches == -1:
         # Automatically determine number of batches
@@ -282,10 +282,9 @@ for i in range(args.cegis_iterations):
         # Use given number of batches
         num_batches = args.batches
 
-    epochs = args.epochs if i >= 1 else args.epochs
-    print(f'- Number of epochs: {epochs}; number of batches: {num_batches}')
+    print(f'- Number of epochs: {args.epochs}; number of batches: {num_batches}')
 
-    for j in tqdm(range(epochs), desc=f"Learner epochs (iteration {i})"):
+    for j in tqdm(range(args.epochs), desc=f"Learner epochs (iteration {i})"):
         for k in range(num_batches):
 
             # Main train step function: Defines one loss function for the provided batch of train data and minimizes it
@@ -308,7 +307,7 @@ for i in range(args.cegis_iterations):
                 if args.update_policy and i >= update_policy_after_iteration:
                     Policy_state = Policy_state.apply_gradients(grads=Policy_grads)
 
-    if i >= 1:
+    if i >= 1 and args.debug_train_step:
         learn.debug_train_step(args, samples_in_batch, start_datetime, iteration=i)
 
 
@@ -341,7 +340,7 @@ for i in range(args.cegis_iterations):
     refine_nr = 0
     while not verify_done:
         print(f'\nCheck martingale conditions...')
-        counterx, counterx_weights, counterx_hard, key, suggested_mesh = \
+        counterx, counterx_weights, counterx_numhard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
         if args.plot_intermediate:
@@ -354,7 +353,7 @@ for i in range(args.cegis_iterations):
 
         # If the suggested mesh is within the limit and also smaller than the current value,
         # and if there are no init or unsafe violations, then try it
-        if len(counterx_hard) != 0:
+        if counterx_numhard != 0:
             print(f'\n- Skip refinement, as there are still "hard" violations that cannot be fixed with refinement')
             verify_done = True
         elif np.min(suggested_mesh) < args.mesh_refine_min:

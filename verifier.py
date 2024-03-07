@@ -297,8 +297,8 @@ class Verifier:
 
 
 
-    def check_conditions(self, env, args, V_state, Policy_state, noise_key, hard_violation_weight = 10,
-                         debug_noise_integration = False, batch_size = 1_000_000):
+    def check_conditions(self, env, args, V_state, Policy_state, noise_key, hard_violation_weight=10,
+                         compare_with_lip=False, debug_noise_integration=False, batch_size=1_000_000):
         ''' If IBP is True, then interval bound propagation is used. '''
 
         lip_policy, _ = lipschitz_coeff(jax.lax.stop_gradient(Policy_state.params), args.weighted, args.cplip, args.linfty)
@@ -330,15 +330,22 @@ class Verifier:
                                                 epsilon = 0.5 * self.check_decrease[:, -1], out_dim = 1)
         check_idxs = (V_lb < 1 / (1 - args.probability_bound))
 
-        # Get the samples
+        # Get the samples where we need to check the expected decrease condition
         x_decrease = self.check_decrease[check_idxs]
         Vx_lb_decrease = V_lb[check_idxs]
 
         # Compute mesh size for every cell that is checked
         mesh_decrease = cell_width2mesh(x_decrease[:, -1], env.state_dim, args.linfty)
 
-        Vx_mean_decrease = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
-                                       x_decrease[:, :self.buffer.dim]).flatten()
+        # Get the V values at the vertices precisely
+        try:
+            Vx_mean_decrease = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                                 x_decrease[:, :self.buffer.dim]).flatten()
+        except:
+            print(f'- Warning: single forward pass with {len(self.check_init)} samples failed. Try again with batch size of {batch_size}.')
+            Vx_mean_decrease = self.batched_forward_pass(V_state.apply_fn, V_state.params,
+                                               x_decrease[:, :self.buffer.dim],
+                                               out_dim=1, batch_size=batch_size).flatten()
 
         # Determine actions for every point where we need to check the expected decrease condition
         actions = self.batched_forward_pass(Policy_state.apply_fn, Policy_state.params, x_decrease[:, :self.buffer.dim],
@@ -351,7 +358,6 @@ class Verifier:
         num_batches = np.ceil(len(x_decrease) / args.verify_batch_size).astype(int)
         starts = np.arange(num_batches) * args.verify_batch_size
         ends = np.minimum(starts + args.verify_batch_size, len(x_decrease))
-        assert len(x_decrease) == len(Vx_lb_decrease) == len(actions)
 
         for (i, j) in tqdm(zip(starts, ends), total=len(starts), desc='Compute E[V(x_{k+1})]'):
             x = x_decrease[i:j, :self.buffer.dim]
@@ -372,11 +378,8 @@ class Verifier:
             #           '; Min diff:', np.min(Vdiff[i:j] - Vdiff_approx))
 
         Vdiff_ibp = ExpV_xPlus - Vx_lb_decrease
-        Vdiff_lip = ExpV_xPlus - (Vx_mean_decrease - lip_certificate * mesh_decrease)
-        Vdiff_mean = ExpV_xPlus - Vx_mean_decrease
+        Vdiff_center = ExpV_xPlus - Vx_mean_decrease
         softplus_lip = (1 - np.exp(-Vx_lb_decrease))
-        assert Vdiff_ibp.shape == Vdiff_lip.shape
-        assert len(softplus_lip) == len(Vdiff_ibp) == len(Vdiff_lip)
 
         # Print for how many points the softplus Lipschitz coefficient improves upon the default of 1
         if args.improved_softplus_lip:
@@ -386,38 +389,39 @@ class Verifier:
 
         # Negative is violation
         V_ibp = Vdiff_ibp + mesh_decrease * Kprime * softplus_lip
-        V_lip = Vdiff_lip + mesh_decrease * Kprime * softplus_lip
-
         violation_idxs = V_ibp >= 0
         x_decrease_vio_IBP = x_decrease[violation_idxs]
-        x_decrease_vio_LIP = x_decrease[V_lip >= 0]
 
-        print(f'\n- [IBP] {len(x_decrease_vio_IBP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
+        print(f'\n- [IBP] {len(x_decrease_vio_IBP)} expected decrease violations (out of {len(x_decrease)} vertices)')
         if len(V_ibp) > 0:
             print(f"-- Degree of violation over all points: min={np.min(V_ibp):.8f}; "
                   f"mean={np.mean(V_ibp):.8f}; max={np.max(V_ibp):.8f}")
-
-        print(f'- [LIP] {len(x_decrease_vio_LIP)} expected decrease violations (out of {len(x_decrease)} checked vertices)')
-        if len(V_lip) > 0:
-            print(f"-- Degree of violation over all points: min={np.min(V_lip):.8f}; "
-                  f"mean={np.mean(V_lip):.8f}; max={np.max(V_lip):.8f}")
+            print("-- Value of E[V(x_{k+1})] - V(x_k): "
+                  f"min={np.min(Vdiff_center):.8f}; mean={np.mean(Vdiff_center):.8f}; max={np.max(Vdiff_center):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff_mean[violation_idxs]
-                                               / (Kprime * softplus_lip[violation_idxs] + lip_certificate))
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff_center[violation_idxs]
+                                            / (Kprime * softplus_lip[violation_idxs] + lip_certificate))
 
         if len(x_decrease_vio_IBP) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
-            print("-- Value of E[V(x_{k+1}) - V(x_k): " 
-                  f"min={np.min(Vdiff_mean):.8f}; mean={np.mean(Vdiff_mean):.8f}; max={np.max(Vdiff_mean):.8f}")
 
-        weights_expDecr = np.ones(len(Vdiff_mean[violation_idxs])) # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
-        print('- Expected decrease weights computed')
-
+        weights_expDecr = np.ones(len(Vdiff_center[violation_idxs]))  # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         # hard_violation_idxs = (Vdiff_mean[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
         # weights_expDecr[hard_violation_idxs] *= 10
         # print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
+
+        if compare_with_lip:
+            Vdiff_lip = ExpV_xPlus - (Vx_mean_decrease - lip_certificate * mesh_decrease)
+            assert Vdiff_ibp.shape == Vdiff_lip.shape
+            assert len(softplus_lip) == len(Vdiff_ibp) == len(Vdiff_lip)
+            V_lip = Vdiff_lip + mesh_decrease * Kprime * softplus_lip
+            x_decrease_vio_LIP = x_decrease[V_lip >= 0]
+            print(f'\n- [LIP] {len(x_decrease_vio_LIP)} exp. decr. violations (out of {len(x_decrease)} vertices)')
+            if len(V_lip) > 0:
+                print(f"-- Degree of violation over all points: min={np.min(V_lip):.8f}; "
+                      f"mean={np.mean(V_lip):.8f}; max={np.max(V_lip):.8f}")
 
         #################################
         print('\nCheck initial states condition...')
@@ -434,29 +438,16 @@ class Verifier:
                                                          0.5 * self.check_init[:, -1],
                                                          out_dim=1, batch_size=batch_size)
 
-        # Compare IBP with method based on Lipschitz coefficient
-        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
-                                       self.check_init[:, :self.buffer.dim]).flatten()
-        mesh_init = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
-
         # Set counterexamples (for initial states)
         V = (V_init_ub - 1)
         x_init_vio_IBP = self.check_init[V > 0]
-        print(f'\n- [IBP] {len(x_init_vio_IBP)} initial state violations (out of {len(self.check_init)} checked vertices)')
-        x_init_vio_lip = self.check_init[V_mean + mesh_init * lip_certificate > 1]
-        print(f'- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} checked vertices)')
+        print(f'\n- [IBP] {len(x_init_vio_IBP)} initial state violations (out of {len(self.check_init)} vertices)')
         if len(V) > 0:
             print(f"-- Stats. of [V_init_ub-1] (>0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
 
         # Compute suggested mesh
         suggested_mesh_init = 0.1 * cell_width2mesh(x_init_vio_IBP[:, -1], env.state_dim, args.linfty)
-
-        # V_counterx_init = V[V > 0]
-        # suggested_mesh_init = np.maximum(1.01 * args.mesh_refine_min,
-        #                                  counterx_init[:, -1] + (-V_counterx_init) / lip_certificate)
-        # if len(counterx_init) > 0:
-        #     print(f'-- Smallest suggested mesh based on initial state violations: {np.min(suggested_mesh_init):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         try:
@@ -468,19 +459,25 @@ class Verifier:
                                                x_init_vio_IBP[:, :self.buffer.dim],
                                                out_dim=1, batch_size=batch_size).flatten()
 
-        V_mean = (V_init - 1)
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
-        x_init_vioHard = self.env.init_space.contains(x_init_vio_IBP[V_mean > 0], dim=self.buffer.dim, delta=0)
+        x_init_vioNumHard = len(self.env.init_space.contains(x_init_vio_IBP[(V_init - 1) > 0], dim=self.buffer.dim, delta=0))
 
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
         # weights_init[V_mean > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
-        print(f'-- {len(x_init_vioHard)} hard violations (out of {len(out_of)})')
-        if len(x_init_vioHard) > 0:
-            print(f"-- Stats. of [V_init_mean-1] (>0 is violation): min={np.min(V_mean):.8f}; "
-                  f"mean={np.mean(V_mean):.8f}; max={np.max(V_mean):.8f}")
+        print(f'-- {len(x_init_vioNumHard)} hard violations (out of {len(out_of)})')
+
+        if compare_with_lip:
+            # Compare IBP with method based on Lipschitz coefficient
+            mesh_init = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
+
+            Vx_init_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                                 self.check_init[:, :self.buffer.dim]).flatten()
+
+            x_init_vio_lip = self.check_init[Vx_init_mean + mesh_init * lip_certificate > 1]
+            print(f'\n- [LIP] {len(x_init_vio_lip)} initial state violations (out of {len(self.check_init)} vertices)')
 
         #################################
         print('\nCheck unsafe states condition...')
@@ -498,30 +495,17 @@ class Verifier:
                                                            0.5 * self.check_unsafe[:, -1],
                                                            out_dim=1, batch_size=batch_size)
 
-        # Compare IBP with method based on Lipschitz coefficient
-        V_mean = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
-                                       self.check_unsafe[:, :self.buffer.dim]).flatten()
-        mesh_unsafe = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty).flatten()
-
-        V = (V_unsafe_lb - 1 / (1 - args.probability_bound))
-
         # Set counterexamples (for unsafe states)
+        V = (V_unsafe_lb - 1 / (1 - args.probability_bound))
         x_unsafe_vio_IBP = self.check_unsafe[V < 0]
-        print(f'\n- [IBP] {len(x_unsafe_vio_IBP)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
-        x_unsafe_vio_lip = self.check_unsafe[V - mesh_unsafe * lip_certificate < 1 / (1 - args.probability_bound)]
-        print(f'- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} checked vertices)')
+        print(f'\n- [IBP] {len(x_unsafe_vio_IBP)} unsafe state violations (out of {len(self.check_unsafe)} vertices)')
+
         if len(V) > 0:
             print(f"-- Stats. of [V_unsafe_lb-1/(1-p)] (<0 is violation): min={np.min(V):.8f}; "
                   f"mean={np.mean(V):.8f}; max={np.max(V):.8f}")
 
         # Compute suggested mesh
         suggested_mesh_unsafe = 0.1 * cell_width2mesh(x_unsafe_vio_IBP[:, -1], env.state_dim, args.linfty)
-
-        # V_counterx_unsafe = V[V < 0]
-        # suggested_mesh_unsafe = np.maximum(1.01 * args.mesh_refine_min,
-        #                                    counterx_unsafe[:, -1] + V_counterx_unsafe / lip_certificate)
-        # if len(counterx_unsafe) > 0:
-        #     print(f'-- Smallest suggested mesh based on unsafe state violations: {np.min(suggested_mesh_unsafe):.5f}')
 
         # For the counterexamples, check which are actually "hard" violations (which cannot be fixed with smaller tau)
         try:
@@ -533,9 +517,9 @@ class Verifier:
                                                  x_unsafe_vio_IBP[:, :self.buffer.dim],
                                                  out_dim=1, batch_size=batch_size).flatten()
 
-        V_mean = (V_unsafe - 1 / (1 - args.probability_bound)).flatten()
         # Only keep the hard counterexamples that are really contained in the initial region (not adjacent to it)
-        x_unsafe_vioHard = self.env.unsafe_space.contains(x_unsafe_vio_IBP[V_mean < 0], dim=self.buffer.dim, delta=0)
+        x_unsafe_vioHard = self.env.unsafe_space.contains(x_unsafe_vio_IBP[(V_unsafe - 1 /
+                                                    (1 - args.probability_bound)) < 0], dim=self.buffer.dim, delta=0)
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
@@ -543,15 +527,23 @@ class Verifier:
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {len(x_unsafe_vioHard)} hard violations (out of {len(out_of)})')
-        if len(x_unsafe_vioHard) > 0:
-            print(f"-- Stats. of [V_unsafe_mean-1/(1-p)] (<0 is violation): min={np.min(V_mean):.8f}; "
-                  f"mean={np.mean(V_mean):.8f}; max={np.max(V_mean):.8f}")
+
+        if compare_with_lip:
+            # Compare IBP with method based on Lipschitz coefficient
+            mesh_unsafe = cell_width2mesh(self.check_unsafe[:, -1], env.state_dim, args.linfty).flatten()
+
+            Vx_init_unsafe = jit(V_state.apply_fn)(jax.lax.stop_gradient(V_state.params),
+                                           self.check_unsafe[:, :self.buffer.dim]).flatten()
+
+            x_unsafe_vio_lip = self.check_unsafe[Vx_init_unsafe - mesh_unsafe * lip_certificate
+                                                 < 1 / (1 - args.probability_bound)]
+            print(f'- [LIP] {len(x_unsafe_vio_lip)} unsafe state violations (out of {len(self.check_unsafe)} vertices)')
 
         #################################
         print('\nPut together verification results...')
 
         counterx = np.vstack([x_decrease_vio_IBP, x_init_vio_IBP, x_unsafe_vio_IBP])
-        counterx_hard = np.vstack([x_init_vioHard, x_unsafe_vioHard])
+        counterx_numhard = x_init_vioNumHard + x_unsafe_vioHard
 
         counterx_weights = np.concatenate([
             weights_expDecr,
@@ -565,7 +557,7 @@ class Verifier:
             suggested_mesh_unsafe
         ])
 
-        return counterx, counterx_weights, counterx_hard, noise_key, suggested_mesh
+        return counterx, counterx_weights, counterx_numhard, noise_key, suggested_mesh
 
     @partial(jax.jit, static_argnums=(0,))
     def expectation_Vx_plus(self, V_state, V_params, x, u, w_lb, w_ub, prob_ub):
