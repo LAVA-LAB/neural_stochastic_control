@@ -157,7 +157,7 @@ class Learner:
         def loss_fun(certificate_params, policy_params):
 
             # Small epsilon used in the initial/unsafe loss terms
-            EPS = 1e-3
+            EPS = 1e-2
             softplus_lip_min = 1
 
             # Compute Lipschitz coefficients.
