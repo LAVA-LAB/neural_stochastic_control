@@ -376,6 +376,7 @@ class Verifier:
 
         Vdiff_ibp = ExpV_xPlus - Vx_lb_decrease
         Vdiff_lip = ExpV_xPlus - (Vx_mean_decrease - lip_certificate * mesh_decrease)
+        Vdiff_mean = ExpV_xPlus - Vx_mean_decrease
         softplus_lip = (1 - np.exp(-Vx_lb_decrease))
         assert Vdiff_ibp.shape == Vdiff_lip.shape
         assert len(softplus_lip) == len(Vdiff_ibp) == len(Vdiff_lip)
@@ -405,12 +406,15 @@ class Verifier:
                   f"mean={np.mean(V_lip):.8f}; max={np.max(V_lip):.8f}")
 
         # Computed the suggested mesh for the expected decrease condition
-        suggested_mesh_expDecr = np.maximum(0, 0.95 * -(ExpV_xPlus[violation_idxs]-Vx_mean_decrease[violation_idxs])
+        suggested_mesh_expDecr = np.maximum(0, 0.95 * -Vdiff_mean[violation_idxs]
                                                / (Kprime * softplus_lip[violation_idxs] + lip_certificate))
+
         if len(x_decrease_vio_IBP) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
+            print("-- Value of E[V(x_{k+1}) - V(x_k) over all points where exp. decrease is checked:\n" 
+                  f"min={np.min(Vdiff_mean):.8f}; mean={np.mean(Vdiff_mean):.8f}; max={np.max(Vdiff_mean):.8f}")
 
-        weights_expDecr = np.ones(len(x_decrease_vio_IBP)) #np.maximum(0, Vdiff_ibp + mesh_decrease[violation_idxs] * Kprime * softplus_lip[violation_idxs])
+        weights_expDecr = np.maximum(0, Vdiff_ibp + mesh_decrease[violation_idxs] * Kprime * softplus_lip[violation_idxs])
         print('- Expected decrease weights computed')
 
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
