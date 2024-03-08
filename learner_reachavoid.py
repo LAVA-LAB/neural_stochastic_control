@@ -54,7 +54,6 @@ class Learner:
         print(f'- Num. counterexamples per batch: {self.batch_size_counterx}\n')
 
         self.improved_expdecrease_loss = args.improved_expdecrease_loss
-        self.perturb_samples = args.perturb_train_samples
 
         # Lipschitz factor
         self.lambda_lipschitz = args.loss_lipschitz_lambda

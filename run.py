@@ -109,8 +109,6 @@ parser.add_argument('--plot_intermediate', action=argparse.BooleanOptionalAction
                     help="If True, plots are generated throughout the CEGIS iterations (increases runtime)")
 
 ### ARGUMENTS TO EXPERIMENT WITH ###
-parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAction, default=False,
-                    help="If True, samples are (slightly) perturbed by the learner")
 parser.add_argument('--perturb_counterexamples', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, counterexamples are perturbed before being added to the counterexample buffer")
 parser.add_argument('--improved_expdecrease_loss', action=argparse.BooleanOptionalAction, default=False,
@@ -118,7 +116,6 @@ parser.add_argument('--improved_expdecrease_loss', action=argparse.BooleanOption
 parser.add_argument('--new_cx_buffer', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, use a counterexample with three weight columns "
                          "(for init, unsafe, and decrease counterexamples, respectively)")
-
 
 ## Lipschitz coefficient arguments
 parser.add_argument('--linfty', action=argparse.BooleanOptionalAction, default=False,
@@ -148,6 +145,8 @@ elif args.model == 'Anaesthesia':
     envfun = models.AnaesthesiaEnv
 elif args.model == 'Dubins':
     envfun = models.DubinsEnv
+elif args.model == 'PackageDelivery':
+    envfun = models.PackageDelivery
 else:
     assert False
 
