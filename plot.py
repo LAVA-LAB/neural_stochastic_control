@@ -8,6 +8,41 @@ from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
 
+def plot_boxes(env, ax):
+    ''' Plot the target, initial, and unsafe state sets '''
+
+    # Plot target set
+    if type(env.target_space) == list:
+        for set in env.target_space:
+            width, height = set.high - set.low
+            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='green'))
+
+    else:
+        width, height = env.target_space.high - env.target_space.low
+        ax.add_patch(Rectangle(env.target_space.low, width, height, fill=False, edgecolor='green'))
+
+    # Plot unsafe set
+    if type(env.unsafe_space) == list:
+        for set in env.unsafe_space:
+            width, height = set.high - set.low
+            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='red'))
+
+    else:
+        width, height = env.unsafe_space.high - env.unsafe_space.low
+        ax.add_patch(Rectangle(env.unsafe_space.low, width, height, fill=False, edgecolor='red'))
+
+    # Plot initial set
+    if type(env.init_space) == list:
+        for set in env.init_space:
+            width, height = set.high - set.low
+            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='blue'))
+
+    else:
+        width, height = env.init_space.high - env.init_space.low
+        ax.add_patch(Rectangle(env.init_space.low, width, height, fill=False, edgecolor='blue'))
+
+    return
+
 def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=False, filename=False):
 
     dim = env.plot_dim
@@ -34,12 +69,6 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
             # Make step in environment
             traces[j+1,i], key = env.step_noise_key(state, key, action)
 
-        # print('Trace', i)
-        # print(traces[:,i])
-        # print('With actions')
-        # print(actions[:,i])
-        # print('\n====\n')
-
     # Plot traces
     if dim == 2:
         ax = plt.figure().add_subplot()
@@ -49,13 +78,16 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
             plt.plot(traces[0,i,0], traces[0,i,1], 'ro')
             plt.plot(traces[-1, i, 0], traces[-1, i, 1], 'bo')
 
-            # Goal x-y limits
+        # Plot relevant state sets
+        plot_boxes(env, ax)
+
+        # Goal x-y limits
         low = env.state_space.low
         high = env.state_space.high
         ax.set_xlim(low[0], high[0])
         ax.set_ylim(low[1], high[1])
 
-        ax.set_title("Simulated traces under given controller", fontsize=10)
+        ax.set_title(f"Simulated traces ({filename})", fontsize=10)
         if hasattr(env, 'variable_names'):
             plt.xlabel(env.variable_names[0])
             plt.ylabel(env.variable_names[1])
@@ -75,7 +107,7 @@ def plot_traces(env, Policy_state, key, num_traces=10, len_traces=100, folder=Fa
         ax.set_ylim(low[1], high[1])
         ax.set_zlim(low[2], high[2])
 
-        ax.set_title("Simulated traces under given controller", fontsize=10)
+        ax.set_title(f"Simulated traces ({filename})", fontsize=10)
         if hasattr(env, 'variable_names'):
             ax.set_xlabel(env.variable_names[0])
             ax.set_ylabel(env.variable_names[1])
@@ -100,16 +132,6 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
 
     fig, ax = plt.subplots()
 
-    # Plot stabilize set
-    if type(env.target_space) == list:
-        for set in env.target_space:
-            width, height = set.high - set.low
-            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='red'))
-
-    else:
-        width, height = env.target_space.high - env.target_space.low
-        ax.add_patch(Rectangle(env.target_space.low, width, height, fill=False, edgecolor='red'))
-
     # Plot data points in buffer that are not in the stabilizing set
     if train_data is not None:
         x = train_data[:,0]
@@ -121,13 +143,16 @@ def plot_dataset(env, train_data=None, additional_data=None, folder=False, filen
         y = additional_data[:, 1]
         plt.scatter(x,y, color='blue', s=0.1)
 
+    # Plot relevant state sets
+    plot_boxes(env, ax)
+
     # XY limits
     low = env.state_space.low
     high = env.state_space.high
     ax.set_xlim(low[0], high[0])
     ax.set_ylim(low[1], high[1])
 
-    ax.set_title("Samples (black) and counterexamples (blue)", fontsize=10)
+    ax.set_title(f"Sample plot ({filename})", fontsize=10)
     if hasattr(env, 'variable_names'):
         plt.xlabel(env.variable_names[0])
         plt.ylabel(env.variable_names[1])
@@ -163,15 +188,17 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
     scaling = 1
     vectors = (next_obs - grid) * scaling
 
-    print('Vectors shape:', vectors.shape)
-
     # Plot vectors
     if dim == 2:
         print('- 2D Quiver...')
         ax = plt.figure().add_subplot()
         ax.quiver(grid[:, 0], grid[:, 1], vectors[:, 0], vectors[:, 1])
 
-        ax.set_title("Vector field of dynamics under current policy", fontsize=10)
+        # Plot relevant state sets
+        plot_boxes(env, ax)
+
+        ax.set_title(f"Closed-loop dynamics ({filename})", fontsize=10)
+
         if hasattr(env, 'variable_names'):
             plt.xlabel(env.variable_names[0])
             plt.ylabel(env.variable_names[1])
@@ -182,7 +209,7 @@ def vector_plot(env, Pi_state, vectors_per_dim = 10, seed = 1, folder=False, fil
         ax.quiver(grid[:, 0], grid[:, 1], grid[:, 2], vectors[:, 0], vectors[:, 1], vectors[:, 2],
                   length=0.5, normalize=False, arrow_length_ratio=0.5)
 
-        ax.set_title("Vector field of dynamics under current policy", fontsize=10)
+        ax.set_title(f"Closed-loop dynamics ({filename})", fontsize=10)
 
         if hasattr(env, 'variable_names'):
             ax.set_xlabel(env.variable_names[0])
@@ -223,7 +250,10 @@ def plot_certificate_2D(env, cert_state, folder=False, filename=False):
     data = data.pivot(index='y', columns='x', values='z')[::-1]
     sns.heatmap(data)
 
-    ax.set_title(f"Trained Lyapunov function ({filename})", fontsize=10)
+    # Plot relevant state sets
+    plot_boxes(env, ax)
+
+    ax.set_title(f"Learned Martingale ({filename})", fontsize=10)
 
     if hasattr(env, 'variable_names'):
         plt.xlabel(env.variable_names[0])

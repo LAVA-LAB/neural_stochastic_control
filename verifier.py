@@ -409,7 +409,7 @@ class Verifier:
         if len(x_decrease_vio_IBP) > 0:
             print(f'- Smallest suggested mesh based on exp. decrease violations: {np.min(suggested_mesh_expDecr):.8f}')
 
-        weights_expDecr = np.ones(len(Vdiff_center[violation_idxs]))  # np.maximum(0, Vdiff_mean[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate))
+        weights_expDecr = np.maximum(0, Vdiff_center[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate)) # np.ones(len(Vdiff_center[violation_idxs]))  #
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         hard_violation_idxs = (Vdiff_center[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
         weights_expDecr[hard_violation_idxs] *= 10
