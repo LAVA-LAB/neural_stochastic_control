@@ -78,12 +78,12 @@ class LinearEnv(gym.Env):
         self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
         self.init_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-0.25, -0.1]), high=np.array([-0.20, 0.1]), dtype=np.float32),
+            RectangularSet(low=np.array([-1.4, -0.1]), high=np.array([-1.3, 0.1]), dtype=np.float32),
             RectangularSet(low=np.array([0.20, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
         ])
 
         self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
+            RectangularSet(low=np.array([-0.9, -0.2]), high=np.array([-0.7, 0.2]), dtype=np.float32),
             RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
         ])
 
