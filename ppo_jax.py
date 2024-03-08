@@ -564,7 +564,7 @@ def update_ppo(
 
 
 
-def PPO(environment_function,
+def PPO(env,
         args,
         max_policy_lipschitz,
         neurons_per_layer=[64,64],
@@ -578,9 +578,6 @@ def PPO(environment_function,
     rng = jax.random.PRNGKey(args.seed)
     rng, env_rng, actor_key, critic_key, action_key, permutation_key = jax.random.split(rng, 6)
     env_key = jax.random.split(env_rng, args.num_envs)
-
-    # Create gym environment
-    env = environment_function()
 
     obs, env_key, steps_since_reset = env.vreset(env_key)
 

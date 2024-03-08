@@ -24,7 +24,7 @@ class LinearEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, layout=0, g=10.0):
+    def __init__(self, args, render_mode: Optional[str] = None, g=10.0):
 
         self.render_mode = render_mode
 
@@ -74,7 +74,7 @@ class LinearEnv(gym.Env):
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
         self.noise_dim = len(high)
 
-        if layout == 0:
+        if args.layout == 0:
             print('- Use layout with unsafe regions in corners of state space')
 
             # Set target set

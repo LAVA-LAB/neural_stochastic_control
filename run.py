@@ -27,6 +27,8 @@ start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 parser = argparse.ArgumentParser(prefix_chars='--')
 parser.add_argument('--model', type=str, default="LinearEnv",
                     help="Gymnasium environment ID")
+parser.add_argument('--layout', type=int, default=0,
+                    help="Select a particular layout for the benchmark model (if this option exists)")
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 
@@ -95,8 +97,6 @@ parser.add_argument('--counterx_refresh_fraction', type=float, default=0.50,
                     help="Fraction of the counter example buffer to renew after each iteration")
 parser.add_argument('--counterx_fraction', type=float, default=0.25,
                     help="Fraction of counter examples, compared to the total train data set.")
-parser.add_argument('--perturb_counterexamples', action=argparse.BooleanOptionalAction, default=False,
-                    help="If True, counterexamples are perturbed before being added to the counterexample buffer")
 parser.add_argument('--local_refinement', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, local grid refinements are performed")
 
@@ -111,8 +111,8 @@ parser.add_argument('--plot_intermediate', action=argparse.BooleanOptionalAction
 ### ARGUMENTS TO EXPERIMENT WITH ###
 parser.add_argument('--perturb_train_samples', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, samples are (slightly) perturbed by the learner")
-parser.add_argument('--expdecrease_loss_type', type=int, default=0,
-                    help="Loss function used for the expected decrease condition by the learner")
+parser.add_argument('--perturb_counterexamples', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, counterexamples are perturbed before being added to the counterexample buffer")
 parser.add_argument('--improved_expdecrease_loss', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, use the differentiable version of the new expected decrease condition in the learner")
 parser.add_argument('--new_cx_buffer', action=argparse.BooleanOptionalAction, default=False,
@@ -191,7 +191,7 @@ if args.ppo_load_file == '':
                        minibatch_size=minibatch_size,
                        num_iterations=num_iterations)
 
-    ppo_state = PPO(envfun,
+    ppo_state = PPO(envfun(args),
                     ppo_args,
                     max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                     neurons_per_layer=pi_neurons_per_layer,
@@ -223,7 +223,7 @@ raw_restored = orbax_checkpointer.restore(checkpoint_path)
 ppo_state = raw_restored['model']
 
 # Create gym environment (jax/flax version)
-env = envfun()
+env = envfun(args)
 
 V_neurons_per_layer = V_neurons_per_layer + [1]
 V_act_funcs = V_act_funcs + [nn.softplus]

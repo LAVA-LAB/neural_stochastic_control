@@ -27,7 +27,7 @@ class PendulumEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, g=10.0):
+    def __init__(self, args, render_mode: Optional[str] = None, g=10.0):
 
         self.render_mode = render_mode
 

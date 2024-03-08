@@ -53,7 +53,6 @@ class Learner:
         print(f'-- Expected decrease: {self.num_samples_decrease}')
         print(f'- Num. counterexamples per batch: {self.batch_size_counterx}\n')
 
-        self.expected_decrease_loss = args.expdecrease_loss_type
         self.improved_expdecrease_loss = args.improved_expdecrease_loss
         self.perturb_samples = args.perturb_train_samples
 
