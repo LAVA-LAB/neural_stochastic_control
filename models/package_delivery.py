@@ -47,7 +47,7 @@ class PackageDelivery(gym.Env):
             [1, 0],
             [0, 1]
         ])
-        self.W = 0.1 * np.diag([np.sqrt(2), np.sqrt(2)])
+        self.W = 0.001 * np.diag([np.sqrt(2), np.sqrt(2)])
 
         # Lipschitz coefficient of linear dynamical system is maximum sum of columns in A and B matrix.
         self.lipschitz_f_l1 = float(np.max(np.sum(np.hstack((self.A, self.B)), axis=0)))
