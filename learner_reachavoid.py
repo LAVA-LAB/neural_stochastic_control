@@ -134,9 +134,9 @@ class Learner:
             if self.new_cx_buffer:
                 cx_samples = cx[:, :-3]
 
-                cx_weights_init = cx[:, -3]
-                cx_weights_unsafe = cx[:, -2]
-                cx_weights_decrease = cx[:, -1]
+                cx_weights_decrease = cx[:, -3]
+                cx_weights_init = cx[:, -2]
+                cx_weights_unsafe = cx[:, -1]
 
                 cx_bool_init = cx_weights_init > 0
                 cx_bool_unsafe = cx_weights_unsafe > 0
