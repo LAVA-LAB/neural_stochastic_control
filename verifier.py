@@ -3,6 +3,7 @@ import jax.numpy as jnp
 from functools import partial
 from jax import jit
 import numpy as np
+from scipy.linalg import block_diag
 import time
 from jax_utils import lipschitz_coeff, create_batches
 import os
@@ -545,11 +546,19 @@ class Verifier:
         counterx = np.vstack([x_decrease_vio_IBP, x_init_vio_IBP, x_unsafe_vio_IBP])
         counterx_numhard = x_init_vioNumHard + x_unsafe_vioHard
 
-        counterx_weights = np.concatenate([
-            weights_expDecr,
-            weights_init,
-            weights_unsafe
-        ])
+        if args.new_cx_buffer:
+            counterx_weights = block_diag(*[
+                weights_expDecr.reshape(-1,1),
+                weights_init.reshape(-1,1),
+                weights_unsafe.reshape(-1,1)
+            ])
+
+        else:
+            counterx_weights = np.concatenate([
+                weights_expDecr,
+                weights_init,
+                weights_unsafe
+            ])
 
         suggested_mesh = np.concatenate([
             suggested_mesh_expDecr,

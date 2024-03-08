@@ -115,6 +115,9 @@ parser.add_argument('--expdecrease_loss_type', type=int, default=0,
                     help="Loss function used for the expected decrease condition by the learner")
 parser.add_argument('--improved_expdecrease_loss', action=argparse.BooleanOptionalAction, default=False,
                     help="If True, use the differentiable version of the new expected decrease condition in the learner")
+parser.add_argument('--new_cx_buffer', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, use a counterexample with three weight columns "
+                         "(for init, unsafe, and decrease counterexamples, respectively)")
 
 
 ## Lipschitz coefficient arguments
@@ -127,7 +130,8 @@ parser.add_argument('--cplip', action=argparse.BooleanOptionalAction, default=Tr
 parser.add_argument('--split_lip', action=argparse.BooleanOptionalAction, default=True,
                     help="If True, use L_f split over the system state space and control action space")
 parser.add_argument('--improved_softplus_lip', action=argparse.BooleanOptionalAction, default=True,
-                    help="If True, use improved (local) Lipschitz constants for softplus in V (if False, global constant of 1 is used)")
+                    help="If True, use improved (local) Lipschitz constants for softplus in V (if False, "
+                         "global constant of 1 is used)")
 
 args = parser.parse_args()
 args.cwd = os.getcwd()
@@ -263,7 +267,7 @@ verify.partition_noise(env, args)
 print(f'- Create initial counterexample buffer')
 counterx_buffer = Buffer(dim = env.state_space.dimension,
                          max_size = args.num_counterexamples_in_buffer,
-                         extra_dims = 1)
+                         extra_dims = 3 if args.new_cx_buffer else 1)
 
 # Set uniform verify grid, which covers the complete state space with the specified `tau` (mesh size)
 print(f'- Create initial verification grid')
@@ -346,9 +350,9 @@ for i in range(args.cegis_iterations):
         counterx, counterx_weights, counterx_numhard, key, suggested_mesh = \
             verify.check_conditions(env, args, V_state, Policy_state, key)
 
-        if args.plot_intermediate:
-            filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
-            plot_dataset(env, verify.buffer.data, folder=args.cwd, filename=filename)
+        # if args.plot_intermediate:
+        #     filename = f"plots/{start_datetime}_verify_samples_iteration={i}_refine_nr={refine_nr}"
+        #     plot_dataset(env, verify.buffer.data, folder=args.cwd, filename=filename)
 
         if len(counterx) == 0:
             print('\n=== Successfully learned martingale! ===')
@@ -386,8 +390,11 @@ for i in range(args.cegis_iterations):
         break
 
     # Append weights to the counterexamples
-    weight_column = counterx_weights.reshape(-1,1)
-    counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
+    if args.new_cx_buffer:
+        counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], counterx_weights))
+    else:
+        weight_column = counterx_weights.reshape(-1,1)
+        counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
 
     # Add counterexamples to the counterexample buffer
     print(f'\nRefresh {(args.counterx_refresh_fraction*100):.1f}% of the counterexample buffer')

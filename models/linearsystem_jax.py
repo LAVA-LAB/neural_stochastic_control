@@ -24,7 +24,7 @@ class LinearEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, g=10.0):
+    def __init__(self, render_mode: Optional[str] = None, layout=0, g=10.0):
 
         self.render_mode = render_mode
 
@@ -74,18 +74,35 @@ class LinearEnv(gym.Env):
         self.noise_space = spaces.Box(low=-high, high=high, dtype=np.float32)
         self.noise_dim = len(high)
 
-        # Set target set
-        self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
+        if layout == 0:
 
-        self.init_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-1.4, -0.1]), high=np.array([-1.3, 0.1]), dtype=np.float32),
-            RectangularSet(low=np.array([0.20, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
-        ])
+            # Set target set
+            self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
 
-        self.unsafe_space = MultiRectangularSet([
-            RectangularSet(low=np.array([-0.9, -0.2]), high=np.array([-0.7, 0.2]), dtype=np.float32),
-            RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
-        ])
+            self.init_space = MultiRectangularSet([
+                RectangularSet(low=np.array([-0.25, -0.1]), high=np.array([-0.20, 0.1]), dtype=np.float32),
+                RectangularSet(low=np.array([0.20, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
+            ])
+
+            self.unsafe_space = MultiRectangularSet([
+                RectangularSet(low=np.array([-1.5, -1.5]), high=np.array([-1.4, 0]), dtype=np.float32),
+                RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
+            ])
+
+        else:
+
+            # Set target set
+            self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
+
+            self.init_space = MultiRectangularSet([
+                RectangularSet(low=np.array([-1.4, -0.1]), high=np.array([-1.3, 0.1]), dtype=np.float32),
+                RectangularSet(low=np.array([0.20, -0.1]), high=np.array([0.25, 0.1]), dtype=np.float32)
+            ])
+
+            self.unsafe_space = MultiRectangularSet([
+                RectangularSet(low=np.array([-0.9, -0.2]), high=np.array([-0.7, 0.2]), dtype=np.float32),
+                RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
+            ])
 
         self.num_steps_until_reset = 1000
 

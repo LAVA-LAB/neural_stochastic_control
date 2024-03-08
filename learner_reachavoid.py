@@ -15,6 +15,8 @@ class Learner:
 
     def __init__(self, env, args):
 
+        self.new_cx_buffer = args.new_cx_buffer
+
         # Set batch sizes
         self.batch_size_total = int(args.batch_size)
         self.batch_size_base = int(args.batch_size * (1-args.counterx_fraction))
@@ -128,13 +130,26 @@ class Learner:
         # Sample from the full list of counterexamples
         if len(counterexamples) > 0:
             cx = jax.random.choice(cx_key, counterexamples, shape=(self.batch_size_counterx,), replace=False)
-            cx_samples = cx[:, :-1]
-            cx_weights = cx[:, -1]
 
-            # Check which counterexamples are contained in which regions
-            cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
-            cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
-            cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
+            if self.new_cx_buffer:
+                cx_samples = cx[:, :-3]
+
+                cx_weights_init = cx[:, -3]
+                cx_weights_unsafe = cx[:, -2]
+                cx_weights_decrease = cx[:, -1]
+
+                cx_bool_init = cx_weights_init > 0
+                cx_bool_unsafe = cx_weights_unsafe > 0
+                cx_bool_decrease = cx_weights_decrease > 0
+
+            else:
+                cx_samples = cx[:, :-1]
+                cx_weights_init = cx_weights_unsafe = cx_weights_decrease = cx[:, -1]
+
+                # Check which counterexamples are contained in which regions
+                cx_bool_init = self.env.init_space.jax_contains(cx[:, :-1])
+                cx_bool_unsafe = self.env.unsafe_space.jax_contains(cx[:, :-1])
+                cx_bool_decrease = self.env.target_space.jax_not_contains(cx[:, :-1])
         else:
             cx_samples = cx_weights = cx_bool_init = cx_bool_unsafe = cx_bool_decrease = False
 
@@ -198,7 +213,7 @@ class Learner:
 
             if self.improved_expdecrease_loss:
                 V_decrease_lb, _ = V_state.ibp_fn(certificate_params, samples_decrease, mesh_loss)
-                softplus_lip = jnp.maximum(softplus_lip_min, (1 - jnp.exp(-V_decrease_lb.flatten())))
+                softplus_lip_cx = jnp.maximum(softplus_lip_min, (1 - jnp.exp(-V_decrease_lb.flatten())))
                 Vdiffs = jnp.maximum(0, V_expected - V_decrease_lb.flatten()
                                         + mesh_loss * K * softplus_lip_cx)
             else:
@@ -248,20 +263,17 @@ class Learner:
                 ### WEIGHTED LOSSES ###
 
                 # Add weighted initial state counterexample loss
-                loss_init_counterx = jnp.sum(cx_weights * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
-                            jnp.sum(cx_weights * cx_bool_init, axis=0) + 1e-6)
-
-                assert cx_weights.shape[0] == cx_bool_init.shape[0]
-                assert (cx_weights*cx_bool_init).shape[0] == cx_bool_init.shape[0]
+                loss_init_counterx = jnp.sum(cx_weights_init * cx_bool_init * jnp.ravel(losses_init_cx), axis=0) / (
+                            jnp.sum(cx_weights_init * cx_bool_init, axis=0) + 1e-6)
 
                 # Add weighted unsafe state counterexample loss
-                loss_unsafe_counterx = jnp.sum(cx_weights * cx_bool_unsafe * jnp.ravel(losses_unsafe_cx), axis=0) / (
-                            jnp.sum(cx_weights * cx_bool_unsafe, axis=0) + 1e-6)
+                loss_unsafe_counterx = jnp.sum(cx_weights_unsafe * cx_bool_unsafe * jnp.ravel(losses_unsafe_cx), axis=0) / (
+                            jnp.sum(cx_weights_unsafe * cx_bool_unsafe, axis=0) + 1e-6)
 
                 # Add weighted expected decrease counterexample loss
                 loss_expdecr_counterx = expDecr_multiplier * jnp.sum(
-                    cx_weights * cx_bool_decrease * jnp.ravel(Vdiffs_cx), axis=0) / (
-                        jnp.sum(cx_weights * cx_bool_decrease, axis=0) + 1e-6)
+                    cx_weights_decrease * cx_bool_decrease * jnp.ravel(Vdiffs_cx), axis=0) / (
+                        jnp.sum(cx_weights_decrease * cx_bool_decrease, axis=0) + 1e-6)
 
             else:
                 loss_init = jnp.max(losses_init, axis=0)
@@ -316,7 +328,6 @@ class Learner:
             'decrease': samples_decrease,
             'decrease_not_in_target': samples_decrease_bool_not_target,
             'counterx': cx_samples,
-            'counterx_weights': cx_weights,
             'cx_bool_init': cx_bool_init,
             'cx_bool_unsafe': cx_bool_unsafe,
             'cx_bool_decrease': cx_bool_decrease
@@ -337,11 +348,6 @@ class Learner:
         print(f"-- # cx init: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_init']])}")
         print(f"-- # cx unsafe: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_unsafe']])}")
         print(f"-- # cx decrease: {len(samples_in_batch['counterx'][samples_in_batch['cx_bool_decrease']])}")
-
-        # print(f"- Counterexample weights:")
-        # print(f"-- # init: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_init']]}")
-        # print(f"-- # unsafe: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_unsafe']]}")
-        # print(f"-- # decrease: {samples_in_batch['counterx_weights'][samples_in_batch['cx_bool_decrease']]}")
 
         # Plot samples used in batch
         for s in ['init', 'unsafe', 'target', 'decrease', 'counterx']:
