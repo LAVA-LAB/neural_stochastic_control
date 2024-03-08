@@ -166,7 +166,7 @@ class PackageDelivery(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        unsafe_penalty = jnp.sum(1000 * self.unsafe_space.jax_contains(state))
+        unsafe_penalty = jnp.sum(1000 * jnp.array([self.unsafe_space.jax_contains(state)]))
 
         target_mean = (self.target_space.high + self.target_space.low) / 2
         costs = -1 + (state[0]-target_mean[0]) ** 2 + (state[1] - target_mean[1]) ** 2 + unsafe_penalty
