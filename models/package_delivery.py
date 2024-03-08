@@ -164,7 +164,8 @@ class PackageDelivery(gym.Env):
         # Sample noise value
         noise = self.sample_noise(subkey, size=(self.noise_dim,))
 
-        costs = -1 + state[0] ** 2 + state[1] ** 2
+        target_mean = (self.target_space.high + self.target_space.low) / 2
+        costs = -1 + (state[0]-target_mean[0]) ** 2 + (state[1] - target_mean[1]) ** 2
 
         # Propagate dynamics
         state = self.step_base(state, u, noise)
