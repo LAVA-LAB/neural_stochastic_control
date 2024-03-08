@@ -7,12 +7,13 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
 from pathlib import Path
 from buffer import define_grid
+from commons import MultiRectangularSet
 
 def plot_boxes(env, ax):
     ''' Plot the target, initial, and unsafe state sets '''
 
     # Plot target set
-    if type(env.target_space) == list:
+    if isinstance(env.target_space, MultiRectangularSet):
         for set in env.target_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='green'))
@@ -22,7 +23,7 @@ def plot_boxes(env, ax):
         ax.add_patch(Rectangle(env.target_space.low, width, height, fill=False, edgecolor='green'))
 
     # Plot unsafe set
-    if type(env.unsafe_space) == list:
+    if isinstance(env.unsafe_space, MultiRectangularSet):
         for set in env.unsafe_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='red'))
@@ -32,7 +33,7 @@ def plot_boxes(env, ax):
         ax.add_patch(Rectangle(env.unsafe_space.low, width, height, fill=False, edgecolor='red'))
 
     # Plot initial set
-    if type(env.init_space) == list:
+    if isinstance(env.init_space, MultiRectangularSet):
         for set in env.init_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='blue'))
