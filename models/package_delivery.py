@@ -79,7 +79,7 @@ class PackageDelivery(gym.Env):
         self.init_space = RectangularSet(low=np.array([5, -1]), high=np.array([6, 1]), dtype=np.float32)
         self.unsafe_space = RectangularSet(low=np.array([0, -5]), high=np.array([1, 1]), dtype=np.float32)
 
-        self.num_steps_until_reset = 1000
+        self.num_steps_until_reset = 100
 
         # Define vectorized functions
         self.vreset = jax.vmap(self.reset, in_axes=0, out_axes=0)
