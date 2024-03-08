@@ -77,7 +77,7 @@ class PackageDelivery(gym.Env):
 
         self.target_space = RectangularSet(low=np.array([-4, -4]), high=np.array([-2, -3]), dtype=np.float32)
         self.init_space = RectangularSet(low=np.array([5, -1]), high=np.array([6, 1]), dtype=np.float32)
-        self.unsafe_space = RectangularSet(low=np.array([0. -5]), high=np.array([1, 1]), dtype=np.float32)
+        self.unsafe_space = RectangularSet(low=np.array([0, -5]), high=np.array([1, 1]), dtype=np.float32)
 
         self.num_steps_until_reset = 1000
 
