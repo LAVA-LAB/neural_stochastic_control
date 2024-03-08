@@ -68,8 +68,6 @@ class Learner:
         self.cplip = args.cplip
         self.split_lip = args.split_lip
 
-        if self.perturb_samples:
-            print('- Learner setting: Training samples are slightly perturbed')
         if self.lambda_lipschitz > 0:
             print('- Learner setting: Enable Lipschitz loss')
             print(f'--- For certificate up to: {self.max_lip_certificate:.3f}')
@@ -158,13 +156,6 @@ class Learner:
 
         # For expected decrease, exclude samples from target region
         samples_decrease_bool_not_target = self.env.target_space.jax_not_contains(samples_decrease)
-
-        # Random perturbation to samples (for expected decrease condition)
-        if self.perturb_samples > 0:
-            perturbation = jax.random.uniform(perturbation_key, samples_decrease.shape,
-                                              minval=-0.5 * self.perturb_samples,
-                                              maxval=0.5 * self.perturb_samples)
-            samples_decrease = samples_decrease + perturbation
 
         def loss_fun(certificate_params, policy_params):
 
