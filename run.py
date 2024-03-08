@@ -389,12 +389,17 @@ for i in range(args.cegis_iterations):
     if len(counterx) == 0:
         break
 
+    import numpy as np
+
     # Append weights to the counterexamples
     if args.new_cx_buffer:
         counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], counterx_weights))
     else:
         weight_column = counterx_weights.reshape(-1,1)
         counterx_plus_weights = np.hstack(( counterx[:, :verify.buffer.dim], weight_column))
+
+    np.set_printoptions(threshold=np.inf)
+    print(counterx_plus_weights)
 
     # Add counterexamples to the counterexample buffer
     print(f'\nRefresh {(args.counterx_refresh_fraction*100):.1f}% of the counterexample buffer')

@@ -75,6 +75,7 @@ class LinearEnv(gym.Env):
         self.noise_dim = len(high)
 
         if layout == 0:
+            print('- Use layout with unsafe regions in corners of state space')
 
             # Set target set
             self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
@@ -90,6 +91,7 @@ class LinearEnv(gym.Env):
             ])
 
         else:
+            print('- Use slightly more complex layout with unsafe state between init and target')
 
             # Set target set
             self.target_space = RectangularSet(low=np.array([-0.2, -0.2]), high=np.array([0.2, 0.2]), dtype=np.float32)
