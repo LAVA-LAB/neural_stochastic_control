@@ -13,7 +13,7 @@ def plot_boxes(env, ax):
 
     # Plot target set
     if type(env.target_space) == list:
-        for set in env.target_space:
+        for set in env.target_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='green'))
 
@@ -23,7 +23,7 @@ def plot_boxes(env, ax):
 
     # Plot unsafe set
     if type(env.unsafe_space) == list:
-        for set in env.unsafe_space:
+        for set in env.unsafe_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='red'))
 
@@ -33,7 +33,7 @@ def plot_boxes(env, ax):
 
     # Plot initial set
     if type(env.init_space) == list:
-        for set in env.init_space:
+        for set in env.init_space.sets:
             width, height = set.high - set.low
             ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='blue'))
 
