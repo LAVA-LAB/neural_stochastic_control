@@ -68,7 +68,6 @@ class Learner:
         self.cplip = args.cplip
         self.split_lip = args.split_lip
 
-        print(f'- Learner setting: Expected decrease loss type is: {self.expected_decrease_loss}')
         if self.perturb_samples:
             print('- Learner setting: Training samples are slightly perturbed')
         if self.lambda_lipschitz > 0:
