@@ -24,7 +24,7 @@ class LinearEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, render_mode: Optional[str] = None, layout=0, g=10.0):
+    def __init__(self, render_mode: Optional[str] = None, layout=1, g=10.0):
 
         self.render_mode = render_mode
 
