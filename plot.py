@@ -36,11 +36,11 @@ def plot_boxes(env, ax):
     if isinstance(env.init_space, MultiRectangularSet):
         for set in env.init_space.sets:
             width, height = set.high - set.low
-            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='blue'))
+            ax.add_patch(Rectangle(set.low, width, height, fill=False, edgecolor='gold'))
 
     else:
         width, height = env.init_space.high - env.init_space.low
-        ax.add_patch(Rectangle(env.init_space.low, width, height, fill=False, edgecolor='blue'))
+        ax.add_patch(Rectangle(env.init_space.low, width, height, fill=False, edgecolor='gold'))
 
     return
 
