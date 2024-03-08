@@ -30,7 +30,7 @@ class PackageDelivery(gym.Env):
 
         self.variable_names = ['x', 'y']
 
-        self.max_torque = np.array([1])
+        self.max_torque = np.array([1, 1])
 
         self.screen_dim = 500
         self.screen = None
