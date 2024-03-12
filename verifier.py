@@ -412,7 +412,7 @@ class Verifier:
         weights_expDecr = np.maximum(0, Vdiff_center[violation_idxs] + mesh_decrease[violation_idxs] * (Kprime + lip_certificate)) # np.ones(len(Vdiff_center[violation_idxs]))  #
         # Normal violations get a weight of 1. Hard violations a weight that is higher.
         hard_violation_idxs = (Vdiff_center[violation_idxs] + args.mesh_refine_min * (Kprime * softplus_lip[violation_idxs] + lip_certificate) > 0)
-        weights_expDecr[hard_violation_idxs] *= 10
+        # weights_expDecr[hard_violation_idxs] *= 10
         print(f'- Increase the weight for {sum(hard_violation_idxs)} hard expected decrease violations')
 
         if compare_with_lip:
