@@ -467,7 +467,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
-        weights_init[V_init > 0] = hard_violation_weight
+        #weights_init[V_init > 0] = hard_violation_weight
 
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_init_vioNumHard} hard violations (out of {len(out_of)})')
@@ -525,7 +525,7 @@ class Verifier:
 
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
-        weights_unsafe[V_unsafe < 0] = hard_violation_weight
+        #weights_unsafe[V_unsafe < 0] = hard_violation_weight
 
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_unsafe_vioHard} hard violations (out of {len(out_of)})')
