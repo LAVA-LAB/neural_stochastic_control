@@ -383,7 +383,7 @@ class Verifier:
 
         #TODO: If K' * tau < 1, then we can also use V_lb for the softplus_lip.
         if args.improved_softplus_lip: 
-            softplus_lip = (1 - np.exp(-Vx_lb_decrease if Kprime * mesh_decrease < 1 else -Vx_mean_decrease))
+            softplus_lip = (1 - np.exp(-np.where(Kprime * mesh_decrease < 1, Vx_lb_decrease, Vx_mean_decrease)))
         else: softplus_lip = None
 
         # Print for how many points the softplus Lipschitz coefficient improves upon the default of 1
