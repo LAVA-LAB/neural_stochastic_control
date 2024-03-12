@@ -78,10 +78,13 @@ def create_train_state(model, act_funcs, rng, in_dim, learning_rate=0.01, ema=0,
     return AgentState.create(apply_fn=jax.jit(model.apply), params=params, tx=tx,
                              ibp_fn=jax.jit(partial(apply_ibp_rectangular, act_funcs)))
 
-#@partial(jax.jit, static_argnums=(1,2,3,))
+@partial(jax.jit, static_argnums=(1,2,3,))
 def lipschitz_coeff(params, weighted, CPLip, Linfty):
     if Linfty: axis = 0
     else: axis = 1
+    
+    minweight = jnp.float32(1e-6)
+    maxweight = jnp.float32(1e6)
     
     if (not weighted and not CPLip):
         L = jnp.float32(1)
@@ -135,8 +138,8 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         weights = [jnp.ones(jnp.shape(matrices[0])[1])]
         for mat in matrices:
             colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
-            lip = jnp.max(colsums)
-            weights.append(colsums / lip)
+            lip = jnp.max(jnp.max(colsums), minweight)
+            weights.append(jnp.maximum(colsums / lip, minweight))
             L *= lip
             
     elif (weighted and not CPLip and Linfty):
@@ -151,7 +154,7 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         for mat in matrices:
             rowsums = jnp.sum(jnp.multiply(jnp.abs(mat), jnp.float32(1) / weights[-1][:, jnp.newaxis]), axis=0)
             lip = jnp.max(rowsums)
-            weights.append(lip / rowsums)
+            weights.append(jnp.minimum(lip / rowsums, maxweight))
             L *= lip
 
     elif (weighted and CPLip and not Linfty):
@@ -166,9 +169,8 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         weights = [jnp.ones(jnp.shape(matrices[0])[1])]
         for mat in matrices:
             colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
-            lip = jnp.max(colsums)
-            weights.append(colsums / lip)
-            print(weights)
+            lip = jnp.max(jnp.max(colsums), minweight)
+            weights.append(jnp.max(colsums / lip, minweight))
             
         matrices.reverse()
         nmatrices = len(matrices)
@@ -213,7 +215,7 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         for mat in matrices:
             rowsums = jnp.sum(jnp.multiply(jnp.abs(mat), jnp.float32(1) / weights[-1][:, jnp.newaxis]), axis=0)
             lip = jnp.max(rowsums)
-            weights.append(lip / rowsums)
+            weights.append(jnp.minimum(lip / rowsums, maxweight))
         weights.reverse()
             
         nmatrices = len(matrices)
@@ -245,6 +247,8 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
                     jprev = jcur + 1
 
             L += Lloc / ncombs
+        
+        weights.reverse()
 
     if weighted:
         return L, weights[-1]
