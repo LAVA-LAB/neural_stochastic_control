@@ -138,7 +138,7 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         weights = [jnp.ones(jnp.shape(matrices[0])[1])]
         for mat in matrices:
             colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
-            lip = jnp.max(jnp.max(colsums), minweight)
+            lip = jnp.maximum(jnp.max(colsums), minweight)
             weights.append(jnp.maximum(colsums / lip, minweight))
             L *= lip
             
@@ -169,8 +169,8 @@ def lipschitz_coeff(params, weighted, CPLip, Linfty):
         weights = [jnp.ones(jnp.shape(matrices[0])[1])]
         for mat in matrices:
             colsums = jnp.sum(jnp.multiply(jnp.abs(mat), weights[-1][jnp.newaxis, :]), axis=1)
-            lip = jnp.max(jnp.max(colsums), minweight)
-            weights.append(jnp.max(colsums / lip, minweight))
+            lip = jnp.maximum(jnp.max(colsums), minweight)
+            weights.append(jnp.maximum(colsums / lip, minweight))
             
         matrices.reverse()
         nmatrices = len(matrices)
