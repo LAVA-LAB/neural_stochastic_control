@@ -135,7 +135,7 @@ class Verifier:
         num_per_dimension = np.array(np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
 
         # Determine number of unique rows in matrix
-        unique_num = np.maximum(2, np.unique(num_per_dimension, axis=0))
+        unique_num = np.unique(num_per_dimension, axis=0)
         assert np.all(unique_num > 1)
 
         # Compute average number of copies per counterexample
