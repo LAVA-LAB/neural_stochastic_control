@@ -804,7 +804,6 @@ def PPO(env,
 
     # Save checkpoint of PPO state
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-
     ckpt_export_file = f"ckpt/{args.model}_seed={args.seed}_{date}"
     checkpoint_path = Path(args.cwd, ckpt_export_file)
 
