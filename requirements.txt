@@ -11,6 +11,7 @@ orbax-checkpoint==0.4.8
 pandas==2.1.4
 pygame==2.5.2
 seaborn==0.13.0
+stable-baselines3==2.2.1
 swig==4.1.1
 sympy==1.12
 tensorboard==2.15.1

@@ -7,9 +7,10 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 from jax import jit
+import torch
 
 import gymnasium as gym
-from gymnasium import spaces
+from gymnasium import spaces, logger
 from gymnasium.envs.classic_control import utils
 from gymnasium.error import DependencyNotInstalled
 from functools import partial
@@ -24,9 +25,7 @@ class LinearEnv(gym.Env):
         "render_fps": 30,
     }
 
-    def __init__(self, args, render_mode: Optional[str] = None, g=10.0):
-
-        self.render_mode = render_mode
+    def __init__(self, args):
 
         self.variable_names = ['position', 'velocity']
 
@@ -68,6 +67,8 @@ class LinearEnv(gym.Env):
         # Set observation / state space
         high = np.array([1.5, 1.5], dtype=np.float32)
         self.state_space = RectangularSet(low=-high, high=high, dtype=np.float32)
+        # Observation space is only used in the gym version of the environment
+        self.observation_space = spaces.Box(low=-high, high=high, dtype=np.float32)
 
         # Set support of noise distribution (which is triangular, zero-centered)
         high = np.array([1, 1], dtype=np.float32)
@@ -106,20 +107,67 @@ class LinearEnv(gym.Env):
                 RectangularSet(low=np.array([1.4, 0]), high=np.array([1.5, 1.5]), dtype=np.float32)
             ])
 
-        self.num_steps_until_reset = 1000
+        self.num_steps_until_reset = 100
 
         # Define vectorized functions
-        self.vreset = jax.vmap(self.reset, in_axes=0, out_axes=0)
+        self.vreset = jax.vmap(self.reset_jax, in_axes=0, out_axes=0)
         self.vstep = jax.vmap(self.step_train, in_axes=0, out_axes=0)
 
         # Vectorized step, but only with different noise values
         self.vstep_noise_batch = jax.vmap(self.step_noise_key, in_axes=(None, 0, None), out_axes=0)
         self.vstep_noise_set = jax.vmap(self.step_noise_set, in_axes=(None, None, 0, 0), out_axes=(0, 0))
 
+        # Initialize state
+        self.state = None
+        self.steps_beyond_terminated = None
+
     @partial(jit, static_argnums=(0,))
     def sample_noise(self, key, size=None):
         return jax.random.triangular(key, self.noise_space.low * jnp.ones(self.noise_dim), jnp.zeros(self.noise_dim),
                                      self.noise_space.high * jnp.ones(self.noise_dim))
+
+    def sample_noise_numpy(self, size=None):
+        return np.random.triangular(self.noise_space.low * jnp.ones(self.noise_dim),
+                                    jnp.zeros(self.noise_dim),
+                                    self.noise_space.high * jnp.ones(self.noise_dim),
+                                    size)
+
+    def step(self, u):
+        '''
+        Step in the gymnasium environment (only used for policy initialization with PPO).
+        '''
+
+        assert self.state is not None, "Call reset before using step method."
+
+        u = np.clip(u, -self.max_torque, self.max_torque)
+        w = self.sample_noise_numpy()
+        self.state = self.A @ self.state + self.B @ u + self.W @ w
+        self.last_u = u # for rendering
+
+        terminated = bool(
+            self.unsafe_space.contains(np.array([self.state]), return_indices=True)
+        )
+
+        if not terminated:
+            costs = -1 + self.state[0] ** 2 + self.state[1] ** 2
+        elif self.steps_beyond_terminated is None:
+            # Pole just fell!
+            self.steps_beyond_terminated = 0
+            costs = 100
+        else:
+            if self.steps_beyond_terminated == 0:
+                logger.warn(
+                    "You are calling 'step()' even though this "
+                    "environment has already returned terminated = True. You "
+                    "should always call 'reset()' once you receive 'terminated = "
+                    "True' -- any further steps are undefined behavior."
+                )
+            self.steps_beyond_terminated += 1
+            costs = 0.0
+
+
+        return np.array(self.state, dtype=np.float32), -costs, False, False, {}
+
 
     @partial(jit, static_argnums=(0,))
     def step_base(self, state, u, w):
@@ -221,8 +269,20 @@ class LinearEnv(gym.Env):
 
         return new_state, key, steps_since_reset
 
+    def reset(self, seed=None, options=None):
+
+        # We need the following line to seed self.np_random
+        super().reset(seed=seed)
+
+        # Sample state uniformly from observation space
+        self.state = np.random.uniform(low=self.observation_space.low, high=self.observation_space.high)
+        self.last_u = None
+
+        return self.state, {}
+
     @partial(jit, static_argnums=(0,))
-    def reset(self, key):
+    def reset_jax(self, key):
         state, key, steps_since_reset = self._reset(key)
+        self.state = state
 
         return state, key, steps_since_reset
