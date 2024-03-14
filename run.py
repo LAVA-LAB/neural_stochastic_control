@@ -169,6 +169,7 @@ if args.load_ckpt == '':
     num_iterations = int(args.ppo_total_timesteps // batch_size)
 
     ppo_args = PPOargs(seed=args.seed,
+                       cwd=args.cwd,
                        total_timesteps=args.ppo_total_timesteps,
                        learning_rate=3e-4,
                        num_envs=args.ppo_num_envs,

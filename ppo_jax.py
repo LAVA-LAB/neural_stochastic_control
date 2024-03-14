@@ -35,6 +35,8 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 class PPOargs:
     seed: int
     """seed of the experiment"""
+    cwd: str
+    """current working directory"""
     total_timesteps: int
     """total timesteps of the experiments"""
     learning_rate: float
