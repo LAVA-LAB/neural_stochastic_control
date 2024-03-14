@@ -32,9 +32,10 @@ parser.add_argument('--layout', type=int, default=0,
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 
-### JAX PPO arguments
-parser.add_argument('--ppo_load_file', type=str, default='',
+parser.add_argument('--load_ckpt', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
+
+### JAX PPO arguments
 parser.add_argument('--ppo_max_policy_lipschitz', type=float, default=3,
                     help="Max. Lipschitz constant for policy to train towards in PPO (below this value, loss is zero)")
 parser.add_argument('--ppo_total_timesteps', type=int, default=1e6,
@@ -160,7 +161,7 @@ print('\n================\n')
 pi_neurons_per_layer = [128, 128]
 pi_act_funcs = [nn.relu, nn.relu]
 
-if args.ppo_load_file == '':
+if args.load_ckpt == '':
     print(f'Run PPO for model `{args.model}`')
 
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
@@ -189,28 +190,19 @@ if args.ppo_load_file == '':
                        num_iterations=num_iterations)
 
     # Only returns the policy state; not the full agent state used in the PPO algorithm.
-    _, Policy_state = PPO(envfun(args),
-                          ppo_args,
-                          max_policy_lipschitz=args.ppo_max_policy_lipschitz,
-                          neurons_per_layer=pi_neurons_per_layer,
-                          activation_functions=pi_act_funcs,
-                          verbose=False)
-
-    # Save checkpoint of PPO state
-    ckpt_export_file = f"ckpt/{args.model}_seed={args.seed}_{start_datetime}"
-    checkpoint_path = Path(args.cwd, ckpt_export_file)
-
-    orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
-    orbax_checkpointer.save(checkpoint_path, Policy_state,
-                            save_args=flax.training.orbax_utils.save_args_from_target(Policy_state), force=True)
+    _, Policy_state, checkpoint_path = PPO(envfun(args),
+                                           ppo_args,
+                                           max_policy_lipschitz=args.ppo_max_policy_lipschitz,
+                                           neurons_per_layer=pi_neurons_per_layer,
+                                           activation_functions=pi_act_funcs,
+                                           verbose=False)
 
     print(f'- Export PPO checkpoint to file: {checkpoint_path}')
 
     print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
 else:
     # Load existing pretrained policy
-    orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
-    checkpoint_path = Path(args.cwd, args.ppo_load_file)
+    checkpoint_path = Path(args.cwd, args.load_ckpt)
 
 # %%
 
@@ -244,6 +236,7 @@ Policy_state = create_train_state(
 )
 
 # Restore state of policy network
+orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
 Policy_state = orbax_checkpointer.restore('ckpt/myLinearEnv_alg=PPO_seed=0_2024-03-14_11-49-14', item=Policy_state,
                   restore_args=flax.training.orbax_utils.restore_args_from_target(Policy_state['PPO'][0], mesh=None))
 

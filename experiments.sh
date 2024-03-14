@@ -25,4 +25,4 @@ python3 run.py --model PackageDelivery --counterx_refresh_fraction 0.5 --counter
 
 # Dubins car
 # L1
-python3 run.py --model Dubins --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --probability_bound 0.5 --expDecr_multiplier 100 --local_refinement --epochs 3 --perturb_counterexamples --mesh_refine_min 0.000001 --mesh_loss 0.0001 --mesh_train_grid 0.01 --mesh_verify_grid_init 0.01 --mesh_verify_grid_min 0.01 --max_refine_factor 2 --plot_intermediate --ppo_total_timesteps 20000000 --ppo_max_policy_lipschitz 20 --ppo_load_file 'ckpt/Dubins_seed=1_2024-02-29_08-47-26'
+python3 run.py --model Dubins --counterx_refresh_fraction 0.5 --counterx_fraction 0.25 --verify_batch_size 30000 --probability_bound 0.5 --expDecr_multiplier 100 --local_refinement --epochs 3 --perturb_counterexamples --mesh_refine_min 0.000001 --mesh_loss 0.0001 --mesh_train_grid 0.01 --mesh_verify_grid_init 0.01 --mesh_verify_grid_min 0.01 --max_refine_factor 2 --plot_intermediate --ppo_total_timesteps 20000000 --ppo_max_policy_lipschitz 20 --load_ckpt 'ckpt/Dubins_seed=1_2024-02-29_08-47-26'

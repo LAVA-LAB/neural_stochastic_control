@@ -1,7 +1,9 @@
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppo_atari_envpool_xla_jaxpy
 import os
 import time
-
+import orbax.checkpoint
+from datetime import datetime
+from pathlib import Path
 import flax
 import flax.linen as nn
 import jax
@@ -800,4 +802,14 @@ def PPO(env,
             print('Kernel:', Policy_state.params['params'][layer]['kernel'])
             print('Bias:', Policy_state.params['params'][layer]['bias'])
 
-    return agent_state, Policy_state
+    # Save checkpoint of PPO state
+    date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    ckpt_export_file = f"ckpt/{args.model}_seed={args.seed}_{date}"
+    checkpoint_path = Path(args.cwd, ckpt_export_file)
+
+    orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
+    orbax_checkpointer.save(checkpoint_path, Policy_state,
+                            save_args=flax.training.orbax_utils.save_args_from_target(Policy_state), force=True)
+
+    return agent_state, Policy_state, checkpoint_path
