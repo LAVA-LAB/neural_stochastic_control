@@ -157,8 +157,6 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
-env = envfun(args)
-
 pi_neurons_per_layer = [128, 128]
 pi_act_funcs = [nn.relu, nn.relu]
 
@@ -213,8 +211,6 @@ else:
     # Load existing pretrained policy
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
-
-del env
 
 # %%
 
