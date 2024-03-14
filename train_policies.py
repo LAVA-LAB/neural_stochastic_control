@@ -41,20 +41,20 @@ def torch_to_jax(jax_policy_state, weights, biases):
 
 
 
-def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activation_fn_jax, total_steps = 100000):
+def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch, activation_fn_jax, total_steps = 100000):
 
     # Create JAX policy network
-    jax_policy_model = MLP(policy_size + [1], activation_fn_jax)
+    jax_policy_model = MLP(policy_size + [1], activation_fn_jax + [None])
     jax_policy_state = create_train_state(
         model=jax_policy_model,
-        act_funcs=activation_fn_jax,
+        act_funcs=activation_fn_jax + [None],
         rng=jax.random.PRNGKey(1),
         in_dim=vec_env.reset().shape[1],
         learning_rate=5e-5,
     )
 
     if RL_method == "PPO":
-        policy_kwargs = dict(activation_fn=activation_fn,
+        policy_kwargs = dict(activation_fn=activation_fn_torch,
                              net_arch=dict(pi=policy_size, vf=policy_size))
 
         model = PPO("MlpPolicy", vec_env, policy_kwargs=policy_kwargs, verbose=1)
@@ -75,7 +75,7 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activ
         jax_policy_state = torch_to_jax(jax_policy_state, weights, biases)
 
     elif RL_method == "TD3":
-        policy_kwargs = dict(activation_fn=activation_fn,
+        policy_kwargs = dict(activation_fn=activation_fn_torch,
                              net_arch=dict(pi=policy_size, vf=policy_size, qf=policy_size))
 
         # The noise objects for TD3
@@ -98,7 +98,7 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activ
         jax_policy_state = torch_to_jax(jax_policy_state, weights, biases)
 
     elif RL_method == "SAC":
-        policy_kwargs = dict(activation_fn=activation_fn,
+        policy_kwargs = dict(activation_fn=activation_fn_torch,
                              net_arch=dict(pi=policy_size, vf=policy_size, qf=policy_size))
         
         model = SAC("MlpPolicy", vec_env, policy_kwargs=policy_kwargs, verbose=1)
@@ -119,7 +119,7 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activ
         jax_policy_state = torch_to_jax(jax_policy_state, weights, biases)
 
     elif RL_method == "A2C":
-        policy_kwargs = dict(activation_fn=activation_fn,
+        policy_kwargs = dict(activation_fn=activation_fn_torch,
                              net_arch=dict(pi=policy_size, vf=policy_size))
         
         model = A2C("MlpPolicy", vec_env, policy_kwargs=policy_kwargs, verbose=1)
@@ -140,7 +140,7 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activ
         jax_policy_state = torch_to_jax(jax_policy_state, weights, biases)
 
     elif RL_method == "DDPG":
-        policy_kwargs = dict(activation_fn=activation_fn,
+        policy_kwargs = dict(activation_fn=activation_fn_torch,
                              net_arch=dict(pi=policy_size, vf=policy_size, qf=policy_size))
         
         # The noise objects for DDPG
@@ -169,18 +169,17 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn, activ
 
 
 
-def pretrain_policy(args, RL_method, seed, policy_size, activation_fn, activation_fn_jax):
+def pretrain_policy(args, RL_method, seed, policy_size, activation_fn_torch, activation_fn_jax):
 
     start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Generate environment
     vec_env = make_vec_env(args.model, n_envs=args.num_envs, env_kwargs={'args': args}, seed=seed)
-    model, jax_policy_state = train_stable_baselines(vec_env, RL_method, policy_size, activation_fn,
+    model, jax_policy_state = train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch,
                                                      activation_fn_jax, args.total_steps)
 
     ######
     # Export JAX policy as Orbax checkpoint
-    ckpt = {'model': jax_policy_state}
     ckpt_export_file = f"ckpt/{args.model}_alg={RL_method}_seed={seed}_{start_datetime}"
     checkpoint_path = Path(args.cwd, ckpt_export_file)
 
@@ -200,9 +199,9 @@ if __name__ == "__main__":
                         help="Dynamical model to train on")
     parser.add_argument('--algorithm', type=str, default="PPO",
                         help="RL algorithm to train with")
-    parser.add_argument('--total_steps', type=int, default=1000,
+    parser.add_argument('--total_steps', type=int, default=10000,
                         help="Number of steps to train for")
-    parser.add_argument('--num_seeds', type=int, default=1,
+    parser.add_argument('--num_seeds', type=int, default=10,
                         help="Number of seeds to train with")
     parser.add_argument('--num_envs', type=int, default=1,
                         help="Number of parallel environments to train with (>1 does not work for all algorithms)")
@@ -216,8 +215,8 @@ if __name__ == "__main__":
         METHODS = [str(args.algorithm)]
 
     policy_size = [128, 128]
-    activation_fn = torch.nn.ReLU
-    activation_fn_jax = [nn.relu] * len(policy_size) + [None]
+    activation_fn_torch = torch.nn.ReLU
+    activation_fn_jax = [nn.relu] * len(policy_size)
 
     model = {}
     jax_policy_state = {}
@@ -234,7 +233,7 @@ if __name__ == "__main__":
             print(f'--- Seed: {seed} ---')
 
             vec_env, model[RL_method][seed], jax_policy_state[RL_method][seed], checkpoint_path[RL_method][seed] = \
-                pretrain_policy(args, RL_method, seed, policy_size, activation_fn, activation_fn_jax)
+                pretrain_policy(args, RL_method, seed, policy_size, activation_fn_torch, activation_fn_jax)
 
             ######
             # Plot

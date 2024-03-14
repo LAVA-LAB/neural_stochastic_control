@@ -815,4 +815,6 @@ def PPO(env,
     orbax_checkpointer.save(checkpoint_path, Policy_state,
                             save_args=flax.training.orbax_utils.save_args_from_target(Policy_state), force=True)
 
+    print(f'- Export PPO checkpoint to file: {checkpoint_path}')
+
     return agent_state, Policy_state, checkpoint_path

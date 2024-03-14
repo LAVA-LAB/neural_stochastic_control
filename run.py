@@ -33,8 +33,11 @@ parser.add_argument('--layout', type=int, default=0,
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 
+### POLICY INITIALIZATION ARGUMENTS
 parser.add_argument('--load_ckpt', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
+parser.add_argument('--pretrain_method', type=str, default='',
+                    help="Method to pretrain (initialize) the policy")
 
 ### JAX PPO arguments
 parser.add_argument('--ppo_max_policy_lipschitz', type=float, default=3,
@@ -159,11 +162,19 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
-pi_neurons_per_layer = [128, 128]
-pi_act_funcs = [nn.relu, nn.relu]
+import torch
 
-if args.load_ckpt == '':
-    print(f'Run PPO for model `{args.model}`')
+pi_neurons_per_layer = [128, 128]
+pi_act_funcs_jax = [nn.relu, nn.relu]
+pi_act_funcs_torch = [torch.nn.ReLU, torch.nn.ReLU]
+
+if args.load_ckpt != '':
+    # Load existing pretrained policy
+    checkpoint_path = Path(args.cwd, args.load_ckpt)
+    print(f'\n=== READ FROM CHECKPOINT: {checkpoint_path} ===\n')
+
+elif args.pretrain_method == 'PPO_JAX':
+    print(f'Run PPO (JAX) for model `{args.model}`')
 
     batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
     minibatch_size = int(batch_size // args.ppo_num_minibatches)
@@ -197,15 +208,19 @@ if args.load_ckpt == '':
                                            args=ppo_args,
                                            max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                                            neurons_per_layer=pi_neurons_per_layer,
-                                           activation_functions=pi_act_funcs,
+                                           activation_functions=pi_act_funcs_jax,
                                            verbose=False)
 
-    print(f'- Export PPO checkpoint to file: {checkpoint_path}')
-
-    print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
+    print('\n=== POLICY TRAINING (WITH PPO, JAX) COMPLETED ===\n')
 else:
-    # Load existing pretrained policy
-    checkpoint_path = Path(args.cwd, args.load_ckpt)
+    print(f'Run {args.pretrain_method} (PyTorch) for model `{args.model}`')
+
+    from train_policies import pretrain_policy
+
+    pretrain_policy(args, RL_method=args.pretrain_method, seed=args.seed, policy_size=pi_neurons_per_layer,
+                    activation_fn_torch=pi_act_funcs_torch, activation_fn_jax=pi_act_funcs_jax)
+
+    print('\n=== POLICY TRAINING (WITH PPO, JAX) COMPLETED ===\n')
 
 # %%
 
@@ -216,8 +231,6 @@ env = envfun(args)
 
 V_neurons_per_layer = [128, 128, 1]
 V_act_funcs = [nn.relu, nn.relu, nn.softplus]
-Policy_neurons_per_layer = pi_neurons_per_layer + [len(env.action_space.low)]
-Policy_act_funcs = pi_act_funcs + [None]
 
 # Initialize certificate network
 certificate_model = MLP(V_neurons_per_layer, V_act_funcs)
@@ -229,10 +242,10 @@ V_state = create_train_state(
     learning_rate=5e-4,
 )
 
-policy_model = MLP(Policy_neurons_per_layer, Policy_act_funcs)
+policy_model = MLP(pi_neurons_per_layer + [len(env.action_space.low)], pi_act_funcs_jax + [None])
 Policy_state = create_train_state(
     model=policy_model,
-    act_funcs=Policy_act_funcs,
+    act_funcs=pi_act_funcs_jax + [None],
     rng=jax.random.PRNGKey(1),
     in_dim=env.state_dim,
     learning_rate=5e-5,
