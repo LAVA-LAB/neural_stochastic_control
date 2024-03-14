@@ -166,7 +166,7 @@ import torch
 
 pi_neurons_per_layer = [128, 128]
 pi_act_funcs_jax = [nn.relu, nn.relu]
-pi_act_funcs_torch = [torch.nn.ReLU, torch.nn.ReLU]
+pi_act_funcs_torch = torch.nn.ReLU
 
 if args.load_ckpt != '':
     # Load existing pretrained policy
