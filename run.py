@@ -240,7 +240,7 @@ Policy_state = create_train_state(
 
 # Restore state of policy network
 orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
-Policy_state = orbax_checkpointer.restore('ckpt/myLinearEnv_alg=PPO_seed=0_2024-03-14_11-49-14', item=Policy_state,
+Policy_state = orbax_checkpointer.restore(checkpoint_path, item=Policy_state,
                   restore_args=flax.training.orbax_utils.restore_args_from_target(Policy_state, mesh=None))
 
 # %%
