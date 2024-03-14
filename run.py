@@ -6,6 +6,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 import orbax.checkpoint
+from flax.training import orbax_utils
 import flax
 import numpy as np
 import time
@@ -240,7 +241,7 @@ Policy_state = create_train_state(
 # Restore state of policy network
 orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
 Policy_state = orbax_checkpointer.restore('ckpt/myLinearEnv_alg=PPO_seed=0_2024-03-14_11-49-14', item=Policy_state,
-                  restore_args=flax.training.orbax_utils.restore_args_from_target(Policy_state['PPO'][0], mesh=None))
+                  restore_args=flax.training.orbax_utils.restore_args_from_target(Policy_state, mesh=None))
 
 # %%
 
