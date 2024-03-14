@@ -251,8 +251,13 @@ Policy_state = create_train_state(
 
 # Load parameters from policy network initialized with PPO
 for layer in Policy_state.params['params'].keys():
+    print(f'- Layer {layer}')
+
     Policy_state.params['params'][layer]['kernel'] = ppo_state['params']['actor']['params'][layer]['kernel']
     Policy_state.params['params'][layer]['bias'] = ppo_state['params']['actor']['params'][layer]['bias']
+
+    print('Kernel:', Policy_state.params['params'][layer]['kernel'])
+    print('Bias:', Policy_state.params['params'][layer]['bias'])
 
 # %%
 
