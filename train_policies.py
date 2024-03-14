@@ -22,7 +22,7 @@ from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.sac.policies import SACPolicy
 
 gym.register(
-    id='myLinearEnv',
+    id='LinearEnv',
     entry_point='models.linearsystem_jax:LinearEnv',
     max_episode_steps=100
 )
@@ -169,19 +169,20 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch,
 
 
 
-def pretrain_policy(args, RL_method, seed, policy_size, activation_fn_torch, activation_fn_jax):
+def pretrain_policy(args, model, cwd, RL_method, seed, num_envs, total_steps, policy_size, activation_fn_torch,
+                    activation_fn_jax):
 
     start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Generate environment
-    vec_env = make_vec_env(args.model, n_envs=args.num_envs, env_kwargs={'args': args}, seed=seed)
+    vec_env = make_vec_env(model, n_envs=num_envs, env_kwargs={'args': args}, seed=seed)
     model, jax_policy_state = train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch,
-                                                     activation_fn_jax, args.total_steps)
+                                                     activation_fn_jax, total_steps)
 
     ######
     # Export JAX policy as Orbax checkpoint
-    ckpt_export_file = f"ckpt/{args.model}_alg={RL_method}_seed={seed}_{start_datetime}"
-    checkpoint_path = Path(args.cwd, ckpt_export_file)
+    ckpt_export_file = f"ckpt/{model}_alg={RL_method}_seed={seed}_{start_datetime}"
+    checkpoint_path = Path(cwd, ckpt_export_file)
 
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
     orbax_checkpointer.save(checkpoint_path, jax_policy_state,
@@ -195,7 +196,7 @@ def pretrain_policy(args, RL_method, seed, policy_size, activation_fn_torch, act
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(prefix_chars='--')
-    parser.add_argument('--model', type=str, default="myLinearEnv",
+    parser.add_argument('--model', type=str, default="LinearEnv",
                         help="Dynamical model to train on")
     parser.add_argument('--algorithm', type=str, default="PPO",
                         help="RL algorithm to train with")
@@ -233,7 +234,8 @@ if __name__ == "__main__":
             print(f'--- Seed: {seed} ---')
 
             vec_env, model[RL_method][seed], jax_policy_state[RL_method][seed], checkpoint_path[RL_method][seed] = \
-                pretrain_policy(args, RL_method, seed, policy_size, activation_fn_torch, activation_fn_jax)
+                pretrain_policy(args, args.model, args.cwd, RL_method, seed, args.num_envs, args.total_steps,
+                                policy_size, activation_fn_torch, activation_fn_jax)
 
             ######
             # Plot

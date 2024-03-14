@@ -38,15 +38,15 @@ parser.add_argument('--load_ckpt', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
 parser.add_argument('--pretrain_method', type=str, default='PPO_JAX',
                     help="Method to pretrain (initialize) the policy")
+parser.add_argument('--pretrain_total_steps', type=int, default=1e6,
+                    help="Total number of timesteps to do with PPO (for policy initialization")
+parser.add_argument('--pretrain_num_envs', type=int, default=10,
+                    help="Number of parallel environments in PPO (for policy initialization")
 
 ### JAX PPO arguments
 parser.add_argument('--ppo_max_policy_lipschitz', type=float, default=3,
                     help="Max. Lipschitz constant for policy to train towards in PPO (below this value, loss is zero)")
-parser.add_argument('--ppo_total_timesteps', type=int, default=1e6,
-                    help="Total number of timesteps to do with PPO (for policy initialization")
-parser.add_argument('--ppo_num_envs', type=int, default=10,
-                    help="Number of parallel environments in PPO (for policy initialization")
-parser.add_argument('--ppo_num_steps', type=int, default=2048,
+parser.add_argument('--ppo_num_steps_per_batch', type=int, default=2048,
                     help="Total steps for rollout in PPO (for policy initialization")
 parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
@@ -176,15 +176,15 @@ if args.load_ckpt != '':
 elif args.pretrain_method == 'PPO_JAX':
     print(f'Run PPO (JAX) for model `{args.model}`')
 
-    batch_size = int(args.ppo_num_envs * args.ppo_num_steps)
+    batch_size = int(args.pretrain_num_envs * args.ppo_num_steps_per_batch)
     minibatch_size = int(batch_size // args.ppo_num_minibatches)
-    num_iterations = int(args.ppo_total_timesteps // batch_size)
+    num_iterations = int(args.pretrain_total_steps // batch_size)
 
     ppo_args = PPOargs(seed=args.seed,
-                       total_timesteps=args.ppo_total_timesteps,
+                       total_timesteps=args.pretrain_total_steps,
                        learning_rate=3e-4,
-                       num_envs=args.ppo_num_envs,
-                       num_steps=args.ppo_num_steps,
+                       num_envs=args.pretrain_num_envs,
+                       num_steps=args.ppo_num_steps_per_batch,
                        anneal_lr=True,
                        gamma=0.99,
                        gae_lambda=0.95,
@@ -217,8 +217,17 @@ else:
 
     from train_policies import pretrain_policy
 
-    pretrain_policy(args, RL_method=args.pretrain_method, seed=args.seed, policy_size=pi_neurons_per_layer,
-                    activation_fn_torch=pi_act_funcs_torch, activation_fn_jax=pi_act_funcs_jax)
+    _, _, _, checkpoint_path = pretrain_policy(
+            args,
+            model=args.model,
+            cwd=args.cwd,
+            RL_method=args.pretrain_method,
+            seed=args.seed,
+            num_envs=args.pretrain_num_envs,
+            total_steps=args.pretrain_total_steps,
+            policy_size=pi_neurons_per_layer,
+            activation_fn_torch=pi_act_funcs_torch,
+            activation_fn_jax=pi_act_funcs_jax)
 
     print('\n=== POLICY TRAINING (WITH PPO, JAX) COMPLETED ===\n')
 
