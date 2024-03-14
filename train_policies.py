@@ -30,8 +30,8 @@ gym.register(
 def torch_to_jax(jax_policy_state, weights, biases):
 
     for i,(w,b) in enumerate(zip(weights,biases)):
-        w = w.detach().numpy()
-        b = b.detach().numpy()
+        w = w.cpu().detach().numpy()
+        b = b.cpu().detach().numpy()
 
         # Copy weights and biases from each layer from Pytorch to JAX
         jax_policy_state.params['params']["Dense_" + str(i)]['kernel'] = w.T # Note: Transpose between torch and jax!
@@ -181,7 +181,7 @@ def pretrain_policy(args, model, cwd, RL_method, seed, num_envs, total_steps, po
 
     ######
     # Export JAX policy as Orbax checkpoint
-    ckpt_export_file = f"ckpt/{model}_alg={RL_method}_seed={seed}_{start_datetime}"
+    ckpt_export_file = f"ckpt/{model}_{start_datetime}_alg={RL_method}_seed={seed}_steps={total_steps}"
     checkpoint_path = Path(cwd, ckpt_export_file)
 
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
@@ -198,9 +198,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(prefix_chars='--')
     parser.add_argument('--model', type=str, default="LinearEnv",
                         help="Dynamical model to train on")
-    parser.add_argument('--algorithm', type=str, default="PPO",
+    parser.add_argument('--algorithm', type=str, default="ALL",
                         help="RL algorithm to train with")
-    parser.add_argument('--total_steps', type=int, default=10000,
+    parser.add_argument('--total_steps', type=int, default=1000000,
                         help="Number of steps to train for")
     parser.add_argument('--num_seeds', type=int, default=10,
                         help="Number of seeds to train with")
@@ -266,13 +266,3 @@ if __name__ == "__main__":
             filename = f"plots/initialized_policy_alg={RL_method}_steps={int(args.total_steps)}_seed={seed}"
             filepath = Path(args.cwd, filename).with_suffix('.png')
             plt.savefig(filepath, format='png', bbox_inches='tight', dpi=300)
-
-
-# %%
-
-# obs = traces[i]
-# mid1 = model['SAC'][0].actor.latent_pi[0].weight.detach().numpy() @ obs.flatten() + model['SAC'][0].actor.latent_pi[0].bias.detach().numpy()
-# mid2 = np.maximum(mid1, 0)
-# out = model['SAC'][0].actor.mu.weight.detach().numpy() @ mid2 + model['SAC'][0].actor.mu.bias.detach().numpy()
-#
-# out_predict = model['SAC'][0].predict(obs, deterministic=True)
