@@ -4,13 +4,16 @@ import time
 import orbax.checkpoint
 from datetime import datetime
 from pathlib import Path
-import flax
-import flax.linen as nn
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
+
+import flax
+import flax.linen as nn
 from flax.training.train_state import TrainState
+from flax.training import orbax_utils
+from flax import struct
 
 from jax import Array
 import tensorflow_probability.substrates.jax.distributions as tfp
@@ -18,7 +21,6 @@ from jax import jit
 from jax.lax import stop_gradient
 from jax import value_and_grad
 from typing import Callable
-from flax import struct
 
 from functools import partial
 from jax_utils import create_train_state, lipschitz_coeff
