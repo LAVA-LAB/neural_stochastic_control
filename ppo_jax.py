@@ -792,8 +792,8 @@ def PPO(env,
 
     # Load parameters from policy network initialized with PPO
     for layer in Policy_state.params['params'].keys():
-        Policy_state.params['params'][layer]['kernel'] = agent_state.params['params']['actor']['params'][layer]['kernel']
-        Policy_state.params['params'][layer]['bias'] = agent_state.params['params']['actor']['params'][layer]['bias']
+        Policy_state.params['params'][layer]['kernel'] = agent_state.params['actor']['params'][layer]['kernel']
+        Policy_state.params['params'][layer]['bias'] = agent_state.params['actor']['params'][layer]['bias']
 
         if verbose:
             print(f'- Layer {layer}')
