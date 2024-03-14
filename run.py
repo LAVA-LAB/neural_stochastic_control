@@ -50,6 +50,8 @@ parser.add_argument('--ppo_num_steps_per_batch', type=int, default=2048,
                     help="Total steps for rollout in PPO (for policy initialization")
 parser.add_argument('--ppo_num_minibatches', type=int, default=32,
                     help="Number of minibitches in PPO (for policy initialization")
+parser.add_argument('--ppo_verbose', action=argparse.BooleanOptionalAction, default=False,
+                    help="If True, print more output during PPO (JAX) training")
 
 ### VERIFY MESH SIZES
 parser.add_argument('--mesh_loss', type=float, default=0.001,
@@ -209,7 +211,7 @@ elif args.pretrain_method == 'PPO_JAX':
                                            max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                                            neurons_per_layer=pi_neurons_per_layer,
                                            activation_functions=pi_act_funcs_jax,
-                                           verbose=False)
+                                           verbose=args.ppo_verbose)
 
     print('\n=== POLICY TRAINING (WITH PPO, JAX) COMPLETED ===\n')
 else:

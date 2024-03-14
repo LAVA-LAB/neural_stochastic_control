@@ -1,3 +1,22 @@
+# Pretraining with different RL algorithms
+
+By default, a JAX implementation of PPO is used to pretrain the policy. This corresponds with the option
+
+```--pretrain_method PPO_JAX```
+
+Alternatively, stable-baselines3 implementations of several RL algorithms can be used, namely:
+- PPO
+- TD3
+- SAC
+- A2C
+- DDPG
+To use these options, replace `PPO_JAX` above with one of these algorithms, e.g., `--pretrain_method SAC`.
+
+The other arguments relevant for the pretraining are:
+- `--load_ckpt` (string) - Loads the checkpoint, instead of training a new policy (checkpoint must be saved using Orbax).
+- `--pretrain_total_steps` (int) - Total number of steps to train the policy for (1 million by default, but this may take very long when using stable-baselines).
+- `--pretrain_num_envs` (int) - Number of environments to use in parallel for training (10 by default).
+
 # Installing mujoco
 
 - Follow instructions from https://github.com/openai/mujoco-py
