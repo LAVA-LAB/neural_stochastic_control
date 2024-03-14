@@ -169,7 +169,6 @@ if args.load_ckpt == '':
     num_iterations = int(args.ppo_total_timesteps // batch_size)
 
     ppo_args = PPOargs(seed=args.seed,
-                       cwd=args.cwd,
                        total_timesteps=args.ppo_total_timesteps,
                        learning_rate=3e-4,
                        num_envs=args.ppo_num_envs,
@@ -193,7 +192,8 @@ if args.load_ckpt == '':
     # Only returns the policy state; not the full agent state used in the PPO algorithm.
     _, Policy_state, checkpoint_path = PPO(envfun(args),
                                            args.model,
-                                           ppo_args,
+                                           cwd=args.cwd,
+                                           args=ppo_args,
                                            max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                                            neurons_per_layer=pi_neurons_per_layer,
                                            activation_functions=pi_act_funcs,

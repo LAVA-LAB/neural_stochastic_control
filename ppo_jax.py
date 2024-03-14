@@ -35,8 +35,6 @@ os.environ["TF_CUDNN DETERMINISTIC"] = "1"
 class PPOargs:
     seed: int
     """seed of the experiment"""
-    cwd: str
-    """current working directory"""
     total_timesteps: int
     """total timesteps of the experiments"""
     learning_rate: float
@@ -571,6 +569,7 @@ def update_ppo(
 
 def PPO(env,
         env_name,
+        cwd,
         args,
         max_policy_lipschitz,
         neurons_per_layer=[64,64],
@@ -808,7 +807,7 @@ def PPO(env,
     # Save checkpoint of PPO state
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     ckpt_export_file = f"ckpt/ppo_jax_{env_name}_seed={args.seed}_{date}"
-    checkpoint_path = Path(args.cwd, ckpt_export_file)
+    checkpoint_path = Path(cwd, ckpt_export_file)
 
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
     orbax_checkpointer.save(checkpoint_path, Policy_state,
