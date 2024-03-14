@@ -229,7 +229,7 @@ else:
             activation_fn_torch=pi_act_funcs_torch,
             activation_fn_jax=pi_act_funcs_jax)
 
-    print('\n=== POLICY TRAINING (WITH PPO, JAX) COMPLETED ===\n')
+    print(f'\n=== POLICY TRAINING (WITH {args.pretrain_method}, PYTORCH) COMPLETED ===\n')
 
 # %%
 
