@@ -32,9 +32,6 @@ parser.add_argument('--layout', type=int, default=0,
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 
-parser.add_argument('--ppo_load_file', type=str, default='PPO_JAX',
-                    help="If given, a PPO checkpoint in loaded from this file")
-
 ### JAX PPO arguments
 parser.add_argument('--ppo_load_file', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
