@@ -11,6 +11,9 @@ path_to_prism.txt
 plots/*
 !plots/.keep
 
+ckpt/*
+!ckpt/.keep
+
 # Avoid ancillary folder to be pushed
 _old/*
 _pytorch_code/*

@@ -19,7 +19,8 @@ from typing import Callable
 from flax import struct
 
 from functools import partial
-from jax_utils import lipschitz_coeff
+from jax_utils import create_train_state, lipschitz_coeff
+from learner_reachavoid import MLP
 
 # Fix weird OOM https://github.com/google/jax/discussions/6332#discussioncomment-1279991
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.6"
@@ -775,4 +776,28 @@ def PPO(env,
     filepath = 'plots/latest_ppo_vector.png'
     plt.savefig(filepath, format='png', bbox_inches='tight')
 
-    return agent_state
+    # Return only the actor (not the rest of the agent)
+    Policy_neurons_per_layer = neurons_per_layer + [len(env.action_space.low)]
+    Policy_act_funcs = activation_functions + [None]
+
+    # Initialize policy network
+    policy_model = MLP(Policy_neurons_per_layer, Policy_act_funcs)
+    Policy_state = create_train_state(
+        model=policy_model,
+        act_funcs=Policy_act_funcs,
+        rng=jax.random.PRNGKey(1),
+        in_dim=env.state_dim,
+        learning_rate=5e-5,
+    )
+
+    # Load parameters from policy network initialized with PPO
+    for layer in Policy_state.params['params'].keys():
+        Policy_state.params['params'][layer]['kernel'] = agent_state['params']['actor']['params'][layer]['kernel']
+        Policy_state.params['params'][layer]['bias'] = agent_state['params']['actor']['params'][layer]['bias']
+
+        if verbose:
+            print(f'- Layer {layer}')
+            print('Kernel:', Policy_state.params['params'][layer]['kernel'])
+            print('Bias:', Policy_state.params['params'][layer]['bias'])
+
+    return agent_state, Policy_state

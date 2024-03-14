@@ -283,6 +283,5 @@ class LinearEnv(gym.Env):
     @partial(jit, static_argnums=(0,))
     def reset_jax(self, key):
         state, key, steps_since_reset = self._reset(key)
-        self.state = state
 
         return state, key, steps_since_reset

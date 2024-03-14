@@ -6,7 +6,7 @@ from datetime import datetime
 import os
 from pathlib import Path
 import orbax.checkpoint
-from flax.training import orbax_utils
+import flax
 import numpy as np
 import time
 import matplotlib.pyplot as plt
@@ -32,7 +32,10 @@ parser.add_argument('--layout', type=int, default=0,
 parser.add_argument('--seed', type=int, default=1,
                     help="Random seed")
 
-###
+parser.add_argument('--ppo_load_file', type=str, default='PPO_JAX',
+                    help="If given, a PPO checkpoint in loaded from this file")
+
+### JAX PPO arguments
 parser.add_argument('--ppo_load_file', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
 parser.add_argument('--ppo_max_policy_lipschitz', type=float, default=3,
@@ -157,10 +160,10 @@ print('\n================\n')
 
 # %% ### PPO policy initialization ###
 
+env = envfun(args)
+
 pi_neurons_per_layer = [128, 128]
 pi_act_funcs = [nn.relu, nn.relu]
-V_neurons_per_layer = [128, 128]
-V_act_funcs = [nn.relu, nn.relu]
 
 if args.ppo_load_file == '':
     print(f'Run PPO for model `{args.model}`')
@@ -190,42 +193,41 @@ if args.ppo_load_file == '':
                        minibatch_size=minibatch_size,
                        num_iterations=num_iterations)
 
-    ppo_state = PPO(envfun(args),
-                    ppo_args,
-                    max_policy_lipschitz=args.ppo_max_policy_lipschitz,
-                    neurons_per_layer=pi_neurons_per_layer,
-                    activation_functions=pi_act_funcs,
-                    verbose=False)
+    # Only returns the policy state; not the full agent state used in the PPO algorithm.
+    _, Policy_state = PPO(envfun(args),
+                          ppo_args,
+                          max_policy_lipschitz=args.ppo_max_policy_lipschitz,
+                          neurons_per_layer=pi_neurons_per_layer,
+                          activation_functions=pi_act_funcs,
+                          verbose=False)
 
     # Save checkpoint of PPO state
-    ckpt = {'model': ppo_state}
-    ppo_export_file = f"ckpt/{args.model}_seed={args.seed}_{start_datetime}"
-    checkpoint_path = Path(args.cwd, ppo_export_file)
+    ckpt_export_file = f"ckpt/{args.model}_seed={args.seed}_{start_datetime}"
+    checkpoint_path = Path(args.cwd, ckpt_export_file)
 
-    orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
-    save_args = orbax_utils.save_args_from_target(ckpt)
-    orbax_checkpointer.save(checkpoint_path, ckpt, save_args=save_args)
+    orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
+    orbax_checkpointer.save(checkpoint_path, Policy_state,
+                            save_args=flax.training.orbax_utils.save_args_from_target(Policy_state), force=True)
+
     print(f'- Export PPO checkpoint to file: {checkpoint_path}')
 
     print('\n=== POLICY TRAINING (WITH PPO) COMPLETED ===\n')
 else:
     # Load existing pretrained policy
-    orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
+    orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
     checkpoint_path = Path(args.cwd, args.ppo_load_file)
+
+del env
 
 # %%
 
 cegis_start_time = time.time()
 
-# Restore state of policy network
-raw_restored = orbax_checkpointer.restore(checkpoint_path)
-ppo_state = raw_restored['model']
-
 # Create gym environment (jax/flax version)
 env = envfun(args)
 
-V_neurons_per_layer = V_neurons_per_layer + [1]
-V_act_funcs = V_act_funcs + [nn.softplus]
+V_neurons_per_layer = [128, 128, 1]
+V_act_funcs = [nn.relu, nn.relu, nn.softplus]
 Policy_neurons_per_layer = pi_neurons_per_layer + [len(env.action_space.low)]
 Policy_act_funcs = pi_act_funcs + [None]
 
@@ -239,7 +241,6 @@ V_state = create_train_state(
     learning_rate=5e-4,
 )
 
-# Initialize policy network
 policy_model = MLP(Policy_neurons_per_layer, Policy_act_funcs)
 Policy_state = create_train_state(
     model=policy_model,
@@ -249,15 +250,9 @@ Policy_state = create_train_state(
     learning_rate=5e-5,
 )
 
-# Load parameters from policy network initialized with PPO
-for layer in Policy_state.params['params'].keys():
-    print(f'- Layer {layer}')
-
-    Policy_state.params['params'][layer]['kernel'] = ppo_state['params']['actor']['params'][layer]['kernel']
-    Policy_state.params['params'][layer]['bias'] = ppo_state['params']['actor']['params'][layer]['bias']
-
-    print('Kernel:', Policy_state.params['params'][layer]['kernel'])
-    print('Bias:', Policy_state.params['params'][layer]['bias'])
+# Restore state of policy network
+Policy_state = orbax_checkpointer.restore('ckpt/myLinearEnv_alg=PPO_seed=0_2024-03-14_11-49-14', item=Policy_state,
+                  restore_args=flax.training.orbax_utils.restore_args_from_target(Policy_state['PPO'][0], mesh=None))
 
 # %%
 
