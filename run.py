@@ -191,6 +191,7 @@ if args.load_ckpt == '':
 
     # Only returns the policy state; not the full agent state used in the PPO algorithm.
     _, Policy_state, checkpoint_path = PPO(envfun(args),
+                                           args.model,
                                            ppo_args,
                                            max_policy_lipschitz=args.ppo_max_policy_lipschitz,
                                            neurons_per_layer=pi_neurons_per_layer,

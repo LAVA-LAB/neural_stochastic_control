@@ -568,6 +568,7 @@ def update_ppo(
 
 
 def PPO(env,
+        env_name,
         args,
         max_policy_lipschitz,
         neurons_per_layer=[64,64],
@@ -804,7 +805,7 @@ def PPO(env,
 
     # Save checkpoint of PPO state
     date = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    ckpt_export_file = f"ckpt/{args.model}_seed={args.seed}_{date}"
+    ckpt_export_file = f"ckpt/ppo_jax_{env_name}_seed={args.seed}_{date}"
     checkpoint_path = Path(args.cwd, ckpt_export_file)
 
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
