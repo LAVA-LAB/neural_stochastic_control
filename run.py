@@ -36,7 +36,7 @@ parser.add_argument('--seed', type=int, default=1,
 ### POLICY INITIALIZATION ARGUMENTS
 parser.add_argument('--load_ckpt', type=str, default='',
                     help="If given, a PPO checkpoint in loaded from this file")
-parser.add_argument('--pretrain_method', type=str, default='',
+parser.add_argument('--pretrain_method', type=str, default='PPO_JAX',
                     help="Method to pretrain (initialize) the policy")
 
 ### JAX PPO arguments
