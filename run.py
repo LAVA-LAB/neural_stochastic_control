@@ -219,7 +219,7 @@ else:
 
     _, _, _, checkpoint_path = pretrain_policy(
             args,
-            model=args.model,
+            env_name=args.model,
             cwd=args.cwd,
             RL_method=args.pretrain_method,
             seed=args.seed,

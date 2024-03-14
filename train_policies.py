@@ -169,19 +169,19 @@ def train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch,
 
 
 
-def pretrain_policy(args, model, cwd, RL_method, seed, num_envs, total_steps, policy_size, activation_fn_torch,
+def pretrain_policy(args, env_name, cwd, RL_method, seed, num_envs, total_steps, policy_size, activation_fn_torch,
                     activation_fn_jax):
 
     start_datetime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
     # Generate environment
-    vec_env = make_vec_env(model, n_envs=num_envs, env_kwargs={'args': args}, seed=seed)
+    vec_env = make_vec_env(env_name, n_envs=num_envs, env_kwargs={'args': args}, seed=seed)
     model, jax_policy_state = train_stable_baselines(vec_env, RL_method, policy_size, activation_fn_torch,
                                                      activation_fn_jax, total_steps)
 
     ######
     # Export JAX policy as Orbax checkpoint
-    ckpt_export_file = f"ckpt/{model}_{start_datetime}_alg={RL_method}_seed={seed}_steps={total_steps}"
+    ckpt_export_file = f"ckpt/{env_name}_{start_datetime}_alg={RL_method}_seed={seed}_steps={total_steps}"
     checkpoint_path = Path(cwd, ckpt_export_file)
 
     orbax_checkpointer = orbax.checkpoint.Checkpointer(orbax.checkpoint.PyTreeCheckpointHandler())
