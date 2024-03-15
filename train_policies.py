@@ -288,8 +288,8 @@ if __name__ == "__main__":
     jax_policy_state = {}
     checkpoint_path = {}
 
-    for RL_method in METHODS:
-        print(f'\n=== Algorithm: {RL_method} ===')
+    for z,RL_method in enumerate(METHODS):
+        print(f'\n=== Algorithm {z}: {RL_method} ===')
 
         model[RL_method] = {}
         jax_policy_state[RL_method] = {}
