@@ -132,7 +132,8 @@ class Verifier:
         points_ub = (points.T + 0.5 * cell_widths).T
 
         # Number of cells per dimension of the state space
-        num_per_dimension = np.array(np.ceil((points_ub - points_lb).T / new_cell_widths), dtype=int).T
+        cell_width_array = np.broadcast_to(np.atleast_2d(cell_widths).T, (len(cell_widths), env.state_dim)).T
+        num_per_dimension = np.array(np.ceil(cell_width_array / new_cell_widths), dtype=int).T
 
         # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
