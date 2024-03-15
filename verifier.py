@@ -367,7 +367,7 @@ class Verifier:
 
             ExpV_xPlus[i:j] = self.vmap_expectation_Vx_plus(V_state, jax.lax.stop_gradient(V_state.params), x, u,
                                                             self.noise_lb, self.noise_ub, self.noise_int_ub)
-
+            
             # # If debugging is enabled, approximate decrease in V (by sampling noise, instead of numerical integration)
             # if debug_noise_integration:
             #     noise_key, subkey = jax.random.split(noise_key)
@@ -471,10 +471,10 @@ class Verifier:
         # Set weights: hard violations get a stronger weight
         weights_init = np.ones(len(x_init_vio_IBP))
         weights_init[V_init > 0] = hard_violation_weight
-
+        
         out_of = self.env.init_space.contains(x_init_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_init_vioNumHard} hard violations (out of {len(out_of)})')
-
+        
         if compare_with_lip:
             # Compare IBP with method based on Lipschitz coefficient
             mesh_init = cell_width2mesh(self.check_init[:, -1], env.state_dim, args.linfty).flatten()
@@ -529,7 +529,7 @@ class Verifier:
         # Set weights: hard violations get a stronger weight
         weights_unsafe = np.ones(len(x_unsafe_vio_IBP))
         weights_unsafe[V_unsafe < 0] = hard_violation_weight
-
+        
         out_of = self.env.unsafe_space.contains(x_unsafe_vio_IBP, dim=self.buffer.dim, delta=0)
         print(f'-- {x_unsafe_vioHard} hard violations (out of {len(out_of)})')
 
