@@ -383,7 +383,7 @@ for i in range(args.cegis_iterations):
             verify_done = True
         else:
             # Clip the suggested mesh at the lowest allowed value
-            min_allowed_mesh = args.mesh_verify_grid_init / args.max_refine_factor**(refine_nr+1)
+            min_allowed_mesh = args.mesh_verify_grid_init / args.max_refine_factor**(refine_nr+1) * 1.0001
             suggested_mesh = np.maximum(min_allowed_mesh, suggested_mesh)
 
             if args.local_refinement:

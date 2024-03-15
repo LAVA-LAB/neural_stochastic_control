@@ -133,7 +133,7 @@ class Verifier:
 
         # Number of cells per dimension of the state space
         cell_width_array = np.broadcast_to(np.atleast_2d(cell_widths).T, (len(cell_widths), env.state_dim)).T
-        num_per_dimension = np.array(np.ceil(cell_width_array / new_cell_widths * 0.999999), dtype=int).T
+        num_per_dimension = np.array(np.ceil(cell_width_array / new_cell_widths), dtype=int).T
 
         # Determine number of unique rows in matrix
         unique_num = np.unique(num_per_dimension, axis=0)
