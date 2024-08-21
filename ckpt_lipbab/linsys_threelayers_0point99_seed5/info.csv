@@ -1,0 +1,17 @@
+,info
+start_date,2024-05-05_20-40-01
+model,LinearSystem
+layout,0
+seed,5
+ckpt,
+algorithm,PPO_JAX
+probability_bound,0.99
+local_refinement,True
+weighted_counterexamples,True
+weighted_Lipschitz,True
+cplip,True
+split_lip,True
+improved_softplus_lip,True
+total_CEGIS_time,106.556443
+verify_samples,1016932
+verify_samples_naive,499828288
