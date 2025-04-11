@@ -1,57 +1,8 @@
-Learning-Based Verification of Stochastic Dynamical Systems with Neural Network Policies
-=============================
+This repository has been superseded by a newer version:
 
-This repository contains the supplementary code for the paper:
+[https://github.com/LAVA-LAB/logRASM]
 
-- [1] "Learning-Based Verification of Stochastic Dynamical Systems with Neural Network Policies." Anonymous submission.
-
-This paper proposes techniques that make the verification of neural network policies in stochastic dynamical systems
-more scalable.
-In this artifact, we implement these techniques in a learner-verifier framework for verifying that a given neural
-network policy satisfies a given reach-avoid specification.
-The learner trains another neural network, which acts as a certificate proving that the policy satisfies the task.
-The verifier then checks whether this neural network certificate is a so-called reach-avoid supermartingale (RASM),
-which suffices to show reach-avoid guarantees.
-For more details about the approach, we refer to the main paper.
-
-## Reproducibility
-
-All experiments presented in [1] are run on a server running Ubuntu 22.04.1 LTS, with an Intel Core i9-10980XE CPU, 256
-GB of RAM, and an NVIDIA RTX 3090 GPU.
-The excepted run times provided in this ReadMe are also considering a server with these specifications.
-
-<br />
-
-# 1. What does this code do?
-
-While we refer to the paper [1] for details, we briefly explain what our code computes.
-In a nutshell, given
-
-1) a stochastic dynamical system,
-2) a neural network policy, and
-3) a reach-avoid specification, i.e., a tuple $(X_T, X_U, \rho)$ of a set of target states $X_T \subset X$, a set of
-   unsafe states $X_U \subset X$, and a probability bound $\rho \in (0,1)$.
-
-we compute whether the policy, when deployed on this system, satisfies the reach-avoid specification.
-More precisely, a policy $\pi$ satisfies the specification if, from every state in a set $X_0 \subset X$ of initial
-states, the probability to reach $X_T$ while never reaching $X_U$ is at least $\rho$.
-
-Our algorithm verifies that the reach-avoid specification is satisfied by learning a formal certificate, called a
-reach-avoid supermartingale (RASM), in the form of a neural network.
-Finding a RASM is a sufficient proof for the satisfaction of the specification.
-Our code implements an iterative learner-verifier framework that tries to find a RASM for the given inputs.
-If a valid RASM is found, our code terminates and returns the RASM as proof that the specification is satisfied.
-
-<br />
-
-# 2. Installing
-
-We recommend installing in a conda environment; however, other ways of installing are also possible.
-Below, we list the steps needed to install via (Mini)conda.
-
-## Step 1: Install Miniconda
-
-Download Miniconda, e.g., using the following commands ([see here](https://docs.anaconda.com/free/miniconda/) for
+[see here](https://docs.anaconda.com/free/miniconda/) for
 details):
 
 ```
